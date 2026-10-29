@@ -1,0 +1,272 @@
+<?php
+
+use App\Http\Controllers\Admin\Auth\AuthController;
+use App\Http\Controllers\Admin\Auth\LoginController;
+use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\GeneralViewController;
+use App\Http\Controllers\Admin\SettingsController;
+use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\Admin\TransactionController;
+use App\Http\Controllers\Admin\AssignedCardCredentialController;
+use App\Http\Controllers\Admin\EpinRateController;
+use App\Http\Controllers\Admin\PhysicalCardController;
+use App\Http\Controllers\Admin\VirtualUsdCardController;
+use App\Http\Controllers\Admin\PushUpdatesController;
+use App\Http\Controllers\Admin\ForeignAccountRequestController;
+use App\Http\Controllers\Admin\VirtualNGNCardController;
+use App\Http\Controllers\Admin\ForeignAccountController;
+use App\Http\Controllers\Admin\ExchangeRateController;
+use App\Http\Controllers\Admin\MaintenanceController;
+use App\Http\Controllers\Admin\DepositFeeController;
+use App\Http\Controllers\Admin\FundingChargesController;
+use App\Http\Controllers\Admin\VirtualCardExchangeRateController;
+use App\Http\Controllers\Admin\SalesController;
+use App\Http\Controllers\Admin\Auth\PinController;
+use App\Http\Controllers\Admin\VATSettingsController;
+use App\Http\Controllers\Admin\StampDutyController;
+use App\Http\Controllers\Admin\Auth\ForgotPinController;
+use App\Http\Controllers\Admin\ErrorLogController;
+use App\Http\Controllers\Admin\VerificationController;
+
+Route::group(['prefix' => 'adminoffice'], function () {
+
+    //admin auth
+    Route::group(['namespace'=>'Auth','middleware'=>['AdminGuest','visitors'],'as'=>'adminAuth.'],function(){
+    
+        // Route::get('login', [AuthController::class, 'showLoginForm'])->name('Login');
+        // Route::post('login', [AuthController::class, 'Login'])->name('AdminLogin');
+        Route::get('login', [LoginController::class, 'showLoginForm'])->name('Login');
+        Route::post('login', [LoginController::class, 'Login'])->name('AdminLogin');
+        
+    
+    });
+
+    Route::get('/pin', [PinController::class,'showForm'])->name('admin.pin.form')->middleware('Admin');
+    Route::post('/pin', [PinController::class,'verifyPin'])->name('admin.pin.verify')->middleware('Admin');
+
+    // Route::get('logout', [AuthController::class, 'logout'])->name('AdminLogout')->middleware('Admin');
+    Route::get('logout', [LoginController::class, 'logout'])->name('AdminLogout')->middleware('Admin');
+    
+    Route::get('forgot-pin',[ForgotPinController::class,'requestForm'])
+        ->name('admin.pin.forgot');
+
+    Route::post('forgot-pin',[ForgotPinController::class,'sendLink'])
+        ->name('admin.pin.email');
+
+    Route::get('reset-pin/{token}',[ForgotPinController::class,'resetForm'])
+        ->name('admin.pin.reset.form');
+
+    Route::post('reset-pin',[ForgotPinController::class,'resetPin'])
+        ->name('admin.pin.reset');
+
+
+
+    //admin controls
+    Route::group(['middleware'=>['Admin', 'visitors', 'admin.pin'],'as'=>'admin.'],function(){
+
+    //dashboard
+    Route::get('/', [DashboardController::class, 'index'])->name('index');
+
+    // Light/Dark theme toggle for the DeWallet admin (sets a cookie, redirects back)
+    Route::get('toggle-theme', function () {
+        $current = request()->cookie('dupay_theme', 'dark');
+        $next = $current === 'light' ? 'dark' : 'light';
+        // 1 year cookie, applies across the admin
+        return redirect()->back()->withCookie(cookie('dupay_theme', $next, 60 * 24 * 365));
+    })->name('toggleTheme');
+    Route::get('/sales', [DashboardController::class, 'sales'])->name('sales');
+    Route::post('sales-calculator', [SalesController::class, 'calculateSales'])->name('salesCalculate');
+    
+    
+    
+    Route::post('/verify-pin', [PinController::class, 'verify'])
+    ->name('verify.pin');
+    
+    
+    //user
+    Route::resource('user', UserController::class);
+    Route::get('get-user', [UserController::class, 'ajax'])->name('getUser');
+    Route::post('users/update-js/{username}', [UserController::class, 'jsUpdate'])->name('UserUpdateJsAction');
+    Route::post('users/update-js2/{username}', [UserController::class, 'updateReceiveSms'])->name('UserUpdateJsAction2');
+    
+    Route::get('users/wallet-action/{username}', [UserController::class, 'userWalletAction'])->name('AdminUserWalletAction');
+    Route::post('users/wallet-action/{username}', [UserController::class, 'updateUserWallet'])->name('AdminUserWalletAction');
+    
+    Route::get('users/level-action/{username}', [UserController::class, 'userLevelAction'])->name('AdminUserLevelAction');
+    Route::post('users/level-action/{username}', [UserController::class, 'updateUserLevel'])->name('AdminUserLevelAction');
+    
+    Route::post('users/transaction-pin/{username}', [UserController::class, 'resetTransactionPin'])->name('AdminResetUserTransactionPin');
+    Route::post('users/reset-password/{username}', [UserController::class, 'resetPassword'])->name('AdminResetUserPassword');
+    
+    Route::post('users/send-notification/{username}', [UserController::class, 'sendUserNotification'])->name('AdminSendUserNotification');
+    Route::post('users/change-password/{username}', [UserController::class, 'changePassword'])->name('AdminChangeUserPassword');
+    
+    Route::post('users/activate-deactivate/{username}', [UserController::class, 'activateDeactivateUser'])->name('AdminActivateDeactivateUser');
+    Route::post('users/banUnban/{username}', [UserController::class, 'banUnbanUser'])->name('AdminBanUnbanUser');
+    Route::post('users/blockUnblock/{username}', [UserController::class, 'blockUnblockUser'])->name('AdminBlockUnblockUser');
+    Route::get('user/transactions/{username}', [UserController::class, 'showTransaction'])->name('AdminUserTransaction');
+    Route::delete('users/delete/{username}', [UserController::class, 'distoryUser'])->name('AdminDeleteUser');
+    Route::post('user/bulk/delete',[UserController::class, 'bulk_delete'])->name('user.bulk_delete');
+    Route::post('user/balance/top-up/{id}/{currency}',[UserController::class, 'topUpBalance'])->name('user.topup');
+    
+    Route::get('user/fyc/transactions/{id}', [UserController::class, 'transactions'])->name('user.fyc.transactions');
+    Route::get('user/fyc/transactions/ajax/{id}', [UserController::class, 'transactionsAjax'])->name('user.fyc.transactions.ajax');
+    Route::get('user/fyc/transactions/delete', [UserController::class, 'destroyTranx'])->name('user.fyc.transactions.destroy');
+    
+    Route::post('user/daily-limit/update/{username}',[UserController::class, 'updateDailyTransactionLimit'])->name('user.updateDailyTransactionLimit');
+    
+    
+    
+    Route::get('verifications', [VerificationController::class, 'index'])->name('verifications');
+    Route::get('verifications/fetch', [VerificationController::class, 'fetch'])->name('verifications.fetch');
+    Route::get('verifications/{id}', [VerificationController::class, 'show']);
+    Route::post('verifications/{id}/verify', [VerificationController::class, 'verify']);
+    Route::post('verifications/{id}/reject', [VerificationController::class, 'reject']);
+
+    
+    
+    Route::resource('card_credentials', AssignedCardCredentialController::class);
+    Route::resource('epin_rates', EpinRateController::class);
+    Route::resource('physical_cards', PhysicalCardController::class);
+    Route::get('user/physical_cards/ajax/', [PhysicalCardController::class, 'cardAjax'])->name('user.physical_cards.ajax');
+    Route::post('physical_cards/reset-pin/{physical_card}', [PhysicalCardController::class, 'resetCardPin'])->name('physical_cards.reset.pin');
+    
+    Route::get('/push-updates', [PushUpdatesController::class, 'index'])->name('admin.push.updates');
+    Route::get('/push-updates/create', [PushUpdatesController::class, 'create'])->name('push.create');
+    Route::post('/push-updates/store', [PushUpdatesController::class, 'store'])->name('push.store');
+    Route::get('/push-updates/{update}/edit', [PushUpdatesController::class, 'edit'])->name('push.edit');
+    Route::post('/push-updates/{update}/save', [PushUpdatesController::class, 'save'])->name('push.save');
+    Route::get('/push-updates/{update}/destroy', [PushUpdatesController::class, 'destroy'])->name('push.destroy');
+    Route::post('/push-updates/{update}/resend', [PushUpdatesController::class, 'resend'])->name('push.resend');
+    
+    Route::prefix('virtual-usd-cards')->group(function () {
+        Route::get('/', [VirtualUsdCardController::class, 'index'])->name('admin.visual_cards.usd.index');
+        Route::get('/{id}', [VirtualUsdCardController::class, 'show'])->name('admin.visual_cards.usd.show');
+        Route::post('/cards/freeze', [VirtualUsdCardController::class, 'freeze'])->name('visual_cards.usd.freeze');
+        Route::post('/{id}/unfreeze', [VirtualUsdCardController::class, 'unfreeze'])->name('admin.visual_cards.usd.unfreeze');
+        Route::post('/fund', [VirtualUsdCardController::class, 'fund'])->name('visual_cards.usd.fund');
+        Route::post('/withdraw', [VirtualUsdCardController::class, 'withdraw'])->name('visual_cards.usd.withdraw');
+        Route::get('/{id}/transactions', [VirtualUsdCardController::class, 'transactions'])->name('admin.visual_cards.usd.transactions');
+        Route::delete('/destroy/{id}', [VirtualUsdCardController::class, 'destroy'])->name('admin.visual_cards.usd.destroy');
+    });
+    
+    Route::prefix('virtual-ngn-cards')->group(function () {
+        Route::get('/', [VirtualNGNCardController::class, 'index'])->name('visual_cards.ngn.index');
+        Route::get('/{id}', [VirtualNGNCardController::class, 'show'])->name('visual_cards.ngn.show');
+        Route::post('/cards/freeze', [VirtualNGNCardController::class, 'freeze'])->name('visual_cards.ngn.freeze');
+        Route::post('/{id}/unfreeze', [VirtualNGNCardController::class, 'unfreeze'])->name('visual_cards.ngn.unfreeze');
+        Route::post('/reset', [VirtualNGNCardController::class, 'reset'])->name('visual_cards.ngn.reset');
+        Route::delete('/destroy/{id}', [VirtualNGNCardController::class, 'destroy'])->name('visual_cards.ngn.destroy');
+    });
+    
+    Route::prefix('foreign-accounts/request')->name('foreign-accounts.')->group(function () {
+        Route::get('/', [ForeignAccountRequestController::class, 'index'])->name('index');
+        Route::get('/{id}', [ForeignAccountRequestController::class, 'show'])->name('show');
+        Route::get('/{id}/edit', [ForeignAccountRequestController::class, 'edit'])->name('edit');
+        Route::put('/{id}', [ForeignAccountRequestController::class, 'update'])->name('update');
+        Route::delete('/{id}', [ForeignAccountRequestController::class, 'destroy'])->name('destroy');
+    
+        Route::post('/{id}/approve', [ForeignAccountRequestController::class, 'approve'])->name('approve');
+        Route::post('/{id}/decline', [ForeignAccountRequestController::class, 'decline'])->name('decline');
+        Route::post('/{id}/create-bank-account', [ForeignAccountRequestController::class, 'createBankAccount'])->name('create.bank.account');
+    });
+    
+    Route::prefix('foreign-accounts')->name('foreign.accounts.')->group(function () {
+        Route::get('/{currency}', [ForeignAccountController::class, 'index'])->name('index');
+        Route::get('/{id}/edit', [ForeignAccountController::class, 'edit'])->name('edit');
+        Route::put('/{id}', [ForeignAccountController::class, 'update'])->name('update');
+        Route::get('/view/{id}', [ForeignAccountController::class, 'show'])->name('show');
+        Route::delete('/{id}', [ForeignAccountController::class, 'destroy'])->name('destroy');
+    });
+    
+    Route::prefix('exchange-rates')->name('exchange.rates.')->group(function () {
+        Route::get('/', [ExchangeRateController::class, 'index'])->name('index');
+        Route::get('/{id}/edit', [ExchangeRateController::class, 'edit'])->name('edit');
+        Route::put('/{id}', [ExchangeRateController::class, 'update'])->name('update');
+        Route::delete('/{id}', [ExchangeRateController::class, 'destroy'])->name('destroy');
+    });
+    
+    Route::prefix('virtual-card-exchange-rates')->name('virtual.cad.exchange.rates.')->group(function () {
+        Route::get('/', [VirtualCardExchangeRateController::class, 'index'])->name('index');
+        Route::get('/{id}/edit', [VirtualCardExchangeRateController::class, 'edit'])->name('edit');
+        Route::put('/{id}', [VirtualCardExchangeRateController::class, 'update'])->name('update');
+        Route::delete('/{id}', [VirtualCardExchangeRateController::class, 'destroy'])->name('destroy');
+    });
+    
+    Route::prefix('maintenance')->name('maintenance.')->group(function () {
+        Route::get('/', [MaintenanceController::class, 'index'])->name('index');
+        Route::post('/debit', [MaintenanceController::class, 'debitMaintenance'])->name('debit');
+    });
+    
+    Route::prefix('stamp_duty_settings')->name('stamp.duty.')->group(function () {
+        Route::get('/', [StampDutyController::class, 'index'])->name('index');
+        Route::post('/update', [StampDutyController::class, 'update'])->name('update');
+    });
+    
+    Route::prefix('vat_settings')->name('vat.')->group(function () {
+        Route::get('/', [VATSettingsController::class, 'index'])->name('index');
+        Route::post('/update', [VATSettingsController::class, 'update'])->name('update');
+    });
+    
+    Route::prefix('error_log')->name('error.log.')->group(function () {
+        Route::get('/', [ErrorLogController::class, 'index'])->name('index');
+    });
+    
+    Route::prefix('deposit-fee')->name('deposit.fee.')->group(function () {
+        Route::get('/{currency}', [DepositFeeController::class, 'index'])->name('index');
+        Route::get('/edit/{id}', [DepositFeeController::class, 'edit'])->name('edit');
+        Route::put('/update/{id}', [DepositFeeController::class, 'update'])->name('update');
+    });
+    
+    Route::prefix('funding-charge')->name('funding.charge.')->group(function () {
+        Route::get('/', [FundingChargesController::class, 'index'])->name('index');
+        Route::get('/edit/{id}', [FundingChargesController::class, 'edit'])->name('edit');
+        Route::put('/update/{id}', [FundingChargesController::class, 'update'])->name('update');
+    });
+    
+    //transaction
+    Route::get('transactions/{username?}/{wallet_id?}', [TransactionController::class, 'index'])->name('showTransaction');
+    Route::get('transactions-js/{username?}/{wallet_id?}', [TransactionController::class, 'ajax'])->name('showTransactionJs');
+    Route::get('transaction-chart/{username?}', [TransactionController::class, 'chart'])->name('showTransactionChart');
+    Route::get('transactions-paymentlogs', [TransactionController::class, 'paymentLogs'])->name('AdminShowPaymentLogs');
+    Route::get('transactions-transferlogs', [TransactionController::class, 'showTransferLogs'])->name('AdminShowTransferLogs');
+    Route::get('transactions-withdrawallogs', [TransactionController::class, 'showWithdrawalLogs'])->name('AdminShowWithdrawalLogs');
+    Route::post('transactions-deletebulk', [TransactionController::class, 'distoryBulkTransaction'])->name('AdminDeleteBulkTransaction');
+    Route::get('transactions-reciept/{reference}', [TransactionController::class, 'downloadPDF'])->name('AdminDownloadReciept');
+    Route::delete('transactions-delete/{reference}', [TransactionController::class, 'destroy'])->name('DeleteTransaction');
+    Route::get('transactions-{reference}', [TransactionController::class, 'transactionDetails'])->name('TransactionDetails');
+    Route::post('transactions-edit-status/{type}/{reference}', [TransactionController::class, 'editTransactionStatus'])->name('editTransactionStatus');
+    Route::post('transactions/bulk/delete',[TransactionController::class, 'bulk_delete'])->name('transactions.bulk_delete');
+    Route::post('transactions-edit-bulk-status/', [TransactionController::class, 'editBulkTransactionStatus'])->name('editBulkTransactionStatus');
+    Route::post('transactions-verify-status-api/', [TransactionController::class, 'verifyTransactionFromApi'])->name('verifyTransactionApiStatus');
+    Route::post('transactions/bulk/delete',[TransactionController::class, 'bulk_delete'])->name('transactions.bulk_delete');
+    Route::get('transaction/view/{reference}', [TransactionController::class, 'transactionView'])->name('transaction.view');
+    
+    
+    
+    //settings
+    Route::get('settings/password', [SettingsController::class, 'passwordSettings'])->name('PasswordSetting');
+    Route::post('settings/password', [SettingsController::class, 'updatePassword'])->name('PasswordSetting');
+    Route::get('settings/{pageType}', [SettingsController::class, 'edit'])->name('settings');
+    Route::post('settings/{pageType}', [SettingsController::class, 'update'])->name('settings');
+    
+    
+    
+    //general page for crud
+    Route::get('page/view/{pageType}', [GeneralViewController::class, 'index'])->name('ViewItem');
+    Route::get('page/view-details/{pageType}', [GeneralViewController::class, 'show'])->name('ViewItemDetails');
+    Route::get('page/general-ajax/{pageType}', [GeneralViewController::class, 'ajax'])->name('ajaxGetItem');
+    Route::get('page/add/{pageType}/{id?}', [GeneralViewController::class, 'create'])->name('AddNewItem');
+    Route::post('page/add/{pageType}/{id?}', [GeneralViewController::class, 'store'])->name('AddNewItem');
+    Route::get('page/edit/{pageType}/{id}', [GeneralViewController::class, 'edit'])->name('UpdateItem');
+    Route::put('page/edit/{pageType}/{id}', [GeneralViewController::class, 'update'])->name('UpdateItem');
+    Route::put('page/update/{pageType}/{id}', [GeneralViewController::class, 'ajaxUpdate'])->name('UpdateItemApi');
+    Route::delete('page/delete/{pageType}/{id}', [GeneralViewController::class, 'destroy'])->name('DeleteItem');
+    Route::delete('page/delete-bulk/{pageType}', [GeneralViewController::class, 'bulkDestroy'])->name('BulkDeleteItem');
+
+});
+
+
+});
+use App\Http\Controllers\Admin\LoginImageController;
+
