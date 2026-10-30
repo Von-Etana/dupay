@@ -1,0 +1,69 @@
+workflows:
+  ios-workflow:
+    name: iOS Workflow
+    instance_type: mac_mini_m2
+    max_build_duration: 120
+    working_directory: mobile
+    environment:
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: main
+          include: true
+          source: true
+    scripts:
+      - name: Get Flutter packages
+        script: |
+          flutter packages pub get
+      - name: Install CocoaPods dependencies
+        script: |
+          cd ios && pod install
+      - name: Set up code signing settings on Xcode project
+        script: |
+          if [ -n "$APP_STORE_CONNECT_KEY_IDENTIFIER" ] || [ -n "$CM_CERTIFICATE" ]; then
+            xcode-project use-profiles
+          else
+            echo "Skipping profile setup: credentials not yet provided in Codemagic."
+          fi
+      - name: Build iOS
+        script: |
+          if [ -n "$APP_STORE_CONNECT_KEY_IDENTIFIER" ] || [ -n "$CM_CERTIFICATE" ]; then
+            flutter build ipa --release
+          else
+            echo "Building unsigned iOS app (no-codesign)..."
+            flutter build ipa --release --no-codesign
+          fi
+    artifacts:
+      - mobile/build/ios/ipa/*.ipa
+      - mobile/build/ios/archive/*.xcarchive
+      - /tmp/xcodebuild_logs/*.log
+
+  android-workflow:
+    name: Android Workflow
+    instance_type: mac_mini_m2
+    max_build_duration: 120
+    working_directory: mobile
+    environment:
+      flutter: stable
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: main
+          include: true
+          source: true
+    scripts:
+      - name: Get Flutter packages
+        script: |
+          flutter packages pub get
+      - name: Build Android App Bundle and APK
+        script: |
+          flutter build appbundle --release
+          flutter build apk --release
+    artifacts:
+      - mobile/build/app/outputs/**/*.aab
+      - mobile/build/app/outputs/**/*.apk

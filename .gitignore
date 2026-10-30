@@ -24,6 +24,7 @@ firebase_credentials.json
 # Flutter/mobile build output and signing material
 mobile/.dart_tool/
 mobile/build/
+mobile/android/build/
 mobile/.gradle/
 mobile/android/.gradle/
 mobile/android/key.properties
