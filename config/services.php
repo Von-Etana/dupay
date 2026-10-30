@@ -39,4 +39,9 @@ return [
         'secret_key' => env('STROWALLET_SECRET_KEY'),
     ],
 
+    'graph' => [
+        'api_key' => env('GRAPH_API_KEY'),
+        'base_url' => env('GRAPH_BASE_URL', 'https://api.useoval.com'),
+    ],
+
 ];

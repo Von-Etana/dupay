@@ -7,48 +7,83 @@ use App\Models\User;
 use App\Models\ForeignAccount;
 use Carbon\Carbon;
 
+function getGraphApiKey(): string
+{
+    return (string) (config('services.graph.api_key') ?: env('GRAPH_API_KEY', ''));
+}
+
 function CreateGraphPerson(User $user, $data): array
 {
     $url = "https://api.useoval.com/person";
-    $token = env('GRAPH_API_KEY');
+    $token = getGraphApiKey();
     $maxRetries = 3;
     $retryDelay = 1;
 
     $client = new Client(['timeout' => 30]);
     $payload = [];
 
-    try {
-        // ✅ Validate document files exist
-       // Strip leading /storage/ prefix for Storage::disk('public') compatibility
-       
-       
-$doc1Path = ltrim(preg_replace('#^/storage/#', '', $data->document), '/');
-$doc2Path = ltrim(preg_replace('#^/storage/#', '', $data->document2), '/');
+        try {
+        $cleanDocPath = function (?string $raw): ?string {
+            if (!$raw) return null;
+            $path = parse_url($raw, PHP_URL_PATH) ?? $raw;
+            $path = preg_replace('#^/?storage/#i', '', $path);
+            return ltrim($path, '/');
+        };
 
-// ✅ Validate document files exist
-if (!Storage::disk('public')->exists($doc1Path)) {
-    Log::error('Document 1 not found', ['path' => $doc1Path]);
-    return [
-        'status' => false,
-        'message' => 'Document 1 not found in storage',
-        'error' => 'Missing document: ' . $doc1Path
-    ];
-}
+        $doc1Path = $cleanDocPath($data->document);
+        $doc2Path = $cleanDocPath($data->document2);
 
-if (!Storage::disk('public')->exists($doc2Path)) {
-    Log::error('Document 2 not found', ['path' => $doc2Path]);
-    return [
-        'status' => false,
-        'message' => 'Document 2 not found in storage',
-        'error' => 'Missing document: ' . $doc2Path
-    ];
-}
+        if (!$doc1Path || !Storage::disk('public')->exists($doc1Path)) {
+            Log::error('Document 1 not found', ['raw' => $data->document, 'cleaned' => $doc1Path]);
+            return [
+                'status' => false,
+                'message' => 'Document 1 not found in storage (' . ($doc1Path ?: 'empty') . ')',
+                'error' => 'Missing document: ' . ($doc1Path ?: 'empty'),
+                'graph_person_saved' => false,
+            ];
+        }
 
-// ✅ Build document arrays
-$document1 = [
-    "type" => $data->document_type ?? "passport",
-    "url" => asset('storage/' . $doc1Path),
-];
+        if (!$doc2Path || !Storage::disk('public')->exists($doc2Path)) {
+            Log::error('Document 2 not found', ['raw' => $data->document2, 'cleaned' => $doc2Path]);
+            return [
+                'status' => false,
+                'message' => 'Document 2 not found in storage (' . ($doc2Path ?: 'empty') . ')',
+                'error' => 'Missing document: ' . ($doc2Path ?: 'empty'),
+                'graph_person_saved' => false,
+            ];
+        }
+
+        $makePublicUrl = function (string $cleanPath): string {
+            $base = rtrim(config('app.url', 'https://mydupay.com'), '/');
+            if (empty($base) || $base === 'http://localhost') {
+                $base = 'https://mydupay.com';
+            }
+            if (app()->environment('production') || str_contains($base, 'mydupay.com')) {
+                $base = preg_replace('#^http://#', 'https://', $base);
+            }
+            return $base . '/storage/' . $cleanPath;
+        };
+
+        // Normalize document 1 (ID Document)
+        $rawDocType = strtolower(trim((string) ($data->document_type ?? 'passport')));
+        if (in_array($rawDocType, ['drivers_licence', 'drivers_license', 'driver_license'], true)) {
+            $idType = 'drivers_license';
+            $idLevel = 'secondary';
+        } elseif (in_array($rawDocType, ['national_id', 'nin'], true)) {
+            $idType = 'nin';
+            $idLevel = 'secondary';
+        } elseif (in_array($rawDocType, ['voters_card', 'voter_card'], true)) {
+            $idType = 'voters_card';
+            $idLevel = 'secondary';
+        } else {
+            $idType = 'passport';
+            $idLevel = 'primary';
+        }
+
+        $document1 = [
+            "type" => $idType,
+            "url" => $makePublicUrl($doc1Path),
+        ];
 
         if (!empty($data->document_issue_date)) {
             $document1["issue_date"] = $data->document_issue_date;
@@ -58,10 +93,17 @@ $document1 = [
             $document1["expiry_date"] = $data->document_expiry_date;
         }
 
+        // Normalize document 2 (Proof of address)
+        $rawDoc2Type = strtolower(trim((string) ($data->document2_type ?? 'bank_statement')));
+        if (in_array($rawDoc2Type, ['utility_bill', 'utility'], true)) {
+            $doc2Type = 'utility_bill';
+        } else {
+            $doc2Type = 'bank_statement';
+        }
+
         $document2 = [
-            "type" => $data->document2_type ?? "bank_statement",
-            // "url" => asset('storage/' . $data->document2),
-            "url" => asset('storage/' . $doc2Path),
+            "type" => $doc2Type,
+            "url" => $makePublicUrl($doc2Path),
         ];
 
         if (!empty($data->document2_issue_date)) {
@@ -72,24 +114,40 @@ $document1 = [
             $document2["expiry_date"] = $data->document2_expiry_date;
         }
 
-        // ✅ Build payload
+        $firstName = $user->walletVerification->first_name 
+            ?? $user->profile->first_name 
+            ?? (explode(' ', (string) $user->name)[0] ?? 'User');
+
+        $lastName = $user->walletVerification->last_name 
+            ?? $user->profile->last_name 
+            ?? (explode(' ', (string) $user->name)[1] ?? $firstName);
+
+        $otherName = $user->walletVerification->other_names 
+            ?? (explode(' ', (string) $user->name)[2] ?? '');
+
+        $dobRaw = $user->walletVerification->date_of_birth ?? $data->birthDate ?? '1990-01-01';
+
+        $idNumber = $data->document_number
+            ?? $user->walletVerification->nin
+            ?? $user->walletVerification->bvn
+            ?? $data->bvn;
+
+        $bankIdNumber = $data->bvn 
+            ?? $user->walletVerification->bvn 
+            ?? $user->walletVerification->nin 
+            ?? '';
+
         $payload = [
-            "id_level" => "primary",
-            // id_type must be the uploaded ID DOCUMENT type (national_id /
-            // passport / etc.) — the same value used in the documents array,
-            // which Oval accepts. It was previously set from the wallet KYC
-            // method, which for BVN users sent id_type "bvn" and Oval rejected
-            // it with "invalid ID type provided" (BVN is not a document type; it
-            // goes in bank_id_number below, which we already send).
-            "id_type" => strtolower($data->document_type ?? "passport"),
+            "id_level" => $idLevel,
+            "id_type" => $idType,
             "kyc_level" => "basic",
             "address" => [
                 "line1" => $data->address_line1,
-                "line2" => $data->address_line2,
+                "line2" => $data->address_line2 ?? '',
                 "city" => $data->city,
                 "state" => $data->state,
                 "country" => "NG",
-                "postal_code" => $data->postal_code,
+                "postal_code" => (string) $data->postal_code,
             ],
             "background_information" => [
                 "employment_status" => $data->employment_status,
@@ -98,15 +156,15 @@ $document1 = [
                 "source_of_funds" => $data->source_of_funds,
                 "expected_monthly_inflow" => (int) $data->expected_monthly_inflow,
             ],
-            "name_first" => $user->walletVerification->first_name,
-            "name_last" => $user->walletVerification->last_name,
-            "name_other" => $user->walletVerification->other_names,
-            "phone" => '234' . ltrim($user->phone_number, '0'),
+            "name_first" => $firstName,
+            "name_last" => $lastName,
+            "name_other" => $otherName,
+            "phone" => '234' . ltrim((string) $user->phone_number, '0'),
             "email" => $user->email,
-            "dob" => Carbon::parse($user->walletVerification->date_of_birth)->format('Y-m-d'),
-            "id_number" => $user->walletVerification->bvn,
+            "dob" => Carbon::parse($dobRaw)->format('Y-m-d'),
+            "id_number" => (string) $idNumber,
             "id_country" => strtoupper($user->walletVerification->country ?? "NG"),
-            "bank_id_number" => $data->bvn ?? "12345678901",
+            "bank_id_number" => (string) $bankIdNumber,
             "documents" => [$document1, $document2],
         ];
 
@@ -247,7 +305,7 @@ $document1 = [
 // function CreateGraphPerson(User $user, $data): array
 // {
 //     $url = "https://api.useoval.com/person";
-//     $token = env('GRAPH_API_KEY');
+//     $token = getGraphApiKey();
 
 //     $client = new Client(['timeout' => 30]);
 
@@ -367,7 +425,7 @@ $document1 = [
 function CreateGraphBankAccount(User $user, $currency): array
 {
     $url = "https://api.useoval.com/bank_account";
-    $token = env('GRAPH_API_KEY');
+    $token = getGraphApiKey();
 
     $client = new Client([
         'timeout' => 30,
@@ -432,7 +490,7 @@ function FetchGraphBankAccount($bankAccountId)
     try {
         $response = $client->request('GET', "https://api.useoval.com/bank_account/{$bankAccountId}", [
             'headers' => [
-                'Authorization' => 'Bearer ' . env('GRAPH_API_KEY'),
+                'Authorization' => 'Bearer ' . getGraphApiKey(),
                 'Accept'        => 'application/json',
             ],
         ]);
@@ -513,7 +571,7 @@ function UpdateBankAccountStatus(string $bankAccountId, string $status)
     try {
         $response = $client->request('PATCH', "https://api.useoval.com/bank_account/{$bankAccountId}", [
             'headers' => [
-                'Authorization' => 'Bearer ' . env('GRAPH_API_KEY'),
+                'Authorization' => 'Bearer ' . getGraphApiKey(),
                 'accept' => 'application/json',
                 'content-type' => 'application/json',
             ],
@@ -555,7 +613,7 @@ function GraphWhitelistBankAccount(string $bankAccountId, string $accountNumber,
     try {
         $response = $client->request('POST', "https://api.useoval.com/bank_account/{$bankAccountId}/whitelist", [
             'headers' => [
-                'Authorization' => 'Bearer ' . env('GRAPH_API_KEY'),
+                'Authorization' => 'Bearer ' . getGraphApiKey(),
                 'accept' => 'application/json',
                 'content-type' => 'application/json',
             ],
@@ -605,7 +663,7 @@ function GraphListWhitelistedAccounts(string $bankAccountId, int $page = 1, int 
 
         $response = $client->request('GET', $url, [
             'headers' => [
-                'Authorization' => 'Bearer ' . env('GRAPH_API_KEY'),
+                'Authorization' => 'Bearer ' . getGraphApiKey(),
                 'accept' => 'application/json',
             ],
         ]);
@@ -653,7 +711,7 @@ function RemoveGraphWhitelistedAccount(string $accountId, string $whitelistId): 
         $client = new Client();
         $response = $client->delete($url, [
             'headers' => [
-                'Authorization' => 'Bearer ' . env('GRAPH_API_KEY'),
+                'Authorization' => 'Bearer ' . getGraphApiKey(),
                 'Accept'        => 'application/json',
             ],
         ]);
@@ -682,7 +740,7 @@ function clearWhitelistedAccounts(string $accountId): array
         $client = new Client();
         $response = $client->delete($url, [
             'headers' => [
-                'Authorization' => 'Bearer ' . env('GRAPH_API_KEY'),
+                'Authorization' => 'Bearer ' . getGraphApiKey(),
                 'Accept'        => 'application/json',
             ],
         ]);
@@ -712,7 +770,7 @@ function fetchGraphDeposit(string $depositId): array
 
         $response = $client->get("https://api.useoval.com/deposit/{$depositId}", [
             'headers' => [
-                'Authorization' => 'Bearer ' . env('GRAPH_API_KEY'),
+                'Authorization' => 'Bearer ' . getGraphApiKey(),
                 'Accept' => 'application/json',
             ],
             'timeout' => 30,
@@ -743,7 +801,7 @@ function listGraphDeposits(int $page = 1, int $perPage = 20): array
 
         $response = $client->get("https://api.useoval.com/deposit?page={$page}&per_page={$perPage}", [
             'headers' => [
-                'Authorization' => 'Bearer ' . env('GRAPH_API_KEY'),
+                'Authorization' => 'Bearer ' . getGraphApiKey(),
                 'Accept' => 'application/json',
             ],
             'timeout' => 30,
