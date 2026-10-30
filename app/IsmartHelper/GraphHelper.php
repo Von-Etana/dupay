@@ -70,7 +70,11 @@ function CreateGraphPerson(User $user, $data): array
             $idType = 'drivers_license';
             $idLevel = 'secondary';
         } elseif (in_array($rawDocType, ['national_id', 'nin'], true)) {
-            $idType = 'nin';
+            // Graph's person API expects the literal document type
+            // `national_id` for this identity document. `nin` is the
+            // identification number, not an accepted document type when
+            // creating USD accounts.
+            $idType = 'national_id';
             $idLevel = 'secondary';
         } elseif (in_array($rawDocType, ['voters_card', 'voter_card'], true)) {
             $idType = 'voters_card';
