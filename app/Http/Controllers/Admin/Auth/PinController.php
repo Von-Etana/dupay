@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Hash;
 use Carbon\Carbon;
 use App\Models\Admin;
 use Illuminate\Support\Facades\Session;
+use App\Services\SecurityAlertService;
 
 class PinController extends Controller
 {
@@ -21,6 +22,14 @@ class PinController extends Controller
         $admin = Auth::guard('admin')->user();
 
         if (!$admin || !Hash::check($request->pin, (string) $admin->pin)) {
+            SecurityAlertService::record(
+                'admin_pin_failed',
+                'high',
+                'Failed admin PIN verification',
+                'An admin PIN verification attempt failed.',
+                $admin?->id,
+                $request->ip()
+            );
             return response()->json([
                 'status' => false
             ]);

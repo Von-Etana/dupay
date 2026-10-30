@@ -7,6 +7,7 @@ use Carbon\Carbon;
 use Illuminate\Foundation\Auth\AuthenticatesUsers;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
+use App\Services\SecurityAlertService;
 
 class LoginController extends Controller
 {
@@ -74,5 +75,20 @@ class LoginController extends Controller
         $ac['user_type'] = "2";
         $ac['module'] = "Login";
         addSiteActitvity($user, $ac);
+    }
+
+    protected function sendFailedLoginResponse(Request $request)
+    {
+        SecurityAlertService::record(
+            'admin_login_failed',
+            'high',
+            'Failed admin login',
+            'An admin login attempt failed.',
+            null,
+            $request->ip(),
+            ['login' => substr((string) $request->input($this->username()), 0, 120)]
+        );
+
+        return parent::sendFailedLoginResponse($request);
     }
 }

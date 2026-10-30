@@ -222,6 +222,15 @@
         </div>
     </div>
 
+    @can('view_security_alerts')
+        @if($openSecurityAlerts > 0)
+            <a href="{{ route('admin.security-alerts.index') }}" class="alert alert-warning d-flex justify-content-between align-items-center">
+                <span><strong>Security attention required:</strong> {{ $openSecurityAlerts }} unacknowledged security alert(s).</span>
+                <span>Review alerts &rarr;</span>
+            </a>
+        @endif
+    @endcan
+
     {{-- ── Top Stat Cards ────────────────────────────────────────────── --}}
     <div class="db-stats-grid">
 

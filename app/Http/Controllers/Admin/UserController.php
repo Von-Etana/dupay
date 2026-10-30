@@ -21,6 +21,7 @@ use App\Models\ForeignAccount;
 use App\Models\Fintech\ForeignAccountTransaction;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use App\Services\SecurityAlertService;
 
 class UserController extends Controller
 {
@@ -539,6 +540,16 @@ class UserController extends Controller
                 'user_type' => '2', 'extra' => json_encode(['id' => $user->id, 'reference' => $trx])];
             addSiteActitvity(auth()->guard('admin')->user(), $ac);
             DB::commit();
+
+            SecurityAlertService::record(
+                'admin_wallet_adjustment',
+                'high',
+                'Admin wallet adjustment',
+                "An admin {$action}ed a wallet for {$user->profile->username}.",
+                auth()->guard('admin')->id(),
+                request()->ip(),
+                ['user_id' => $user->id, 'wallet_id' => $request->wallet_id, 'amount' => (float) $request->amount, 'reference' => $trx]
+            );
 
             if ($alert) {
               try {
@@ -1126,6 +1137,16 @@ class UserController extends Controller
             ]);
     
             DB::commit();
+
+            SecurityAlertService::record(
+                'admin_foreign_wallet_adjustment',
+                'high',
+                "Admin {$currency} wallet adjustment",
+                "An admin " . ($isCredit ? 'credited' : 'debited') . " a {$currency} wallet.",
+                auth()->guard('admin')->id(),
+                request()->ip(),
+                ['user_id' => $user->id, 'currency' => $currency, 'amount' => (float) $amount, 'reference' => $trx]
+            );
 
             // Notifications are best effort and must never roll back committed funds.
             if ($alert) {

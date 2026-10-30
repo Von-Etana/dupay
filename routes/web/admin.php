@@ -28,6 +28,7 @@ use App\Http\Controllers\Admin\StampDutyController;
 use App\Http\Controllers\Admin\Auth\ForgotPinController;
 use App\Http\Controllers\Admin\ErrorLogController;
 use App\Http\Controllers\Admin\VerificationController;
+use App\Http\Controllers\Admin\SecurityAlertController;
 
 Route::group(['prefix' => 'adminoffice'], function () {
 
@@ -82,6 +83,13 @@ Route::group(['prefix' => 'adminoffice'], function () {
     
     Route::post('/verify-pin', [PinController::class, 'verify'])
     ->name('verify.pin');
+
+    Route::get('security-alerts', [SecurityAlertController::class, 'index'])
+        ->middleware('can:view_security_alerts')
+        ->name('security-alerts.index');
+    Route::post('security-alerts/{securityAlert}/acknowledge', [SecurityAlertController::class, 'acknowledge'])
+        ->middleware('can:manage_security_alerts')
+        ->name('security-alerts.acknowledge');
     
     
     //user
