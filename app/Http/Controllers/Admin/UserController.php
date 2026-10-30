@@ -550,6 +550,14 @@ class UserController extends Controller
                 request()->ip(),
                 ['user_id' => $user->id, 'wallet_id' => $request->wallet_id, 'amount' => (float) $request->amount, 'reference' => $trx]
             );
+            SecurityAlertService::sendTransactionNotice([
+                'action' => $action,
+                'currency' => 'NGN',
+                'amount' => $request->amount,
+                'user_id' => $user->id,
+                'reference' => $trx,
+                'time' => now(),
+            ]);
 
             if ($alert) {
               try {
@@ -1147,6 +1155,14 @@ class UserController extends Controller
                 request()->ip(),
                 ['user_id' => $user->id, 'currency' => $currency, 'amount' => (float) $amount, 'reference' => $trx]
             );
+            SecurityAlertService::sendTransactionNotice([
+                'action' => $isCredit ? 'Credit' : 'Debit',
+                'currency' => $currency,
+                'amount' => $amount,
+                'user_id' => $user->id,
+                'reference' => $trx,
+                'time' => now(),
+            ]);
 
             // Notifications are best effort and must never roll back committed funds.
             if ($alert) {
