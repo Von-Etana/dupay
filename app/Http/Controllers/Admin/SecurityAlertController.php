@@ -10,13 +10,15 @@ class SecurityAlertController extends Controller
 {
     public function index()
     {
-        $alerts = SecurityAlert::with('admin')
+        $alerts = SecurityAlert::with(['admin', 'acknowledgedBy'])
             ->latest()
             ->paginate(25);
 
         $openCount = SecurityAlert::whereNull('acknowledged_at')->count();
+        $criticalCount = SecurityAlert::whereIn('severity', ['critical', 'high'])->whereNull('acknowledged_at')->count();
+        $todayCount = SecurityAlert::whereDate('created_at', today())->count();
 
-        return view('admin.security_alerts.index', compact('alerts', 'openCount'));
+        return view('admin.security_alerts.index', compact('alerts', 'openCount', 'criticalCount', 'todayCount'));
     }
 
     public function acknowledge(Request $request, SecurityAlert $securityAlert)
