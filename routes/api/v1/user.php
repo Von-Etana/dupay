@@ -153,7 +153,7 @@ Route::group(['middleware'=>'verifyTelecomAPiUsers'], function(){
       
      Route::post('virtual-card/withdraw', [VirtualCardController::class, 'withdrawFromVirtualCard'])->name("withdrawFromVirtualCard")->middleware(['notBlocked', 'throttle:money']);
      Route::post('virtual-card/status-update', [VirtualCardController::class, 'virtualCardStatusUpdate'])->name("virtualCardStatusUpdate");
-     Route::post('virtual-card/freeze-or-unfreeze', [VirtualCardController::class, 'freezeUnfreeze'])->name("fundVirtualCard");
+     Route::post('virtual-card/freeze-or-unfreeze', [VirtualCardController::class, 'freezeUnfreeze'])->name("freezeUnfreezeVirtualCard");
      
      Route::get('virtual-card/transactions/{id}/{currency}', [VirtualCardController::class, 'getVirtualCardTransactions'])->name("getVirtualCardTransaction");
      
