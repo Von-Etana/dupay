@@ -79,30 +79,6 @@ void main() async {
     await Firebase.initializeApp();
     NotificationService.navigatorKey = navigatorKey;
     FcmTokenSync.install();
-    NotificationService().onForegroundMessage = (message) {
-      final notification = message.notification;
-      if (notification == null) return;
-      final title = notification.title ?? 'New notification';
-      final body = notification.body;
-      notificationMessengerKey.currentState
-        ?..hideCurrentSnackBar()
-        ..showSnackBar(
-          SnackBar(
-            content: Text(
-              body == null || body.isEmpty ? title : '$title\n$body',
-            ),
-            duration: const Duration(seconds: 6),
-            behavior: SnackBarBehavior.floating,
-            action: SnackBarAction(
-              label: 'View',
-              textColor: const Color(0xFF7CA183),
-              onPressed: () {
-                NotificationService.handleNotificationTap(message);
-              },
-            ),
-          ),
-        );
-    };
     unawaited(NotificationService().initialize());
   } catch (e) {
     print('⚠️ Firebase/FCM init skipped: $e');

@@ -11,6 +11,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:logger/logger.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 /// Must be a top-level function (not a class method) and annotated so the
 /// Flutter engine can find it when the app is killed/in the background.
@@ -30,6 +31,7 @@ class NotificationService {
 
   final Logger _logger = Logger();
   final FirebaseMessaging _messaging = FirebaseMessaging.instance;
+  final FlutterLocalNotificationsPlugin _local = FlutterLocalNotificationsPlugin();
 
   /// Global navigator key reference for routing upon notification taps.
   static GlobalKey<NavigatorState>? navigatorKey;
@@ -48,6 +50,27 @@ class NotificationService {
   void Function(RemoteMessage message)? onForegroundMessage;
 
   bool _initialized = false;
+
+  Future<void> _initLocalNotifications() async {
+    const android = AndroidInitializationSettings('@mipmap/launcher_icon');
+    const ios = DarwinInitializationSettings();
+    await _local.initialize(
+      const InitializationSettings(android: android, iOS: ios),
+      onDidReceiveNotificationResponse: (response) {
+        final payload = response.payload;
+        if (payload != null && payload.isNotEmpty) {
+          handleNotificationTap(RemoteMessage(data: {'route': payload}));
+        }
+      },
+    );
+    await _local
+        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+        ?.createNotificationChannel(const AndroidNotificationChannel(
+          'high_importance', 'High importance notifications',
+          description: 'DuPay alerts', importance: Importance.max,
+          playSound: true, enableVibration: true,
+        ));
+  }
 
   /// Resolves the destination route from notification data payload.
   static String? resolveRoute(Map<String, dynamic> data) {
@@ -82,6 +105,7 @@ class NotificationService {
     _initialized = true;
 
     try {
+      await _initLocalNotifications();
       // 1. Background/terminated handler (must be registered before runApp).
       FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
 
@@ -132,6 +156,21 @@ class NotificationService {
 
       // 7. Foreground messages (app open). Wire to local notifications / UI banner.
       FirebaseMessaging.onMessage.listen((message) {
+        final n = message.notification;
+        if (n != null) {
+          unawaited(_local.show(
+            message.hashCode,
+            n.title ?? 'DuPay',
+            n.body,
+            const NotificationDetails(
+              android: AndroidNotificationDetails('high_importance', 'High importance notifications',
+                channelDescription: 'DuPay alerts', importance: Importance.max,
+                priority: Priority.high, playSound: true, enableVibration: true),
+              iOS: DarwinNotificationDetails(presentAlert: true, presentSound: true),
+            ),
+            payload: resolveRoute(message.data),
+          ));
+        }
         onForegroundMessage?.call(message);
       });
 

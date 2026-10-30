@@ -15,6 +15,8 @@ import '../repositories/auth_repository.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:dupay/services/auth/session_events.dart';
+import 'package:dupay/services/storage/secure_storage_service.dart';
+import 'package:uuid/uuid.dart';
 
 class AuthState {
   final bool isLoading;
@@ -105,6 +107,11 @@ class AuthNotifier extends StateNotifier<AuthState> {
     state = state.copyWith(isLoading: true, error: null);
 
     try {
+      var deviceId = await SecureStorageService.getDeviceId();
+      if (deviceId == null || deviceId.isEmpty) {
+        deviceId = const Uuid().v4();
+        await SecureStorageService.saveDeviceId(deviceId);
+      }
       LoginRequest request;
 
       if (email != null && email.isNotEmpty) {
@@ -113,6 +120,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
           email: email,
           password: password,
           fcmToken: fcmToken,
+          deviceId: deviceId,
         );
       } else if (phoneNumber != null && phoneNumber.isNotEmpty) {
         print('🔐 AuthProvider: Creating login request with phone');
@@ -120,6 +128,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
           phoneNumber: phoneNumber,
           password: password,
           fcmToken: fcmToken,
+          deviceId: deviceId,
         );
       } else {
         throw Exception('Either email or phone number is required');

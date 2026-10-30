@@ -25,6 +25,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   bool _isPasswordObscured = true;
   final LocalAuthentication _localAuth = LocalAuthentication();
   bool _rememberMe = false;
+  bool _biometricLoading = false;
+  bool _loginSubmitting = false;
 
   // ── Top message (replaces bottom SnackBar) ──────────────────────────────────
   OverlayEntry? _topMessageEntry;
@@ -143,6 +145,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _handleLogin() async {
+    if (_loginSubmitting) return;
+    setState(() => _loginSubmitting = true);
+    try {
     if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
       _showTopMessage('Please fill in all fields');
       return;
@@ -185,6 +190,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       if (error != null) {
         _showTopMessage(error);
       }
+    }
+    } finally {
+      if (mounted) setState(() => _loginSubmitting = false);
     }
   }
 
@@ -244,6 +252,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   // platform errors into messages a user can act on.
   // ───────────────────────────────────────────────────────────────────────────
   Future<void> _handleBiometricLogin() async {
+    if (_biometricLoading) return;
+    setState(() => _biometricLoading = true);
+    try {
+      await _performBiometricLogin();
+    } finally {
+      if (mounted) setState(() => _biometricLoading = false);
+    }
+  }
+
+  Future<void> _performBiometricLogin() async {
     try {
       if (!await SecureStorageService.isBiometricEnabled()) {
         if (mounted)
@@ -558,7 +576,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                           vertical: 16.h,
                                         ),
                                       ),
-                                      onPressed: _handleLogin,
+                                      onPressed: _loginSubmitting ? null : _handleLogin,
                                       child: Consumer(
                                         builder: (context, ref, child) {
                                           final isLoading = ref.watch(
@@ -635,12 +653,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                   children: [
                                     const SizedBox(height: 4),
                                     IconButton(
-                                      onPressed: _handleBiometricLogin,
-                                      icon: const Icon(
-                                        Icons.fingerprint_rounded,
-                                        size: 52,
-                                        color: Color(0xFF34544A),
-                                      ),
+                                      onPressed: _biometricLoading ? null : _handleBiometricLogin,
+                                      icon: _biometricLoading
+                                          ? const SizedBox(width: 42, height: 42, child: CircularProgressIndicator(strokeWidth: 3, color: Color(0xFF34544A)))
+                                          : const Icon(Icons.fingerprint_rounded, size: 52, color: Color(0xFF34544A)),
                                     ),
                                   ],
                                 ),

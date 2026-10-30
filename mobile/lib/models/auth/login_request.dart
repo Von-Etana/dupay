@@ -4,12 +4,14 @@ class LoginRequest {
   final String? phoneNumber;
   final String password;
   final String? fcmToken;
+  final String? deviceId;
 
   LoginRequest({
     this.email,
     this.phoneNumber,
     required this.password,
     this.fcmToken,
+    this.deviceId,
   }) : assert(email != null || phoneNumber != null,
             'Either email or phone number is required');
 
@@ -20,6 +22,7 @@ class LoginRequest {
         'phone_number': phoneNumber,
       'password': password,
       if (fcmToken != null && fcmToken!.isNotEmpty) 'fcmToken': fcmToken,
+      if (deviceId != null && deviceId!.isNotEmpty) 'device_id': deviceId,
     };
   }
 
@@ -27,11 +30,13 @@ class LoginRequest {
     required String email,
     required String password,
     String? fcmToken,
+    String? deviceId,
   }) {
     return LoginRequest(
       email: email,
       password: password,
       fcmToken: fcmToken,
+      deviceId: deviceId,
     );
   }
 
@@ -39,11 +44,13 @@ class LoginRequest {
     required String phoneNumber,
     required String password,
     String? fcmToken,
+    String? deviceId,
   }) {
     return LoginRequest(
       phoneNumber: phoneNumber,
       password: password,
       fcmToken: fcmToken,
+      deviceId: deviceId,
     );
   }
 }
