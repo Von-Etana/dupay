@@ -456,7 +456,7 @@ class UserController extends Controller
         $this->validate($request, [
             'amount' => ['required', 'numeric', 'min:0.01', 'max:1000000000', 'regex:/^\d+(\.\d{1,2})?$/'],
             'action' => ['nullable', 'in:on'],
-            'reason' => ['required', 'string', 'max:255'],
+            'reason' => ['nullable', 'string', 'max:255'],
             'wallet_id' => ['required', 'in:1,2,3'],
             'alert' => '',
         ]);

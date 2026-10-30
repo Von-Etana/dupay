@@ -923,7 +923,7 @@
 						</span>
 					</div>
 					@endcan
-					@canany('update_user_bonus', 'view_user_bonus_history', $data)
+					@canany(['update_user_bonus', 'view_user_bonus_history'], $data)
 					<div class="wallet-action text-center d-flex justify-content-around">
 						@can('update_user_bonus', $data)
 						<a class="btn btn-success collapsed" role="menu" data-bs-toggle="collapse"
@@ -1557,11 +1557,17 @@
         .then(data => {
             if (data.status === true) {
                 pinModal.hide();
-                activeForm.submit(); // ✅ submits the correct action
+                if (activeForm) {
+                    activeForm.requestSubmit();
+                }
             } else {
                 errorEl.textContent = 'Invalid PIN';
                 errorEl.classList.remove('d-none');
             }
+        })
+        .catch(() => {
+            errorEl.textContent = 'PIN verification failed. Please try again.';
+            errorEl.classList.remove('d-none');
         });
     });
 </script>
@@ -1612,11 +1618,17 @@
             if (data.status === true) {
                 // PIN correct, submit form
                 currencyPinModal.hide();
-                activeCurrencyForm.submit();
+                if (activeCurrencyForm) {
+                    activeCurrencyForm.requestSubmit();
+                }
             } else {
                 errorEl.textContent = 'Invalid PIN';
                 errorEl.classList.remove('d-none');
             }
+        })
+        .catch(() => {
+            errorEl.textContent = 'PIN verification failed. Please try again.';
+            errorEl.classList.remove('d-none');
         });
     });
 </script>
