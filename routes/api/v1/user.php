@@ -3,7 +3,6 @@
 use App\Http\Controllers\Api\V1\GeneralController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\Ecommerce\IndexController as EcommerceIndexController;
-use App\Http\Controllers\Api\V1\Ecommerce\ProductController;
 use App\Http\Controllers\Api\V1\KYCVerificationController;
 use App\Http\Controllers\Api\V1\Telecom\AirtimeController;
 use App\Http\Controllers\Api\V1\Telecom\BillController;
@@ -302,12 +301,7 @@ Route::get('/get-json', [RechargePinController::class, 'getJson']);
 
 Route::post('/job/card-maintenance', [CardMaintenanceController::class, 'chargeAtmCardMaintenance']);
 
-//ecommerce
-Route::group(['middleware'=>'verifyTelecomAPiUsers', 'prefix' => 'ecommerce'], function(){
-    Route::get('product', [ProductController::class, 'index'])->name('product');
-    Route::get('product/details/{id}', [ProductController::class, 'show'])->name('viewProduct');
-    
-});
+// Ecommerce product routes are disabled until ProductController is restored.
 
 
 
@@ -315,16 +309,6 @@ Route::group(['middleware'=>'verifyTelecomAPiUsers', 'prefix' => 'ecommerce'], f
 Route::group(['middleware'=>'auth:api', 'prefix' => 'ecommerce'], function(){
 
     Route::get('get-category', [EcommerceIndexController::class, 'getCategory'])->name('getCategory');
-
-
-    
-    Route::get('my-product', [ProductController::class, 'myIndex'])->name('myProduct');
-    Route::post('product/create', [ProductController::class, 'store'])->name('storeProduct');
-    Route::post('product/report', [ProductController::class, 'reportProduct'])->name('reportProduct');
-    Route::post('product/request-call-back', [ProductController::class, 'requestCallBack'])->name('requestCallBack');
-    Route::post('product/make-unavailable', [ProductController::class, 'markProductUnavailable'])->name('markProductUnavailable');
-   
-    Route::delete('product/{id}', [ProductController::class, 'destroy'])->name('destroyProduct');
 
 
 });
