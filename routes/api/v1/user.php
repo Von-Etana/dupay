@@ -285,7 +285,8 @@ Route::get('fees', [UserController::class, 'fees'])->name('fees');
 
 Route::post('/webhooks/strowallet/atm/withdraw', [StroWalletWebhookController::class, 'handleHook']);
 Route::post('/webhooks/strowallet/approve', [StroWalletWebhookController::class, 'debitTransaction']);
-Route::post('/webhooks/safehaven', [SafeHavenWebhookController::class, 'virtualAccountTransferHook']);
+Route::post('/webhooks/safehaven', [SafeHavenWebhookController::class, 'virtualAccountTransferHook'])->name('safehavenWebHook.api');
+Route::post('/v1/webhooks/safehaven', [SafeHavenWebhookController::class, 'virtualAccountTransferHook'])->name('safehavenWebHook.api.v1');
 Route::post('/webhooks/fincra', [FincraWebhookController::class, 'handle']);
 Route::post('/webhooks/graph', [GraphWebHookController::class, 'handle']);
 

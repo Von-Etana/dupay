@@ -182,11 +182,14 @@ function verifySafeHavenTransfer(string $sessionId): array
             ];
         }
 
+        $status = strtolower((string) ($responseData['data']['status'] ?? ''));
+        $isReversed = filter_var($responseData['data']['isReversed'] ?? false, FILTER_VALIDATE_BOOLEAN);
+
         $isVerified = (
-            $responseData['statusCode'] === 200 &&
-            $responseData['responseCode'] === '00' &&
-            ($responseData['data']['status'] ?? null) === 'Completed' &&
-            ($responseData['data']['isReversed'] ?? true) === false
+            (int) ($responseData['statusCode'] ?? 0) === 200 &&
+            (string) ($responseData['responseCode'] ?? '') === '00' &&
+            in_array($status, ['completed', 'successful', 'success'], true) &&
+            $isReversed === false
         );
 
         return [
