@@ -16,11 +16,46 @@ workflows:
           include: true
           source: true
     scripts:
-      - name: Set up Firebase config (if provided)
+      - name: Set up Firebase config
         script: |
           if [ -n "$GOOGLE_SERVICE_INFO_PLIST" ]; then
             echo "$GOOGLE_SERVICE_INFO_PLIST" | base64 --decode > ios/Runner/GoogleService-Info.plist 2>/dev/null || echo "$GOOGLE_SERVICE_INFO_PLIST" > ios/Runner/GoogleService-Info.plist
-            echo "GoogleService-Info.plist placed in ios/Runner/"
+            echo "GoogleService-Info.plist placed from environment variable."
+          elif [ ! -f "ios/Runner/GoogleService-Info.plist" ]; then
+            echo "No GoogleService-Info.plist provided in environment; generating fallback for Xcode compilation..."
+            cat << 'EOF' > ios/Runner/GoogleService-Info.plist
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>API_KEY</key>
+	<string>AIzaSyDummyKeyForBuildOnly123456789</string>
+	<key>GCM_SENDER_ID</key>
+	<string>123456789012</string>
+	<key>PLIST_VERSION</key>
+	<string>1</string>
+	<key>BUNDLE_ID</key>
+	<string>com.my.dupay.app.new</string>
+	<key>PROJECT_ID</key>
+	<string>dupay-app</string>
+	<key>STORAGE_BUCKET</key>
+	<string>dupay-app.appspot.com</string>
+	<key>IS_ADS_ENABLED</key>
+	<false/>
+	<key>IS_ANALYTICS_ENABLED</key>
+	<false/>
+	<key>IS_APPINVITE_ENABLED</key>
+	<true/>
+	<key>IS_GCM_ENABLED</key>
+	<true/>
+	<key>IS_SIGNIN_ENABLED</key>
+	<true/>
+	<key>GOOGLE_APP_ID</key>
+	<string>1:123456789012:ios:abcdef1234567890</string>
+</dict>
+</plist>
+EOF
+            echo "Fallback GoogleService-Info.plist generated successfully."
           fi
       - name: Get Flutter packages
         script: |
@@ -66,11 +101,39 @@ workflows:
           include: true
           source: true
     scripts:
-      - name: Set up Firebase config (if provided)
+      - name: Set up Firebase config
         script: |
           if [ -n "$GOOGLE_SERVICES_JSON" ]; then
             echo "$GOOGLE_SERVICES_JSON" | base64 --decode > android/app/google-services.json 2>/dev/null || echo "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
-            echo "google-services.json placed in android/app/"
+            echo "google-services.json placed from environment variable."
+          elif [ ! -f "android/app/google-services.json" ]; then
+            echo "No google-services.json provided in environment; generating fallback for Gradle compilation..."
+            cat << 'EOF' > android/app/google-services.json
+{
+  "project_info": {
+    "project_number": "123456789012",
+    "project_id": "dupay-app",
+    "storage_bucket": "dupay-app.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:123456789012:android:abcdef1234567890",
+        "android_client_info": {
+          "package_name": "com.my.dupay.app.new"
+        }
+      },
+      "api_key": [
+        {
+          "current_key": "AIzaSyDummyKeyForBuildOnly123456789"
+        }
+      ]
+    }
+  ],
+  "configuration_version": "1"
+}
+EOF
+            echo "Fallback google-services.json generated successfully."
           fi
       - name: Get Flutter packages
         script: |
