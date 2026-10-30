@@ -16,6 +16,7 @@ use Illuminate\Http\Request;
 use Carbon\Carbon;
 use App\Models\ForeignAccount;
 use App\Models\SecurityAlert;
+use Illuminate\Support\Facades\Schema;
 
 class DashboardController extends Controller
 {
@@ -45,7 +46,9 @@ class DashboardController extends Controller
         $data["onlineUsers"] =  visitor()->onlineVisitors(User::class);
         $data["totalUSDBalance"] = User::sum('usd_balance');
         $data["totalEURBalance"] = User::sum('eur_balance');
-        $data["openSecurityAlerts"] = SecurityAlert::whereNull('acknowledged_at')->count();
+        $data["openSecurityAlerts"] = Schema::hasTable('security_alerts')
+            ? SecurityAlert::whereNull('acknowledged_at')->count()
+            : 0;
         
         $data["totalUsdForeignUsers"] = number_format(
             ForeignAccount::where('currency', 'USD')->distinct('user_id')->count('user_id')
