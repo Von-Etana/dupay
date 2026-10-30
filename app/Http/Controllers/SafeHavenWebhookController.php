@@ -27,7 +27,16 @@ class SafeHavenWebhookController extends Controller
     
             $payload = $request->all();
             
-            $sessionId = $request->input('data.sessionId');
+            // SafeHaven can deliver the session id either nested in `data` or
+            // at the top level depending on the webhook event version.
+            $sessionId = $request->input('data.sessionId')
+                ?? $request->input('sessionId');
+            if (!is_string($sessionId) || trim($sessionId) === '') {
+                Log::channel('safehaven')->warning('Webhook missing session id', [
+                    'payload' => $payload,
+                ]);
+                return response()->json(['status' => 'failed', 'message' => 'Missing sessionId'], 422);
+            }
             
             $verification = verifySafeHavenTransfer($sessionId);
 
@@ -60,10 +69,13 @@ class SafeHavenWebhookController extends Controller
             //     }
             // }
     
+            $eventType = strtolower((string) ($payload['type'] ?? ''));
+            $eventStatus = strtolower((string) ($payload['data']['status'] ?? ''));
+            $responseCode = (string) ($payload['data']['responseCode'] ?? '');
             if (
-                strtolower($payload['type']) !== 'transfer' ||
-                strtolower($payload['data']['status']) !== 'completed' ||
-                $payload['data']['responseCode'] !== '00'
+                $eventType !== 'transfer' ||
+                !in_array($eventStatus, ['completed', 'successful', 'success'], true) ||
+                $responseCode !== '00'
             ) {
                 $errorMsg = "SafeHaven Webhook Error: Transaction not successful";
                 Log::warning($errorMsg, [
@@ -74,9 +86,12 @@ class SafeHavenWebhookController extends Controller
                 return response($errorMsg, 400);
             }
     
-            $paymentReference = $payload['data']['paymentReference'];
-            $accountNumber = $payload['data']['creditAccountNumber'];
-            $amountPaid = $payload['data']['amount'];
+            $paymentReference = (string) ($payload['data']['paymentReference'] ?? '');
+            $accountNumber = trim((string) ($payload['data']['creditAccountNumber'] ?? ''));
+            $amountPaid = (float) ($payload['data']['amount'] ?? 0);
+            if ($paymentReference === '' || $accountNumber === '' || $amountPaid <= 0) {
+                return response()->json(['status' => 'failed', 'message' => 'Invalid transfer payload'], 422);
+            }
             $paidOn = $payload['data']['approvedAt'] ?? now();
     
             $bankAccount = VirtualAccount::where('account_number', $accountNumber)->first();

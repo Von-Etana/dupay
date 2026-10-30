@@ -99,10 +99,10 @@ Route::group(['prefix' => 'adminoffice'], function () {
     Route::post('users/update-js2/{username}', [UserController::class, 'updateReceiveSms'])->name('UserUpdateJsAction2');
     
     Route::get('users/wallet-action/{username}', [UserController::class, 'userWalletAction'])->name('AdminUserWalletAction');
-    Route::post('users/wallet-action/{username}', [UserController::class, 'updateUserWallet'])->name('AdminUserWalletAction');
+    Route::post('users/wallet-action/{username}', [UserController::class, 'updateUserWallet'])->name('AdminUserWalletAction.post');
     
     Route::get('users/level-action/{username}', [UserController::class, 'userLevelAction'])->name('AdminUserLevelAction');
-    Route::post('users/level-action/{username}', [UserController::class, 'updateUserLevel'])->name('AdminUserLevelAction');
+    Route::post('users/level-action/{username}', [UserController::class, 'updateUserLevel'])->name('AdminUserLevelAction.post');
     
     Route::post('users/transaction-pin/{username}', [UserController::class, 'resetTransactionPin'])->name('AdminResetUserTransactionPin');
     Route::post('users/reset-password/{username}', [UserController::class, 'resetPassword'])->name('AdminResetUserPassword');
@@ -251,7 +251,6 @@ Route::group(['prefix' => 'adminoffice'], function () {
     Route::post('transactions/bulk/delete',[TransactionController::class, 'bulk_delete'])->name('transactions.bulk_delete');
     Route::post('transactions-edit-bulk-status/', [TransactionController::class, 'editBulkTransactionStatus'])->name('editBulkTransactionStatus');
     Route::post('transactions-verify-status-api/', [TransactionController::class, 'verifyTransactionFromApi'])->name('verifyTransactionApiStatus');
-    Route::post('transactions/bulk/delete',[TransactionController::class, 'bulk_delete'])->name('transactions.bulk_delete');
     Route::get('transaction/view/{reference}', [TransactionController::class, 'transactionView'])->name('transaction.view');
     
     
@@ -262,9 +261,9 @@ Route::group(['prefix' => 'adminoffice'], function () {
 
     //settings
     Route::get('settings/password', [SettingsController::class, 'passwordSettings'])->name('PasswordSetting');
-    Route::post('settings/password', [SettingsController::class, 'updatePassword'])->name('PasswordSetting');
+    Route::post('settings/password', [SettingsController::class, 'updatePassword'])->name('PasswordSetting.post');
     Route::get('settings/{pageType}', [SettingsController::class, 'edit'])->name('settings');
-    Route::post('settings/{pageType}', [SettingsController::class, 'update'])->name('settings');
+    Route::post('settings/{pageType}', [SettingsController::class, 'update'])->name('settings.post');
     
     
     
@@ -273,9 +272,9 @@ Route::group(['prefix' => 'adminoffice'], function () {
     Route::get('page/view-details/{pageType}', [GeneralViewController::class, 'show'])->name('ViewItemDetails');
     Route::get('page/general-ajax/{pageType}', [GeneralViewController::class, 'ajax'])->name('ajaxGetItem');
     Route::get('page/add/{pageType}/{id?}', [GeneralViewController::class, 'create'])->name('AddNewItem');
-    Route::post('page/add/{pageType}/{id?}', [GeneralViewController::class, 'store'])->name('AddNewItem');
+    Route::post('page/add/{pageType}/{id?}', [GeneralViewController::class, 'store'])->name('AddNewItem.post');
     Route::get('page/edit/{pageType}/{id}', [GeneralViewController::class, 'edit'])->name('UpdateItem');
-    Route::put('page/edit/{pageType}/{id}', [GeneralViewController::class, 'update'])->name('UpdateItem');
+    Route::put('page/edit/{pageType}/{id}', [GeneralViewController::class, 'update'])->name('UpdateItem.put');
     Route::put('page/update/{pageType}/{id}', [GeneralViewController::class, 'ajaxUpdate'])->name('UpdateItemApi');
     Route::delete('page/delete/{pageType}/{id}', [GeneralViewController::class, 'destroy'])->name('DeleteItem');
     Route::delete('page/delete-bulk/{pageType}', [GeneralViewController::class, 'bulkDestroy'])->name('BulkDeleteItem');
