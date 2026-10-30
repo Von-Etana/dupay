@@ -1,4 +1,4 @@
-<form action="{{ route('admin.AdminUserWalletAction', [$data->profile->username]) }}" method="POST" class="wallet-action-form" onsubmit="return false;">
+<form action="{{ route('admin.AdminUserWalletAction.post', [$data->profile->username]) }}" method="POST" class="wallet-action-form">
 
     @csrf
     <input type="hidden" name="wallet_id" value="{{ $wallet_id }}">

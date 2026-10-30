@@ -749,7 +749,7 @@
 						<div id="TopupUSDWallet" class="collapse" aria-labelledby="TopupUSDWalletLabel"
 							data-bs-parent="#toggleAccordion">
 							<div class="card-body">
-								<form class="currency-topup-form" action="{{ route('admin.user.topup', ['id' => $data->id, 'currency' => 'USD']) }}" method="POST" onsubmit="return false;">
+								<form class="currency-topup-form" action="{{ route('admin.user.topup', ['id' => $data->id, 'currency' => 'USD']) }}" method="POST">
 									@csrf
 									<div class="form-custom form-label mt-3">
 										<label for="amount" class="label">Amount</label>
@@ -1031,7 +1031,7 @@
 					<div id="TopupEURWallet" class="collapse" aria-labelledby="TopupEURWalletLabel"
 						data-bs-parent="#toggleAccordion">
 						<div class="card-body">
-							<form class="currency-topup-form" action="{{ route('admin.user.topup', ['id' => $data->id, 'currency' => 'EUR']) }}" method="POST" onsubmit="return false;">
+								<form class="currency-topup-form" action="{{ route('admin.user.topup', ['id' => $data->id, 'currency' => 'EUR']) }}" method="POST">
 								@csrf
 								<div class="form-custom form-label mt-3">
 									<label for="amount" class="label">Amount</label>

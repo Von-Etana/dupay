@@ -20,7 +20,9 @@ class GeneralViewController extends Controller
 
     public function __construct()
     {
-        $this->pageType = request()->route()->parameter('pageType');
+        // Route inspection/serialization runs controllers without an active
+        // request route. Keep construction safe in CLI contexts.
+        $this->pageType = request()->route()?->parameter('pageType');
     }
 
     /**
