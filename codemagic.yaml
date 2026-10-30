@@ -16,12 +16,19 @@ workflows:
           include: true
           source: true
     scripts:
+      - name: Set up Firebase config (if provided)
+        script: |
+          if [ -n "$GOOGLE_SERVICE_INFO_PLIST" ]; then
+            echo "$GOOGLE_SERVICE_INFO_PLIST" | base64 --decode > ios/Runner/GoogleService-Info.plist 2>/dev/null || echo "$GOOGLE_SERVICE_INFO_PLIST" > ios/Runner/GoogleService-Info.plist
+            echo "GoogleService-Info.plist placed in ios/Runner/"
+          fi
       - name: Get Flutter packages
         script: |
           flutter packages pub get
-      - name: Install CocoaPods dependencies
+      - name: Generate iOS build config & CocoaPods
         script: |
-          cd ios && pod install
+          flutter build ios --config-only --release
+          cd ios && pod install --repo-update
       - name: Set up code signing settings on Xcode project
         script: |
           if [ -n "$APP_STORE_CONNECT_KEY_IDENTIFIER" ] || [ -n "$CM_CERTIFICATE" ]; then
@@ -40,6 +47,8 @@ workflows:
     artifacts:
       - mobile/build/ios/ipa/*.ipa
       - mobile/build/ios/archive/*.xcarchive
+      - build/ios/ipa/*.ipa
+      - build/ios/archive/*.xcarchive
       - /tmp/xcodebuild_logs/*.log
 
   android-workflow:
@@ -57,6 +66,12 @@ workflows:
           include: true
           source: true
     scripts:
+      - name: Set up Firebase config (if provided)
+        script: |
+          if [ -n "$GOOGLE_SERVICES_JSON" ]; then
+            echo "$GOOGLE_SERVICES_JSON" | base64 --decode > android/app/google-services.json 2>/dev/null || echo "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
+            echo "google-services.json placed in android/app/"
+          fi
       - name: Get Flutter packages
         script: |
           flutter packages pub get
@@ -67,3 +82,5 @@ workflows:
     artifacts:
       - mobile/build/app/outputs/**/*.aab
       - mobile/build/app/outputs/**/*.apk
+      - build/app/outputs/**/*.aab
+      - build/app/outputs/**/*.apk
