@@ -20,3 +20,21 @@ firebase_credentials.json
 *.bak*
 .DS_Store
 .phpunit.result.cache
+
+# Flutter/mobile build output and signing material
+mobile/.dart_tool/
+mobile/build/
+mobile/.gradle/
+mobile/android/.gradle/
+mobile/android/key.properties
+mobile/android/local.properties
+mobile/android/app/google-services.json
+mobile/android/app/*.jks
+mobile/android/app/*.keystore
+mobile/ios/Runner/GoogleService-Info.plist
+mobile/ios/Flutter/ephemeral/
+mobile/ios/Flutter/ephemeral/**
+mobile/*.iml
+mobile/.flutter-plugins*
+mobile/.metadata
+mobile/*.docx
