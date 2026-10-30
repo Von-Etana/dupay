@@ -271,6 +271,31 @@ function CreateGraphPerson(User $user, $data): array
         $errorBody = $e->getResponse()->getBody()->getContents();
         $decodedError = json_decode($errorBody, true);
 
+        // Graph is idempotent by identity information. If a previous attempt
+        // created the person but the local save failed, Graph returns a
+        // duplicate-person error with the existing person id. Adopt that id
+        // locally so approving the request can continue with bank creation.
+        $duplicateMessage = (string) ($decodedError['message'] ?? $errorBody);
+        $existingPersonId = null;
+        if (stripos($duplicateMessage, 'already exists') !== false) {
+            preg_match('/\b[a-f0-9]{16,}\b/i', $duplicateMessage, $matches);
+            $existingPersonId = $matches[0] ?? null;
+            if ($existingPersonId) {
+                $user->forceFill(['graph_person_id' => $existingPersonId])->save();
+                Log::warning('Adopted existing Graph person after duplicate response', [
+                    'user_id' => $user->id,
+                    'graph_person_id' => $existingPersonId,
+                ]);
+                return [
+                    'status' => true,
+                    'message' => 'Existing Graph person linked successfully',
+                    'graph_person_id' => $existingPersonId,
+                    'graph_person_saved' => true,
+                    'data' => ['id' => $existingPersonId],
+                ];
+            }
+        }
+
         Log::error('Graph API Client Error', [
             'url' => $url,
             'payload' => $payload,
