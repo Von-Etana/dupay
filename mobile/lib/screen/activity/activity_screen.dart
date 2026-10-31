@@ -360,6 +360,22 @@ class _ActivityScreenState extends ConsumerState<ActivityScreen> {
   }
 
   void _openReceipt(TransactionModel tx) {
+    final extraFields = <ReceiptField>[];
+    if (tx.metadata != null) {
+      final token = tx.metadata!['token'] ?? tx.metadata!['meter_token'];
+      if (token != null && token.toString().trim().isNotEmpty) {
+        extraFields.add(ReceiptField('Token', token.toString().trim(), isBold: true));
+      }
+      final units = tx.metadata!['units'] ?? tx.metadata!['unit'];
+      if (units != null && units.toString().trim().isNotEmpty) {
+        extraFields.add(ReceiptField('Units', units.toString().trim()));
+      }
+      final meter = tx.metadata!['meter_number'] ?? tx.metadata!['decoder_number'];
+      if (meter != null && meter.toString().trim().isNotEmpty) {
+        extraFields.add(ReceiptField('Account / Meter', meter.toString().trim()));
+      }
+    }
+
     Navigator.push(context, MaterialPageRoute(
       builder: (_) => TransactionReceiptScreen(
         data: TransactionReceiptData(
@@ -374,6 +390,7 @@ class _ActivityScreenState extends ConsumerState<ActivityScreen> {
           finalBalance:   tx.metadata?['final_balance']?.toString() ?? '',
           date:           tx.createdAt,
           phoneNumber:    tx.metadata?['phone_number']?.toString(),
+          extraFields:    extraFields.isNotEmpty ? extraFields : null,
         ),
       ),
     ));

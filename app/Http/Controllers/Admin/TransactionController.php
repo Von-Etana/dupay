@@ -21,6 +21,7 @@ use Illuminate\Support\Facades\Session;
 use Yajra\DataTables\Facades\DataTables;
 use Illuminate\Support\Str;
 use FirebaseUserUpdate;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class TransactionController extends Controller
 {
@@ -109,6 +110,24 @@ class TransactionController extends Controller
             $data["transaction"] = $transaction;
     
             return view('admin.transaction.view', $data);
+    }
+
+    public function downloadPDF($reference)
+    {
+        $transaction = Transaction::where('reference', $reference)
+            ->orWhere('id', $reference)
+            ->first();
+
+        if (!$transaction) {
+            return redirect()->back()->with('error', 'Transaction not found');
+        }
+
+        $data['title'] = "Transaction Receipt";
+        $data['transaction'] = $transaction;
+        $data['data'] = $transaction;
+
+        $pdf = Pdf::loadView('pdf.transaction_receipt', $data);
+        return $pdf->download("Receipt_{$reference}.pdf");
     }
 
 

@@ -35,6 +35,7 @@ class TransactionReceiptData {
   final String finalBalance;
   final DateTime date;
   final String? phoneNumber;
+  final List<ReceiptField>? extraFields;
 
   const TransactionReceiptData({
     required this.service,
@@ -48,12 +49,14 @@ class TransactionReceiptData {
     required this.finalBalance,
     required this.date,
     this.phoneNumber,
+    this.extraFields,
   });
 
   /// Convenience: build from a raw API response map.
   factory TransactionReceiptData.fromApiMap(Map<String, dynamic> m, {
     required String service,
     required String amount,
+    List<ReceiptField>? extraFields,
   }) {
     return TransactionReceiptData(
       service: service,
@@ -67,6 +70,7 @@ class TransactionReceiptData {
       finalBalance: m['final_balance']?.toString() ?? '',
       date: DateTime.now(),
       phoneNumber: m['phone_number'],
+      extraFields: extraFields,
     );
   }
 }
@@ -101,6 +105,20 @@ class TransactionReceiptScreen extends StatelessWidget {
       'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
     ];
     return '$hour:$min $ampm - ${d.day} ${months[d.month - 1]} ${d.year}';
+  }
+
+  String _displayAmount(String raw) {
+    final trimmed = raw.trim();
+    if (trimmed.isEmpty) return '₦0.00';
+    // If it already starts with a currency symbol or code, display as-is
+    if (trimmed.startsWith('₦') ||
+        trimmed.startsWith('\$') ||
+        trimmed.startsWith('€') ||
+        trimmed.startsWith('£') ||
+        RegExp(r'^[A-Za-z]{3}\b').hasMatch(trimmed)) {
+      return trimmed;
+    }
+    return formatCurrency(trimmed);
   }
 
   @override
@@ -220,8 +238,6 @@ class TransactionReceiptScreen extends StatelessWidget {
 
                                       _ReceiptRow('Service', data.service),
                                       _DashedDivider(),
-                                      // _ReceiptRow('Type', data.type),
-                                      _DashedDivider(),
                                       if (data.description.isNotEmpty) ...[
                                         _ReceiptRow('Description', data.description),
                                         _DashedDivider(),
@@ -231,8 +247,14 @@ class TransactionReceiptScreen extends StatelessWidget {
                                         _ReceiptRow('Phone Number', data.phoneNumber!),
                                         _DashedDivider(),
                                       ],
-                                      // _ReceiptRow('Amount', data.amount),
-                                      _ReceiptRow('Amount', formatCurrency(data.amount)),
+                                      if (data.extraFields != null &&
+                                          data.extraFields!.isNotEmpty) ...[
+                                        for (final f in data.extraFields!) ...[
+                                          _ReceiptRow(f.label, f.value, isBold: f.isBold),
+                                          _DashedDivider(),
+                                        ],
+                                      ],
+                                      _ReceiptRow('Amount', _displayAmount(data.amount)),
                                       _DashedDivider(),
 
                                       _StatusRow('Status', data.status),
@@ -303,18 +325,7 @@ class TransactionReceiptScreen extends StatelessWidget {
   }
 
   Future<void> _shareReceipt(BuildContext context) async {
-    // Ensure the receipt has been laid out & painted before we try to capture.
-    await WidgetsBinding.instance.endOfFrame;
-    if (!context.mounted) return;
-
-    // Capture the anchor up front, while the context is definitely valid.
     final Rect sharePosition = _shareAnchor(context);
-
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => const Center(child: CircularProgressIndicator()),
-    );
 
     try {
       final boundaryContext = _receiptKey.currentContext;
@@ -323,7 +334,14 @@ class TransactionReceiptScreen extends StatelessWidget {
       }
 
       final boundary =
-          boundaryContext.findRenderObject() as RenderRepaintBoundary;
+          boundaryContext.findRenderObject() as RenderRepaintBoundary?;
+      if (boundary == null) {
+        throw StateError('Receipt render boundary not found');
+      }
+
+      if (boundary.debugNeedsPaint) {
+        await WidgetsBinding.instance.endOfFrame;
+      }
 
       // pixelRatio 2.5 keeps the image crisp on retina displays without
       // ballooning memory for long receipts (3.0 occasionally OOM'd).
@@ -341,9 +359,7 @@ class TransactionReceiptScreen extends StatelessWidget {
       );
       await file.writeAsBytes(pngBytes);
 
-      // Close the loader BEFORE invoking the share sheet so the share sheet
-      // is presented over the receipt, not over the spinner.
-      if (context.mounted) Navigator.of(context).pop();
+      if (!context.mounted) return;
 
       await Share.shareXFiles(
         [XFile(file.path, mimeType: 'image/png', name: 'receipt.png')],
@@ -352,16 +368,15 @@ class TransactionReceiptScreen extends StatelessWidget {
         sharePositionOrigin: sharePosition,
       );
     } catch (e, st) {
-      // Surface the REAL reason the image share failed instead of hiding it.
       debugPrint('Receipt image share failed: $e\n$st');
-      if (context.mounted) Navigator.of(context).pop();
+      if (!context.mounted) return;
 
       // Fallback 1: share plain text so the user still gets something useful.
       try {
         await Share.share(
           'DuPay Receipt\n'
           'Service: ${data.service}\n'
-          'Amount: ${data.amount}\n'
+          'Amount: ${_displayAmount(data.amount)}\n'
           'Status: ${data.status}\n'
           'Ref: ${data.reference}'
           '${data.sessionId != null && data.sessionId!.isNotEmpty ? '\nSession ID: ${data.sessionId}' : ''}',
@@ -374,7 +389,7 @@ class TransactionReceiptScreen extends StatelessWidget {
         await Clipboard.setData(
           ClipboardData(
             text:
-                'DuPay Receipt\nService: ${data.service}\nAmount: ${data.amount}\nStatus: ${data.status}\nRef: ${data.reference}',
+                'DuPay Receipt\nService: ${data.service}\nAmount: ${_displayAmount(data.amount)}\nStatus: ${data.status}\nRef: ${data.reference}',
           ),
         );
         if (context.mounted) {
@@ -471,11 +486,12 @@ class _StatusRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Color badgeColor = status == 'refund'
+    final s = status.trim().toLowerCase();
+    Color badgeColor = s == 'refund'
         ? const Color(0xFF2196F3)
-        : status == 'success'
+        : (s == 'success' || s == 'successful' || s == '1')
             ? const Color(0xFF1DBF73)
-            : status == 'unsuccessful' || status == 'failed'
+            : (s == 'unsuccessful' || s == 'failed' || s == '0')
                 ? Colors.red
                 : Colors.orange;
     return Padding(

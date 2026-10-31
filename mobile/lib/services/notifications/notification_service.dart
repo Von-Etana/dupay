@@ -345,6 +345,18 @@ class NotificationService {
     return null;
   }
 
+  /// Fetches the latest token directly from FirebaseMessaging, caches it in
+  /// [fcmToken], and returns it.
+  Future<String?> refreshToken() async {
+    try {
+      fcmToken = await _messaging.getToken();
+      return fcmToken;
+    } catch (e) {
+      _logger.w('Failed to refresh FCM token: $e');
+      return fcmToken;
+    }
+  }
+
   /// Clears the device token on logout so a logged-out device stops receiving
   /// pushes for the previous user.
   Future<void> deleteToken() async {

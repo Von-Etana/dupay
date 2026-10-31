@@ -131,6 +131,10 @@ class _TransactionSummaryScreenState
         final sessionId =
             (sessionIdRaw != null && sessionIdRaw.isNotEmpty) ? sessionIdRaw : null;
 
+        final extraFields = (result['extra_fields'] is List<ReceiptField>)
+            ? (result['extra_fields'] as List<ReceiptField>)
+            : null;
+
         final receiptData = TransactionReceiptData(
           service: widget.data.service,
           type: result['type'] ?? widget.data.service,
@@ -142,6 +146,7 @@ class _TransactionSummaryScreenState
           initialBalance: result['initial_balance']?.toString() ?? '',
           finalBalance: result['final_balance']?.toString() ?? '',
           date: DateTime.now(),
+          extraFields: extraFields,
         );
         Navigator.pushReplacement(
           context,
