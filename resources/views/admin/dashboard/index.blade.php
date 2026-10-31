@@ -222,19 +222,6 @@
         </div>
     </div>
 
-    @can('view_security_alerts')
-        <a href="{{ route('admin.security-alerts.index') }}" class="alert alert-info d-flex justify-content-between align-items-center">
-            <span><strong>Security overview:</strong> {{ number_format($openSecurityAlerts) }} open alerts · {{ number_format($todayAdminActivity) }} admin actions today.</span>
-            <span>View logs &rarr;</span>
-        </a>
-        @if($openSecurityAlerts > 0)
-            <a href="{{ route('admin.security-alerts.index') }}" class="alert alert-warning d-flex justify-content-between align-items-center">
-                <span><strong>Security attention required:</strong> {{ $openSecurityAlerts }} unacknowledged security alert(s).</span>
-                <span>Review alerts &rarr;</span>
-            </a>
-        @endif
-    @endcan
-
     {{-- ── Top Stat Cards ────────────────────────────────────────────── --}}
     <div class="db-stats-grid">
 
@@ -629,6 +616,25 @@
                     @endforeach
                 </tbody>
             </table>
+        </div>
+    </div>
+    @endcan
+
+    @can('view_security_alerts')
+    <div class="db-card db-full-card" style="margin-top: 18px;">
+        <div class="db-card-header">
+            <div class="db-card-title">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l8 4v6c0 5-3.5 9-8 10-4.5-1-8-5-8-10V6l8-4z"></path><path d="M12 8v4"></path><path d="M12 16h.01"></path></svg>
+                Security Overview
+            </div>
+            <a href="{{ route('admin.security-alerts.index') }}" style="font-size:12px;color:var(--text-muted);">View logs &rarr;</a>
+        </div>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;padding:18px;">
+            <div class="db-stat-sub"><strong>{{ number_format($openSecurityAlerts) }}</strong> open alerts</div>
+            <div class="db-stat-sub"><strong>{{ number_format($todayAdminActivity) }}</strong> admin actions today</div>
+            @if($openSecurityAlerts > 0)
+                <div class="db-stat-sub" style="color:#f59e0b;"><strong>Attention required:</strong> review unacknowledged alerts.</div>
+            @endif
         </div>
     </div>
     @endcan
