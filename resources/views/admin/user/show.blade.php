@@ -450,7 +450,13 @@
 				<div class="widget widget-wallet-one mt-2">
 					<div class="wallet-info text-center mb-3">
 						<p class="wallet-title mb-3">Daily Transaction Limit</p>
-						<p class="total-amount mb-3"> {{ '₦' . number_format($data->daily_transaction_limit, 2) }}</p>
+						@php $effectiveDailyLimit = \App\Services\TransactionLimitService::limitFor($data); @endphp
+						<p class="total-amount mb-3">{{ $effectiveDailyLimit === null ? 'Unlimited' : '₦' . number_format($effectiveDailyLimit, 2) }}</p>
+						@if(\App\Services\TransactionLimitService::isEnabled())
+							<small>Spent today: ₦{{ number_format(\App\Services\TransactionLimitService::spentToday($data), 2) }}</small>
+						@else
+							<small>Daily limit enforcement is disabled in site settings.</small>
+						@endif
 					</div>
 					<div class="wallet-action text-center">
 						<a class="btn btn-info collapsed" role="menu" data-bs-toggle="collapse"

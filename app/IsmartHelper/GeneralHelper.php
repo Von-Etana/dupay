@@ -414,6 +414,21 @@ function getSiteSettings($column_name)
 
 function addSiteActitvity($user, $ac){
 
+    // Persist the audit event without depending on a third-party geolocation
+    // service. The previous path silently discarded activity when that lookup
+    // failed and skipped the primary administrator entirely.
+    if (!$user) return;
+    $ac['user_id'] = $user->id;
+    $ac['ip'] = request()->ip();
+    $ac['browser'] = substr((string) request()->userAgent(), 0, 255);
+    $ac['location'] = '';
+    try {
+        SiteActivity::create($ac);
+    } catch (\Throwable $error) {
+        \Log::warning('Admin activity could not be saved', ['admin_id' => $user->id, 'error' => $error->getMessage()]);
+    }
+    return;
+
     $ip = NULL; $deep_detect = TRUE;
         if (filter_var($ip, FILTER_VALIDATE_IP) === FALSE) {
             $ip = $_SERVER["REMOTE_ADDR"];

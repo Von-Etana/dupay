@@ -19,6 +19,34 @@ use App\Models\StampDutySetting;
 
 class TransferController extends Controller
 {
+    private function notifyWithdrawalOutcome($user, $transaction, string $status, $amount, string $reference): void
+    {
+        try {
+            $message = $status === 'success'
+                ? 'Your bank transfer of ₦' . number_format((float) $amount, 2) . ' was successful.'
+                : 'Your bank transfer of ₦' . number_format((float) $amount, 2) . ' was ' . $status . '.';
+            (new FirebaseUserUpdate)->addUserNotification($user, [
+                'message' => $message,
+                'type' => 'transaction',
+                'read' => 0,
+                'data' => [
+                    'service' => 'Fund Withdrawal',
+                    'id' => $transaction->id,
+                    'reference_id' => $reference,
+                    'status' => $status,
+                    'date' => now()->toIso8601String(),
+                ],
+            ]);
+            if (!empty($user->fcmToken)) {
+                sendFcmNotification($user->fcmToken, 'Bank transfer ' . $status, $message, [
+                    'type' => 'transaction', 'status' => $status,
+                    'reference_id' => $reference, 'route' => '/notification',
+                ]);
+            }
+        } catch (\Throwable $e) {
+            \Log::warning('Withdrawal notification failed', ['transaction_id' => $transaction->id]);
+        }
+    }
     use MailTrait;
 
 
@@ -659,12 +687,13 @@ class TransferController extends Controller
             }
         }
     
+        $this->notifyWithdrawalOutcome($user, $transaction, $finalStatus, $requestAmount, $trx);
         (new FirebaseUserUpdate)->updateUser($user);
     
         return response()->json([
             'success' => $finalStatus === 'success',
             'status' => $finalStatus,
-            'message' => 'Transaction unsuccessful: ' . $resDesc,
+            'message' => $finalStatus === 'success' ? 'Transfer successful.' : 'Transaction unsuccessful: ' . $resDesc,
             'data' => [
                 'service' => "Fund Withdrawal",
                 'amount' => $requestAmount,
@@ -1042,12 +1071,13 @@ class TransferController extends Controller
             }
         }
     
+        $this->notifyWithdrawalOutcome($user, $transaction, $finalStatus, $requestAmount, $trx);
         (new FirebaseUserUpdate)->updateUser($user);
     
         return response()->json([
             'success' => $finalStatus === 'success',
             'status' => $finalStatus,
-            'message' => 'Transaction unsuccessful: ' . $resDesc,
+            'message' => $finalStatus === 'success' ? 'Transfer successful.' : 'Transaction unsuccessful: ' . $resDesc,
             'data' => [
                 'service' => "Fund Withdrawal",
                 'amount' => $requestAmount,

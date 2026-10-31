@@ -223,6 +223,10 @@
     </div>
 
     @can('view_security_alerts')
+        <a href="{{ route('admin.security-alerts.index') }}" class="alert alert-info d-flex justify-content-between align-items-center">
+            <span><strong>Security overview:</strong> {{ number_format($openSecurityAlerts) }} open alerts · {{ number_format($todayAdminActivity) }} admin actions today.</span>
+            <span>View logs &rarr;</span>
+        </a>
         @if($openSecurityAlerts > 0)
             <a href="{{ route('admin.security-alerts.index') }}" class="alert alert-warning d-flex justify-content-between align-items-center">
                 <span><strong>Security attention required:</strong> {{ $openSecurityAlerts }} unacknowledged security alert(s).</span>

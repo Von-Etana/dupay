@@ -65,6 +65,22 @@
             </div>
         @endif
 
+        <div class="widget-content widget-content-area br-8 p-4 mb-4">
+            <h4 class="mb-3">Recent admin activity</h4>
+            <div class="table-responsive"><table class="table table-hover align-middle">
+                <thead><tr><th>Time</th><th>Admin</th><th>Action</th><th>Module</th><th>IP</th></tr></thead>
+                <tbody>
+                @forelse($recentActivity as $activity)
+                    <tr><td>{{ $activity->created_at?->format('d M Y H:i') }}</td>
+                        <td>{{ $activity->user->username ?? 'Unknown' }}</td>
+                        <td>{{ $activity->activity }}</td><td>{{ $activity->module }}</td><td>{{ $activity->ip }}</td></tr>
+                @empty
+                    <tr><td colspan="5" class="text-muted">No recent activity.</td></tr>
+                @endforelse
+                </tbody>
+            </table></div>
+        </div>
+
         <!-- MAIN TABLE -->
         <div class="row">
             <div class="col-12">

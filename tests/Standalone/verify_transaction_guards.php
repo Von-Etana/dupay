@@ -15,10 +15,21 @@ namespace {
     function optional($v){ return $v ?? new class { public function __get($n){ return null; } }; }
 
     class FakeQuery {
-        public $rows;
-        public function __construct($rows){ $this->rows = $rows; }
-        public function where($col, $val){
+        public $rows, $originalRows;
+        public function __construct($rows){ $this->rows = $rows; $this->originalRows = $rows; }
+        public function where($col, $val = null){
+            if ($col instanceof \Closure) {
+                $group = new self($this->rows);
+                $col($group);
+                $this->rows = $group->rows;
+                return $this;
+            }
             $this->rows = array_filter($this->rows, fn($r) => (string)($r[$col] ?? '') === (string)$val);
+            return $this;
+        }
+        public function orWhereNull($col){ return $this->orWhere($col, null); }
+        public function orWhere($col, $val){
+            $this->rows = array_filter($this->originalRows, fn($r) => in_array($r, $this->rows, true) || ($r[$col] ?? null) === $val);
             return $this;
         }
         public function whereNotIn($col, $vals){
