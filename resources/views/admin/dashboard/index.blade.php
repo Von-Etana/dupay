@@ -620,7 +620,6 @@
     </div>
     @endcan
 
-    @can('view_security_alerts')
     <div class="db-card db-full-card" style="margin-top: 18px;">
         <div class="db-card-header">
             <div class="db-card-title">
@@ -637,7 +636,6 @@
             @endif
         </div>
     </div>
-    @endcan
 
 </div>
 @endsection

@@ -209,7 +209,6 @@
             @endcan
 
             {{-- Security monitoring --}}
-            @can('view_security_alerts')
             <li style="margin: 2px 0;">
                 <a href="{{ route('admin.security-alerts.index') }}" style="{{ $menuStyle }}"
                    onmouseover="this.style.background='rgba(255,255,255,0.08)'; this.style.borderLeftColor='#f59e0b';"
@@ -220,7 +219,6 @@
                     </div>
                 </a>
             </li>
-            @endcan
 
             @canany(['view_naira_deposit_charges', 'view_usd_deposit_charges', 'view_eur_deposit_charges'])
             <li style="margin: 2px 0;">
