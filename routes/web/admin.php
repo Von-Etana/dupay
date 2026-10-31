@@ -70,7 +70,7 @@ Route::group(['prefix' => 'adminoffice'], function () {
 
 
     //admin controls
-    Route::group(['middleware'=>['Admin', 'visitors', 'admin.2fa', 'admin.pin'],'as'=>'admin.'],function(){
+    Route::group(['middleware'=>['Admin', 'visitors', 'admin.2fa'],'as'=>'admin.'],function(){
 
     //dashboard
     Route::get('/', [DashboardController::class, 'index'])->name('index');

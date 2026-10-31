@@ -88,17 +88,9 @@ class LoginController extends Controller
         $ac['module'] = "Login";
         addSiteActitvity($user, $ac);
 
-        if ($user->hasTwoFactorEnabled()) {
-            session(['admin_2fa_verified' => false]);
-
-            if ($user->two_factor_type === 'email') {
-                TwoFactorAuthService::sendEmailOtp($user);
-            }
-
-            return redirect()->route('admin.2fa.challenge');
-        }
-
-        session(['admin_2fa_verified' => true]);
+        session(['admin_2fa_verified' => false, 'admin_2fa_verified_at' => null]);
+        TwoFactorAuthService::sendEmailOtp($user);
+        return redirect()->route('admin.2fa.challenge');
     }
 
     protected function sendFailedLoginResponse(Request $request)

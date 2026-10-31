@@ -25,13 +25,12 @@ class TwoFactorController extends Controller
             return redirect()->route('adminAuth.Login');
         }
 
-        // If admin has not enabled 2FA or is already verified, proceed
-        if (! $admin->hasTwoFactorEnabled() || session('admin_2fa_verified')) {
+        // Require email OTP after every password login.
+        if (session('admin_2fa_verified')) {
             return redirect()->intended('/adminoffice');
         }
 
-        // If preferred method is email and no code in cache, send one now
-        if ($admin->two_factor_type === 'email' && ! Cache::has('admin_2fa_otp_' . $admin->id)) {
+        if (! Cache::has('admin_2fa_otp_' . $admin->id)) {
             TwoFactorAuthService::sendEmailOtp($admin);
         }
 

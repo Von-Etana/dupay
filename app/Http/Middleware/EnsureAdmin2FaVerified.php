@@ -24,11 +24,10 @@ class EnsureAdmin2FaVerified
             return $next($request);
         }
 
-        // Check if admin has 2FA enabled
-        if ($admin->hasTwoFactorEnabled()) {
-            $isVerified = (bool) session('admin_2fa_verified');
+        // Email OTP is mandatory for every admin login.
+        $isVerified = (bool) session('admin_2fa_verified');
 
-            if (! $isVerified) {
+        if (! $isVerified) {
                 // Allowed routes during 2FA challenge
                 $exemptRouteNames = [
                     'admin.2fa.challenge',
@@ -45,7 +44,6 @@ class EnsureAdmin2FaVerified
                 }
 
                 return redirect()->route('admin.2fa.challenge');
-            }
         }
 
         return $next($request);
