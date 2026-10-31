@@ -93,7 +93,7 @@ class RechargePinController extends Controller
             $balanceAction = userBalanceAction($lockedUser, $amount, '1', "-");
     
             if (!$balanceAction["success"]) {
-                return response(['success' => false, 'message' => 'Insufficient balance. Please refresh and try again.']);
+                return response(['success' => false, 'message' => $balanceAction['message'] ?? 'Insufficient balance. Please refresh and try again.']);
             }
     
             $init_balance = $balanceAction["init_balance"];

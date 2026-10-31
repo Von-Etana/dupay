@@ -393,7 +393,7 @@ class CableController extends Controller
             $ul['status'] = $finalStatus;
             $tansaction =  $user->transaction()->create($ul);
         } else {
-            return response(['success' => false, 'message' => "Wallet balance error"]);
+            return response(['success' => false, 'message' => $balanceAction["message"] ?? "Wallet balance error"]);
         }
         $sucess = false;
         $isPending = false; // true when VTpass reports the txn is still processing

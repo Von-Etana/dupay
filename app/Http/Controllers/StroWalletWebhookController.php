@@ -158,24 +158,10 @@ class StroWalletWebhookController extends Controller
                 return response()->json(['APPROVE' => 'NO', 'reason' => 'Card exceed spending limit'], 200);
             }
         
-            if (
-                getSiteSettings("limit_daily_transaction") === "Yes" &&
-                $user->level &&
-                $user->level->daily_transaction_limit != "-"
-            ) {
-                $totalTransaction = $user->transaction()
-                    ->where("type", "0")
-                    ->where("status", "success")
-                    ->whereDate('created_at', Carbon::today())
-                    ->sum("amount");
-        
-                if (
-                    $totalTransaction >= $user->level->daily_transaction_limit &&
-                    (!$user->walletVerification || $user->walletVerification->status != "1")
-                ) {
-                    $webhook->update(['status' => 'daily_limit_exceeded']);
-                    return response()->json(['APPROVE' => 'NO', 'reason' => 'Daily limit exceeded'], 200);
-                }
+            $limitCheck = \App\Services\TransactionLimitService::check($user, $totalDebit, 'NGN');
+            if (empty($limitCheck['success'])) {
+                $webhook->update(['status' => 'daily_limit_exceeded']);
+                return response()->json(['APPROVE' => 'NO', 'reason' => 'Daily limit exceeded'], 200);
             }
         
             if (

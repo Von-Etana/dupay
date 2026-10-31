@@ -167,6 +167,9 @@ class DataCardController extends Controller
         $init_balance = $balanceAction["init_balance"];
         $final_balance = $balanceAction["final_balance"];
 
+        if (!$balanceAction["success"]) {
+            return response(['success' => false, 'message' => $balanceAction["message"] ?? "Wallet balance error"]);
+        }
 
         if ($balanceAction["success"]) {
             $description = $quantity." ".$dataPlan->networks->name . " " . $dataPlan->plan." Data E-Pin";

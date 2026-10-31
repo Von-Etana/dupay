@@ -129,7 +129,7 @@ class VirtualCardController extends Controller
         (new FirebaseUserUpdate)->updateUser($user);
 
         if($balanceAction["success"] != true){
-            return response(['success' => false, 'message' => "Unable to access wallet balance"]);
+            return response(['success' => false, 'message' => $balanceAction['message'] ?? "Unable to access wallet balance"]);
         }
 
                     $description = "$request->currency Virtual Card creation";
@@ -266,7 +266,7 @@ class VirtualCardController extends Controller
             (new FirebaseUserUpdate)->updateUser($user);
 
             if($balanceAction["success"] != true){
-                return response(['success' => false, 'message' => "Unable to access wallet balance"]);
+                return response(['success' => false, 'message' => $balanceAction['message'] ?? "Unable to access wallet balance"]);
             }
 
                         $description = "$fundingAmount $request->currency Virtual Card Funding";

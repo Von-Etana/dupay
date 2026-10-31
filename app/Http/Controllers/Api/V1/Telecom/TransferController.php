@@ -443,7 +443,7 @@ class TransferController extends Controller
     
         $balanceAction = userBalanceAction($user, $totalDebit, $walletId, "-");
         if (!$balanceAction['success']) {
-            return response(['success' => false, 'message' => "Wallet balance error"]);
+            return response(['success' => false, 'message' => $balanceAction['message'] ?? "Wallet balance error"]);
         }
     
         $trx = strtoupper(Str::random(16));
@@ -826,7 +826,7 @@ class TransferController extends Controller
 
         $balanceAction = userBalanceAction($user, $totalDebit, $walletId, "-");
         if (!$balanceAction['success']) {
-            return response(['success' => false, 'message' => "Wallet balance error"]);
+            return response(['success' => false, 'message' => $balanceAction['message'] ?? "Wallet balance error"]);
         }
     
         $trx = strtoupper(Str::random(16));
@@ -1412,12 +1412,14 @@ class TransferController extends Controller
         //   * it compared the running total to the cap without adding the amount
         //     being sent, so from a clean slate any single transfer went through
         //     however large.
-        if(getSiteSettings("limit_daily_transfer") == "Yes" && $user->level->daily_transfer_limit != "-"){
+        if(getSiteSettings("limit_daily_transfer") !== "No" && optional($user->level)->daily_transfer_limit && $user->level->daily_transfer_limit != "-"){
             $transferLimit  = (float) str_replace(',', '', (string) $user->level->daily_transfer_limit);
             $amountTransfer = (float) $user->transaction()
                 ->where("service_type", "Fund Transfer")
                 ->where("type", "0")
-                ->where("currency", "NGN")
+                ->where(function ($q) {
+                    $q->where("currency", "NGN")->orWhereNull("currency")->orWhere("currency", "");
+                })
                 ->whereNotIn("status", \App\Services\TransactionLimitService::UNCOUNTED_STATUSES)
                 ->whereDate("created_at", Carbon::today())
                 ->sum("amount");

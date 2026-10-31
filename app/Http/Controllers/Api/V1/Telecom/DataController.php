@@ -130,7 +130,7 @@ class DataController extends Controller
     $final_balance = $balanceAction["final_balance"];
 
     if (!$balanceAction["success"]) {
-        return response(['success' => false, 'message' => "Wallet balance error"]);
+        return response(['success' => false, 'message' => $balanceAction["message"] ?? "Wallet balance error"]);
     }
 
     // Generate transaction reference

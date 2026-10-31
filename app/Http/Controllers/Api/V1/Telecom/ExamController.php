@@ -122,32 +122,32 @@ class ExamController extends Controller
         }
 
         //check user Wallet
-        $checkWallet =  checkUserWallet($price, $select_wallet_id);
+        $checkWallet = checkUserWallet($user, $price, $select_wallet_id);
         if (!$checkWallet) {
             return response(['success' => false, 'message' => "Insufficient Funds"]);
         }
         $amount = $price;
-        $wallet = $user->balance;
-        $balance = $wallet - $amount;
-        $description = "$quantity pieces of $exam result checker";
-        if (updateUserBalance($balance, $select_wallet_id)) {
-            $Trx = strtoupper(Str::random(16));
-            $ul['wallet_id'] = $select_wallet_id;
-            $ul['user_level_id'] = $user->user_level_id;
-            $ul['service'] = $item->name;
-            $ul['service_type'] = "Result Checker";
-            $ul['description'] = $description;
-            $ul['amount'] = $amount;
-            $ul['phone_number'] = $user->phone_number;
-            $ul['type'] = "0";
-            $ul['initial_balance'] = $wallet;
-            $ul['final_balance'] = $balance;
-            $ul['reference'] = $Trx;
-            $ul['status'] = "pending";
-            $tansaction =  $user->transaction()->create($ul);
-        }else{
-            return response(['success' => false, 'message' => "Wallet balance error"]);
+        $balanceAction = userBalanceAction($user, $amount, $select_wallet_id, "-");
+        if (!$balanceAction['success']) {
+            return response(['success' => false, 'message' => $balanceAction['message'] ?? "Wallet balance error"]);
         }
+        $wallet = $balanceAction['init_balance'];
+        $balance = $balanceAction['final_balance'];
+        $description = "$quantity pieces of $exam result checker";
+        $Trx = strtoupper(Str::random(16));
+        $ul['wallet_id'] = $select_wallet_id;
+        $ul['user_level_id'] = $user->user_level_id;
+        $ul['service'] = $item->name;
+        $ul['service_type'] = "Result Checker";
+        $ul['description'] = $description;
+        $ul['amount'] = $amount;
+        $ul['phone_number'] = $user->phone_number;
+        $ul['type'] = "0";
+        $ul['initial_balance'] = $wallet;
+        $ul['final_balance'] = $balance;
+        $ul['reference'] = $Trx;
+        $ul['status'] = "pending";
+        $tansaction =  $user->transaction()->create($ul);
 
 
         foreach ($examPin as  $value) {
@@ -200,7 +200,8 @@ class ExamController extends Controller
             $query =  $user->transaction()->where(['id' => $tansaction->id])->update(['status' => "unsuccessful"]);
             if ($query) {
                 //refund user
-                if (updateUserBalance($wallet, $select_wallet_id)) {
+                $refundAction = userBalanceAction($user, $amount, $select_wallet_id, "+");
+                if (!empty($refundAction['success'])) {
                     $description." Refund";
                     $trx = strtoupper(Str::random(16));
                     $ul['wallet_id'] = $select_wallet_id;

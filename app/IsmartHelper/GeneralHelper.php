@@ -77,15 +77,28 @@ function getPriceA($amount, $currency = 'NGN')
 //     }
     
     
-    function updateUserBalance($newBalance)
+    function updateUserBalance($newBalance, $select_wallet_id = "1")
 {
-    $user = auth()->user();
+    $user = \Illuminate\Support\Facades\Auth::guard('api')->user()
+        ?: \Illuminate\Support\Facades\Auth::guard('web')->user()
+        ?: \Illuminate\Support\Facades\Auth::user();
+
     if (!$user) {
         return false;
     }
 
-    $user->balance = $newBalance;
-    return $user->save();
+    $currentBalance = (float) $user->balance;
+    $diff = (float) $newBalance - $currentBalance;
+
+    if ($diff < 0) {
+        $res = userBalanceAction($user, abs($diff), $select_wallet_id, "-");
+        return !empty($res['success']);
+    } elseif ($diff > 0) {
+        $res = userBalanceAction($user, $diff, $select_wallet_id, "+");
+        return !empty($res['success']);
+    }
+
+    return true;
 }
     
     
@@ -703,7 +716,13 @@ function userShouldEnforceSpendGuards($user, $enforceGuards = null): bool
     }
 
     try {
-        $apiUser = Auth::guard('api')->user();
+        if (\Illuminate\Support\Facades\Auth::guard('admin')->check()) {
+            return false;
+        }
+
+        $apiUser = \Illuminate\Support\Facades\Auth::guard('api')->user()
+            ?: \Illuminate\Support\Facades\Auth::guard('web')->user()
+            ?: \Illuminate\Support\Facades\Auth::user();
     } catch (\Throwable $e) {
         return false;
     }

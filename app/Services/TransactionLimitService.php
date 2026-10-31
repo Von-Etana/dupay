@@ -38,12 +38,17 @@ class TransactionLimitService
     public const UNLIMITED = '-';
 
     /**
-     * Master switch. When the site setting is off, no limit is enforced —
-     * matches the behaviour the middleware already had.
+     * Master switch. When the site setting is explicitly 'No', no limit is enforced.
+     * Defaults to enabled if 'Yes', null, or not explicitly disabled.
      */
     public static function isEnabled(): bool
     {
-        return getSiteSettings('limit_daily_transaction') === 'Yes';
+        $setting = getSiteSettings('limit_daily_transaction');
+        if ($setting === 'No') {
+            return false;
+        }
+
+        return true;
     }
 
     /**
@@ -141,12 +146,22 @@ class TransactionLimitService
             return 0.0;
         }
 
-        return (float) $user->transaction()
+        $query = $user->transaction()
             ->where('type', '0')                       // 0 = debit, 1 = credit
-            ->where('currency', $currency)
             ->whereNotIn('status', self::UNCOUNTED_STATUSES)
-            ->whereDate('created_at', Carbon::today())
-            ->sum('amount');
+            ->whereDate('created_at', Carbon::today());
+
+        if (strtoupper($currency) === 'NGN') {
+            $query->where(function ($q) {
+                $q->where('currency', 'NGN')
+                  ->orWhereNull('currency')
+                  ->orWhere('currency', '');
+            });
+        } else {
+            $query->where('currency', $currency);
+        }
+
+        return (float) $query->sum('amount');
     }
 
     /**

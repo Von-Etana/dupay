@@ -142,7 +142,7 @@ class BulkSmsController extends Controller
                 $ul['status'] = "pending";
                 $tansaction =  $user->transaction()->create($ul);
             }else{
-                return response(['success' => false, 'message' => "Wallet balance error"]);
+                return response(['success' => false, 'message' => $balanceAction["message"] ?? "Wallet balance error"]);
             }
 
             $sucess = false;

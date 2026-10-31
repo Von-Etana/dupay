@@ -130,7 +130,7 @@ class PhysicalCardController extends Controller
                 \DB::rollBack();
                 return response()->json([
                     'success' => false,
-                    'message' => 'Wallet balance error. Please try again.',
+                    'message' => $balanceAction['message'] ?? 'Wallet balance error. Please try again.',
                 ], 400);
             }
             $init_balance  = $balanceAction["init_balance"];
@@ -595,10 +595,10 @@ class PhysicalCardController extends Controller
         
         // Deduct card creation fee from user balance
         $balanceAction = userBalanceAction($user, $card_creation_fee, '1', "-");
-        if (!$balanceAction || !isset($balanceAction["init_balance"], $balanceAction["final_balance"])) {
+        if (!$balanceAction || empty($balanceAction["success"])) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to process card creation fee deduction. Please try again later.',
+                'message' => $balanceAction['message'] ?? 'Failed to process card creation fee deduction. Please try again later.',
             ]);
         }
     

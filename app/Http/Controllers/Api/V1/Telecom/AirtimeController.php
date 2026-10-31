@@ -219,7 +219,7 @@ class AirtimeController extends Controller
             
             
         }else{
-            return response(['success' => false, 'message' => "Wallet balance error"]);
+            return response(['success' => false, 'message' => $balanceAction["message"] ?? "Wallet balance error"]);
         }
         $sucess = false;
 
