@@ -86,10 +86,17 @@ class TransactionLimitService
 
         if (self::isVerified($user)) {
             $candidates[] = $user->verified_daily_transaction_limit ?? null;
-            $candidates[] = optional($user->level)->verified_daily_transaction_limit;
         }
 
+        // An explicitly configured per-user limit must win over the account
+        // level default, including for verified users. Otherwise a verified
+        // level set to "-" (unlimited) silently bypasses an admin-assigned
+        // user limit.
         $candidates[] = $user->daily_transaction_limit ?? null;
+
+        if (self::isVerified($user)) {
+            $candidates[] = optional($user->level)->verified_daily_transaction_limit;
+        }
         $candidates[] = optional($user->level)->daily_transaction_limit;
 
         foreach ($candidates as $candidate) {
