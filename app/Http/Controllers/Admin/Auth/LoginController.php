@@ -68,6 +68,7 @@ class LoginController extends Controller
             'admin_2fa_verified',
             'admin_2fa_verified_at',
             'admin_pin_verified_at',
+            'admin_pin_verified_admin_id',
             'admin_2fa_temp_secret',
         ]);
 

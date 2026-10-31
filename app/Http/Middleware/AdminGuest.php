@@ -18,7 +18,7 @@ class AdminGuest
     {
         if(Auth::guard('admin')->check())
         {
-            return redirect('admin');
+            return redirect('/adminoffice');
         }
 
         return $next($request);
