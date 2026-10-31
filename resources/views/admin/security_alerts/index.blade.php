@@ -7,7 +7,7 @@
         <div class="page-meta my-4">
             <nav class="breadcrumb-style-one" aria-label="breadcrumb">
                 <ol class="breadcrumb">
-                    <li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}">Dashboard</a></li>
+                    <li class="breadcrumb-item"><a href="{{ route('admin.index') }}">Dashboard</a></li>
                     <li class="breadcrumb-item active" aria-current="page">Security Alerts</li>
                 </ol>
             </nav>
