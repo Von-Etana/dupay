@@ -244,7 +244,31 @@ function sendFcmNotification($deviceToken, $title, $body, $data = [])
                 'title' => $title,
                 'body' => $body,
             ],
-            
+            'android' => [
+                'priority' => 'high',
+                'notification' => [
+                    'channel_id' => 'high_importance',
+                    'notification_priority' => 'PRIORITY_MAX',
+                    'default_sound' => true,
+                    'default_vibrate_timings' => true,
+                    'visibility' => 'PUBLIC',
+                ],
+            ],
+            'apns' => [
+                'headers' => [
+                    'apns-priority' => '10',
+                ],
+                'payload' => [
+                    'aps' => [
+                        'alert' => [
+                            'title' => $title,
+                            'body' => $body,
+                        ],
+                        'sound' => 'default',
+                        'badge' => 1,
+                    ],
+                ],
+            ],
             'data' => is_array($data) ? array_map('strval', $data) : new \stdClass()
         ]
     ];
@@ -288,6 +312,31 @@ function sendFcmToMultipleDevices(array $tokens, string $title, string $body, ar
                 'notification' => [
                     'title' => $title,
                     'body' => $body,
+                ],
+                'android' => [
+                    'priority' => 'high',
+                    'notification' => [
+                        'channel_id' => 'high_importance',
+                        'notification_priority' => 'PRIORITY_MAX',
+                        'default_sound' => true,
+                        'default_vibrate_timings' => true,
+                        'visibility' => 'PUBLIC',
+                    ],
+                ],
+                'apns' => [
+                    'headers' => [
+                        'apns-priority' => '10',
+                    ],
+                    'payload' => [
+                        'aps' => [
+                            'alert' => [
+                                'title' => $title,
+                                'body' => $body,
+                            ],
+                            'sound' => 'default',
+                            'badge' => 1,
+                        ],
+                    ],
                 ],
                 'data' => array_map('strval', $data),
             ]

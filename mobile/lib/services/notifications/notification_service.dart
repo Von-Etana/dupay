@@ -4,12 +4,13 @@
 // token-refresh, and message handlers. The rest of the app reads the current
 // token synchronously via NotificationService.fcmToken (e.g. login/register).
 
-import 'dart:async' show unawaited;
+import 'dart:async' show unawaited, Timer;
 import 'dart:io' show Platform;
 
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:logger/logger.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
@@ -50,10 +51,16 @@ class NotificationService {
   void Function(RemoteMessage message)? onForegroundMessage;
 
   bool _initialized = false;
+  static OverlayEntry? _activeTopBanner;
+  static Timer? _bannerDismissTimer;
 
   Future<void> _initLocalNotifications() async {
     const android = AndroidInitializationSettings('@mipmap/launcher_icon');
-    const ios = DarwinInitializationSettings();
+    const ios = DarwinInitializationSettings(
+      requestAlertPermission: true,
+      requestBadgePermission: true,
+      requestSoundPermission: true,
+    );
     await _local.initialize(
       const InitializationSettings(android: android, iOS: ios),
       onDidReceiveNotificationResponse: (response) {
@@ -63,13 +70,32 @@ class NotificationService {
         }
       },
     );
-    await _local
-        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
-        ?.createNotificationChannel(const AndroidNotificationChannel(
-          'high_importance', 'High importance notifications',
-          description: 'DuPay alerts', importance: Importance.max,
-          playSound: true, enableVibration: true,
-        ));
+
+    // Register high-priority channels for heads-up top bar notifications
+    final androidPlugin = _local
+        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+    if (androidPlugin != null) {
+      const channelHigh = AndroidNotificationChannel(
+        'high_importance',
+        'High importance notifications',
+        description: 'DuPay transaction and security alerts',
+        importance: Importance.max,
+        playSound: true,
+        enableVibration: true,
+        showBadge: true,
+      );
+      const channelDefault = AndroidNotificationChannel(
+        'dupay_channel',
+        'DuPay General Notifications',
+        description: 'DuPay updates and notifications',
+        importance: Importance.max,
+        playSound: true,
+        enableVibration: true,
+        showBadge: true,
+      );
+      await androidPlugin.createNotificationChannel(channelHigh);
+      await androidPlugin.createNotificationChannel(channelDefault);
+    }
   }
 
   /// Resolves the destination route from notification data payload.
@@ -99,6 +125,57 @@ class NotificationService {
     });
   }
 
+  /// Displays an in-app drop-down notification banner in the top bar of the screen.
+  static void showInAppTopBanner({
+    required String title,
+    required String body,
+    String? route,
+  }) {
+    final navState = navigatorKey?.currentState;
+    final navContext = navState?.context;
+    if (navContext == null) return;
+
+    final overlay = navState?.overlay;
+    if (overlay == null) return;
+
+    _bannerDismissTimer?.cancel();
+    _activeTopBanner?.remove();
+    _activeTopBanner = null;
+
+    late OverlayEntry entry;
+    entry = OverlayEntry(
+      builder: (context) {
+        final topPadding = MediaQuery.of(context).padding.top;
+        return _InAppTopBannerWidget(
+          topPadding: topPadding,
+          title: title,
+          body: body,
+          onTap: () {
+            _bannerDismissTimer?.cancel();
+            entry.remove();
+            _activeTopBanner = null;
+            if (route != null && route.isNotEmpty) {
+              navigatorKey?.currentState?.pushNamed(route);
+            }
+          },
+          onDismiss: () {
+            _bannerDismissTimer?.cancel();
+            entry.remove();
+            _activeTopBanner = null;
+          },
+        );
+      },
+    );
+
+    _activeTopBanner = entry;
+    overlay.insert(entry);
+
+    _bannerDismissTimer = Timer(const Duration(seconds: 4), () {
+      _activeTopBanner?.remove();
+      _activeTopBanner = null;
+    });
+  }
+
   /// Call once in main(), AFTER Firebase.initializeApp().
   Future<void> initialize() async {
     if (_initialized) return;
@@ -106,6 +183,7 @@ class NotificationService {
 
     try {
       await _initLocalNotifications();
+
       // 1. Background/terminated handler (must be registered before runApp).
       FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
 
@@ -154,23 +232,54 @@ class NotificationService {
         }
       });
 
-      // 7. Foreground messages (app open). Wire to local notifications / UI banner.
+      // 7. Foreground messages (app in use). Triggers both OS top status bar and in-app banner.
       FirebaseMessaging.onMessage.listen((message) {
-        final n = message.notification;
-        if (n != null) {
+        final title = message.notification?.title ?? message.data['title']?.toString() ?? 'DuPay';
+        final body = message.notification?.body ?? message.data['body']?.toString() ?? message.data['message']?.toString() ?? '';
+        final targetRoute = resolveRoute(message.data);
+
+        if (title.isNotEmpty || body.isNotEmpty) {
+          // A. Trigger OS Heads-Up Notification (appears in top mobile status bar)
           unawaited(_local.show(
             message.hashCode,
-            n.title ?? 'DuPay',
-            n.body,
+            title,
+            body,
             const NotificationDetails(
-              android: AndroidNotificationDetails('high_importance', 'High importance notifications',
-                channelDescription: 'DuPay alerts', importance: Importance.max,
-                priority: Priority.high, playSound: true, enableVibration: true),
-              iOS: DarwinNotificationDetails(presentAlert: true, presentSound: true),
+              android: AndroidNotificationDetails(
+                'high_importance',
+                'High importance notifications',
+                channelDescription: 'DuPay transaction and security alerts',
+                importance: Importance.max,
+                priority: Priority.max,
+                playSound: true,
+                enableVibration: true,
+                icon: '@mipmap/launcher_icon',
+                channelShowBadge: true,
+                visibility: NotificationVisibility.public,
+                category: AndroidNotificationCategory.message,
+                ticker: 'DuPay Notification',
+              ),
+              iOS: DarwinNotificationDetails(
+                presentAlert: true,
+                presentBanner: true,
+                presentSound: true,
+                presentBadge: true,
+                presentList: true,
+              ),
             ),
-            payload: resolveRoute(message.data),
+            payload: targetRoute,
           ));
+
+          // B. Show in-app drop-down top bar notification banner
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            showInAppTopBanner(
+              title: title,
+              body: body,
+              route: targetRoute,
+            );
+          });
         }
+
         onForegroundMessage?.call(message);
       });
 
@@ -218,39 +327,22 @@ class NotificationService {
         await onTokenChanged!(token);
       }
     } catch (e) {
-      _logger.e('Error obtaining FCM token: $e');
+      _logger.w('Failed to get FCM token: $e');
     }
   }
 
-  /// Polls for the APNs device token, which arrives asynchronously after
-  /// `registerForRemoteNotifications()`. Returns null if it never shows up
-  /// within [timeout].
-  Future<String?> _waitForApnsToken({
-    Duration timeout = const Duration(seconds: 10),
-  }) async {
+  Future<String?> _waitForApnsToken({Duration timeout = const Duration(seconds: 30)}) async {
     final deadline = DateTime.now().add(timeout);
     while (DateTime.now().isBefore(deadline)) {
       try {
         final token = await _messaging.getAPNSToken();
-        if (token != null && token.isNotEmpty) return token;
-      } catch (e) {
-        _logger.w('APNs token lookup failed: $e');
+        if (token != null) return token;
+      } catch (_) {
+        // Plugin throws if APNs registration is still in flight; swallow and retry.
       }
-      await Future.delayed(const Duration(milliseconds: 500));
+      await Future.delayed(const Duration(seconds: 1));
     }
     return null;
-  }
-
-  /// Force-refresh the token (e.g. after login, to be safe).
-  Future<String?> refreshToken() async {
-    try {
-      if (Platform.isIOS) await _waitForApnsToken();
-      fcmToken = await _messaging.getToken();
-      return fcmToken;
-    } catch (e) {
-      _logger.e('Error refreshing token: $e');
-      return null;
-    }
   }
 
   /// Clears the device token on logout so a logged-out device stops receiving
@@ -262,5 +354,183 @@ class NotificationService {
     } catch (e) {
       _logger.e('Error deleting token: $e');
     }
+  }
+}
+
+/// Floating in-app notification banner that drops down from the top bar of the screen.
+class _InAppTopBannerWidget extends StatefulWidget {
+  final double topPadding;
+  final String title;
+  final String body;
+  final VoidCallback onTap;
+  final VoidCallback onDismiss;
+
+  const _InAppTopBannerWidget({
+    required this.topPadding,
+    required this.title,
+    required this.body,
+    required this.onTap,
+    required this.onDismiss,
+  });
+
+  @override
+  State<_InAppTopBannerWidget> createState() => _InAppTopBannerWidgetState();
+}
+
+class _InAppTopBannerWidgetState extends State<_InAppTopBannerWidget>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _animController;
+  late Animation<Offset> _slideAnimation;
+  late Animation<double> _fadeAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _animController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 320),
+    );
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, -1),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _animController,
+      curve: Curves.easeOutCubic,
+    ));
+    _fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _animController,
+      curve: Curves.easeIn,
+    ));
+
+    _animController.forward();
+    try {
+      HapticFeedback.lightImpact();
+    } catch (_) {}
+  }
+
+  @override
+  void dispose() {
+    _animController.dispose();
+    super.dispose();
+  }
+
+  void _dismiss() {
+    _animController.reverse().then((_) {
+      widget.onDismiss();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned(
+      top: widget.topPadding + 8,
+      left: 14,
+      right: 14,
+      child: SlideTransition(
+        position: _slideAnimation,
+        child: FadeTransition(
+          opacity: _fadeAnimation,
+          child: GestureDetector(
+            onTap: widget.onTap,
+            onVerticalDragUpdate: (details) {
+              if (details.primaryDelta != null && details.primaryDelta! < -4) {
+                _dismiss();
+              }
+            },
+            child: Material(
+              color: Colors.transparent,
+              elevation: 8,
+              borderRadius: BorderRadius.circular(16),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1E3A34), // DuPay brand dark green
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color(0x40000000),
+                      blurRadius: 16,
+                      offset: Offset(0, 6),
+                    ),
+                  ],
+                  border: Border.all(
+                    color: Color(0x597CA183),
+                    width: 1,
+                  ),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF34544A),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(
+                        Icons.notifications_active_rounded,
+                        color: Color(0xFFE2F1E8),
+                        size: 22,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  widget.title,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: 0.2,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              const Text(
+                                'now',
+                                style: TextStyle(
+                                  color: Color(0xFFB5C9BD),
+                                  fontSize: 11,
+                                ),
+                              ),
+                            ],
+                          ),
+                          if (widget.body.isNotEmpty) ...[
+                            const SizedBox(height: 3),
+                            Text(
+                              widget.body,
+                              style: const TextStyle(
+                                color: Color(0xFFE0EBE4),
+                                fontSize: 12.5,
+                                height: 1.25,
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
