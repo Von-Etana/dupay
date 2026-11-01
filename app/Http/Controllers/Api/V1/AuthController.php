@@ -16,6 +16,7 @@ use Auth;
 use App\TraitsFolder\MailTrait;
 use FirebaseUserUpdate;
 use Illuminate\Support\Facades\DB;
+use App\Services\UserSecurityService;
 
 class AuthController extends Controller
 {
@@ -543,13 +544,22 @@ class AuthController extends Controller
             'password' => $request->input('password')
         ];
 
+        $candidate = User::where($loginField, $loginType)->first();
+        if ($candidate && (UserSecurityService::passwordLocked($candidate) || UserSecurityService::otpLocked($candidate))) {
+            return response(['success' => false, 'code' => 'account_locked', 'message' => 'Account temporarily locked. Check your email for recovery instructions.'], 423);
+        }
+
         // Attempt to authenticate the user
         if (!auth()->attempt($loginData)) {
+            if ($candidate) {
+                UserSecurityService::recordPasswordFailure($candidate);
+            }
             return response(['success' => false, 'message' => 'Invalid Login Details']);
         }
 
         // Fetch the authenticated user
         $user = User::whereId(auth()->user()->id)->with('profile')->firstOrFail();
+        UserSecurityService::resetPasswordFailures($user);
 
         // Check if the user is banned
         if ($user->ban_status == "1") {
