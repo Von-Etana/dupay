@@ -378,6 +378,17 @@
     </div>
     @endcan
 
+    <div class="db-card db-full-card" style="margin-top:18px;">
+        <div class="db-card-header">
+            <div class="db-card-title"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l8 4v6c0 5-3.5 9-8 10-4.5-1-8-5-8-10V6l8-4z"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>Security Overview</div>
+            <a href="{{ route('admin.security-alerts.index') }}" style="font-size:12px;color:var(--db-faint);">View logs &rarr;</a>
+        </div>
+        <div style="display:flex;gap:18px;flex-wrap:wrap;padding:18px;color:var(--db-muted);">
+            <span><strong style="color:var(--db-text);">{{ number_format($openSecurityAlerts) }}</strong> open alerts</span>
+            <span><strong style="color:var(--db-text);">{{ number_format($todayAdminActivity) }}</strong> admin actions today</span>
+        </div>
+    </div>
+
 </div>
 @endsection
 
