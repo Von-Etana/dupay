@@ -77,7 +77,7 @@
                             <div class="text-muted">
                                 {{ $transaction->created_at->format('d M, Y h:i A') }}
                             </div>
-                            <a href="{{ route('AdminDownloadReciept', $transaction->reference ?: $transaction->id) }}" class="btn btn-primary btn-sm mt-2">
+                            <a href="{{ route('admin.AdminDownloadReciept', $transaction->reference ?: $transaction->id) }}" class="btn btn-primary btn-sm mt-2">
                                 <i class="fa fa-file-pdf-o me-1"></i> Download PDF Receipt
                             </a>
                             <button type="button" id="downloadReceiptBtn" class="btn btn-outline-secondary btn-sm mt-2">
