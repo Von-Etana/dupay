@@ -5,6 +5,7 @@
 // token synchronously via NotificationService.fcmToken (e.g. login/register).
 
 import 'dart:async' show unawaited, Timer;
+import 'dart:convert';
 import 'dart:io' show Platform;
 
 import 'package:firebase_core/firebase_core.dart';
@@ -32,7 +33,8 @@ class NotificationService {
 
   final Logger _logger = Logger();
   final FirebaseMessaging _messaging = FirebaseMessaging.instance;
-  final FlutterLocalNotificationsPlugin _local = FlutterLocalNotificationsPlugin();
+  final FlutterLocalNotificationsPlugin _local =
+      FlutterLocalNotificationsPlugin();
 
   /// Global navigator key reference for routing upon notification taps.
   static GlobalKey<NavigatorState>? navigatorKey;
@@ -66,14 +68,24 @@ class NotificationService {
       onDidReceiveNotificationResponse: (response) {
         final payload = response.payload;
         if (payload != null && payload.isNotEmpty) {
-          handleNotificationTap(RemoteMessage(data: {'route': payload}));
+          try {
+            final decoded = jsonDecode(payload);
+            handleNotificationTap(
+              RemoteMessage(data: Map<String, dynamic>.from(decoded)),
+            );
+          } catch (_) {
+            handleNotificationTap(RemoteMessage(data: {'route': payload}));
+          }
         }
       },
     );
 
     // Register high-priority channels for heads-up top bar notifications
-    final androidPlugin = _local
-        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+    final androidPlugin =
+        _local
+            .resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin
+            >();
     if (androidPlugin != null) {
       const channelHigh = AndroidNotificationChannel(
         'high_importance',
@@ -120,7 +132,19 @@ class NotificationService {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final nav = navigatorKey?.currentState;
       if (nav != null) {
-        nav.pushNamed(targetRoute);
+        nav.pushNamed(
+          targetRoute,
+          arguments: {
+            'title':
+                message.notification?.title ??
+                message.data['title']?.toString(),
+            'body':
+                message.notification?.body ??
+                message.data['body']?.toString() ??
+                message.data['message']?.toString(),
+            'route': targetRoute,
+          },
+        );
       }
     });
   }
@@ -209,7 +233,9 @@ class NotificationService {
       try {
         final initialMessage = await _messaging.getInitialMessage();
         if (initialMessage != null) {
-          _logger.i('🚀 Cold-start launch via notification: ${initialMessage.messageId}');
+          _logger.i(
+            '🚀 Cold-start launch via notification: ${initialMessage.messageId}',
+          );
           pendingInitialMessage = initialMessage;
         }
       } catch (e) {
@@ -235,49 +261,58 @@ class NotificationService {
 
       // 7. Foreground messages (app in use). Triggers both OS top status bar and in-app banner.
       FirebaseMessaging.onMessage.listen((message) {
-        final title = message.notification?.title ?? message.data['title']?.toString() ?? 'DuPay';
-        final body = message.notification?.body ?? message.data['body']?.toString() ?? message.data['message']?.toString() ?? '';
+        final title =
+            message.notification?.title ??
+            message.data['title']?.toString() ??
+            'DuPay';
+        final body =
+            message.notification?.body ??
+            message.data['body']?.toString() ??
+            message.data['message']?.toString() ??
+            '';
         final targetRoute = resolveRoute(message.data);
 
         if (title.isNotEmpty || body.isNotEmpty) {
           // A. Trigger OS Heads-Up Notification (appears in top mobile status bar)
-          unawaited(_local.show(
-            message.hashCode,
-            title,
-            body,
-            const NotificationDetails(
-              android: AndroidNotificationDetails(
-                'high_importance',
-                'High importance notifications',
-                channelDescription: 'DuPay transaction and security alerts',
-                importance: Importance.max,
-                priority: Priority.max,
-                playSound: true,
-                enableVibration: true,
-                icon: '@mipmap/launcher_icon',
-                channelShowBadge: true,
-                visibility: NotificationVisibility.public,
-                category: AndroidNotificationCategory.message,
-                ticker: 'DuPay Notification',
+          unawaited(
+            _local.show(
+              message.hashCode,
+              title,
+              body,
+              const NotificationDetails(
+                android: AndroidNotificationDetails(
+                  'high_importance',
+                  'High importance notifications',
+                  channelDescription: 'DuPay transaction and security alerts',
+                  importance: Importance.max,
+                  priority: Priority.max,
+                  playSound: true,
+                  enableVibration: true,
+                  icon: '@mipmap/launcher_icon',
+                  channelShowBadge: true,
+                  visibility: NotificationVisibility.public,
+                  category: AndroidNotificationCategory.message,
+                  ticker: 'DuPay Notification',
+                ),
+                iOS: DarwinNotificationDetails(
+                  presentAlert: true,
+                  presentBanner: true,
+                  presentSound: true,
+                  presentBadge: true,
+                  presentList: true,
+                ),
               ),
-              iOS: DarwinNotificationDetails(
-                presentAlert: true,
-                presentBanner: true,
-                presentSound: true,
-                presentBadge: true,
-                presentList: true,
-              ),
+              payload: jsonEncode({
+                'route': targetRoute,
+                'title': title,
+                'body': body,
+              }),
             ),
-            payload: targetRoute,
-          ));
+          );
 
           // B. Show in-app drop-down top bar notification banner
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            showInAppTopBanner(
-              title: title,
-              body: body,
-              route: targetRoute,
-            );
+            showInAppTopBanner(title: title, body: body, route: targetRoute);
           });
         }
 
@@ -286,7 +321,9 @@ class NotificationService {
 
       // 8. User tapped a notification that opened the app from background.
       FirebaseMessaging.onMessageOpenedApp.listen((message) {
-        _logger.i('📲 Notification tapped from background: ${message.messageId}');
+        _logger.i(
+          '📲 Notification tapped from background: ${message.messageId}',
+        );
         handleNotificationTap(message);
       });
     } catch (e) {
@@ -332,7 +369,9 @@ class NotificationService {
     }
   }
 
-  Future<String?> _waitForApnsToken({Duration timeout = const Duration(seconds: 30)}) async {
+  Future<String?> _waitForApnsToken({
+    Duration timeout = const Duration(seconds: 30),
+  }) async {
     final deadline = DateTime.now().add(timeout);
     while (DateTime.now().isBefore(deadline)) {
       try {
@@ -406,17 +445,13 @@ class _InAppTopBannerWidgetState extends State<_InAppTopBannerWidget>
     _slideAnimation = Tween<Offset>(
       begin: const Offset(0, -1),
       end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _animController,
-      curve: Curves.easeOutCubic,
-    ));
+    ).animate(
+      CurvedAnimation(parent: _animController, curve: Curves.easeOutCubic),
+    );
     _fadeAnimation = Tween<double>(
       begin: 0.0,
       end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _animController,
-      curve: Curves.easeIn,
-    ));
+    ).animate(CurvedAnimation(parent: _animController, curve: Curves.easeIn));
 
     _animController.forward();
     try {
@@ -458,7 +493,10 @@ class _InAppTopBannerWidgetState extends State<_InAppTopBannerWidget>
               elevation: 8,
               borderRadius: BorderRadius.circular(16),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
                 decoration: BoxDecoration(
                   color: const Color(0xFF1E3A34), // DuPay brand dark green
                   borderRadius: BorderRadius.circular(16),
@@ -469,10 +507,7 @@ class _InAppTopBannerWidgetState extends State<_InAppTopBannerWidget>
                       offset: Offset(0, 6),
                     ),
                   ],
-                  border: Border.all(
-                    color: Color(0x597CA183),
-                    width: 1,
-                  ),
+                  border: Border.all(color: Color(0x597CA183), width: 1),
                 ),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
