@@ -30,6 +30,7 @@ use App\Http\Controllers\Admin\ErrorLogController;
 use App\Http\Controllers\Admin\VerificationController;
 use App\Http\Controllers\Admin\SecurityAlertController;
 use App\Http\Controllers\Admin\Auth\TwoFactorController;
+use App\Http\Controllers\Admin\UserSecurityController;
 
 Route::group(['prefix' => 'adminoffice'], function () {
 
@@ -96,6 +97,8 @@ Route::group(['prefix' => 'adminoffice'], function () {
     Route::post('security-alerts/{securityAlert}/acknowledge', [SecurityAlertController::class, 'acknowledge'])
         ->middleware('can:manage_security_alerts')
         ->name('security-alerts.acknowledge');
+    Route::post('security/users/{user}/unlock', [UserSecurityController::class, 'unlock'])->middleware('can:manage_security_alerts')->name('security.users.unlock');
+    Route::post('security/users/{user}/revoke-sessions', [UserSecurityController::class, 'revokeSessions'])->middleware('can:manage_security_alerts')->name('security.users.revoke-sessions');
 
     // Two-Factor Authentication Settings
     Route::get('security/2fa', [TwoFactorController::class, 'showSettings'])->name('security.2fa');

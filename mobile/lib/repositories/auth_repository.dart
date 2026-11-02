@@ -30,13 +30,20 @@ class AuthRepository {
     );
 
     // Save tokens if login successful
-    if (response.success && response.data != null) {
+    if (response.success && response.data != null && response.data!.accessToken.isNotEmpty) {
       await SecureStorageService.saveAccessToken(response.data!.accessToken);
       await SecureStorageService.saveUserId(response.data!.user.id.toString());
     }
 
     return response;
   }
+
+  Future<ApiResponse<LoginResponse>> verifyLoginOtp({required String challengeId, required String otp}) async {
+    final response = await _apiService.post<LoginResponse>(ApiConstants.loginOtpVerify, data: {'challenge_id': challengeId, 'otp': otp}, fromJson: LoginResponse.fromJson);
+    if (response.success && response.data != null && response.data!.accessToken.isNotEmpty) { await SecureStorageService.saveAccessToken(response.data!.accessToken); await SecureStorageService.saveUserId(response.data!.user.id.toString()); }
+    return response;
+  }
+  Future<ApiResponse<LoginResponse>> resendLoginOtp(String challengeId) => _apiService.post<LoginResponse>(ApiConstants.loginOtpResend, data: {'challenge_id': challengeId}, fromJson: LoginResponse.fromJson);
 
   // Register
   //

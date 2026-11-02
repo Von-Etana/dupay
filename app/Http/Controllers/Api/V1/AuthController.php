@@ -571,7 +571,11 @@ class AuthController extends Controller
             $user->update(['fcmToken' => $request->fcmToken]);
         }
 
-        $challenge = app(LoginChallengeService::class)->begin($user, $request->input('device_id'));
+        try {
+            $challenge = app(LoginChallengeService::class)->begin($user, $request->input('device_id'));
+        } catch (\RuntimeException $e) {
+            return response(['success'=>false,'code'=>'otp_delivery_failed','message'=>'Unable to deliver login code. Please try again.'], 503);
+        }
         return response(['success'=>false,'code'=>'otp_required','challenge_id'=>$challenge->id], 200);
 
         // Generate access token
