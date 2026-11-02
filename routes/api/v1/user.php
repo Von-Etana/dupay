@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\V1\GeneralController;
 use App\Http\Controllers\Api\V1\AuthController;
+use App\Http\Controllers\Api\V1\LoginChallengeController;
 use App\Http\Controllers\Api\V1\Ecommerce\IndexController as EcommerceIndexController;
 use App\Http\Controllers\Api\V1\KYCVerificationController;
 use App\Http\Controllers\Api\V1\Telecom\AirtimeController;
@@ -37,6 +38,9 @@ use App\Http\Controllers\Api\V1\ExchangeController;
 Route::group(['prefix' => 'v1'], function () {
 
 Route::post('/login', [AuthController::class, 'login'])->name("userLogin")->middleware('throttle:auth');
+Route::post('/login/otp/send', [LoginChallengeController::class, 'send'])->middleware('throttle:otp');
+Route::post('/login/otp/resend', [LoginChallengeController::class, 'resend'])->middleware('throttle:otp');
+Route::post('/login/otp/verify', [LoginChallengeController::class, 'verify'])->middleware('throttle:otp');
 Route::post('/register', [AuthController::class, 'register'])->name("userRegister")->middleware('throttle:auth');
 Route::post('/reset-password', [AuthController::class, 'resetPassword'])->name("userResetPassword")->middleware('throttle:otp');
 Route::post('/send-email-otp', [AuthController::class, 'sendEmailOtp'])->name("sendEmailOtp")->middleware('throttle:otp');

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
+use App\Services\{UserSecurityService,LoginChallengeService};
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Carbon\Carbon;
@@ -569,6 +570,9 @@ class AuthController extends Controller
         if ($request->filled('fcmToken')) {
             $user->update(['fcmToken' => $request->fcmToken]);
         }
+
+        $challenge = app(LoginChallengeService::class)->begin($user, $request->input('device_id'));
+        return response(['success'=>false,'code'=>'otp_required','challenge_id'=>$challenge->id], 200);
 
         // Generate access token
         $accessToken = auth()->user()->createToken('authToken');
