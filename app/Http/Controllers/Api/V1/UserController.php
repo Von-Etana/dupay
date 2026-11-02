@@ -32,6 +32,7 @@ use iSmartPaystack;
 use iSmartFlutterWave;
 use App\Models\Telecom\VirtualAccount;
 use App\Models\ErrorLog;
+use App\Services\UserSecurityService;
 
 class UserController extends Controller
 {
@@ -46,6 +47,12 @@ class UserController extends Controller
 
     public function logoutCurrentToken(Request $request)
     {
+        $deviceHash = UserSecurityService::deviceHash($request->input('device_id'));
+        if ($deviceHash) {
+            DB::table('user_devices')->where('user_id', $request->user('api')->id)
+                ->where('device_id_hash', $deviceHash)
+                ->update(['revoked_at' => now(), 'updated_at' => now()]);
+        }
         $token = $request->user('api')->token();
         if ($token === null || !$token->revoke()) {
             return response()->json(['success' => false, 'message' => 'Could not revoke token'], 503);

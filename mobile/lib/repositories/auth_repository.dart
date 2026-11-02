@@ -171,7 +171,11 @@ class AuthRepository {
   Future<void> logout() async {
     try {
       if (await SecureStorageService.getAccessToken() != null) {
-        await _apiService.postSimple(ApiConstants.logout);
+        final deviceId = await SecureStorageService.getDeviceId();
+        await _apiService.postSimple(
+          ApiConstants.logout,
+          data: deviceId == null ? null : {'device_id': deviceId},
+        );
       }
     } catch (_) {
       // Local sign-out must still work when the API cannot be reached.
