@@ -3,7 +3,6 @@
 use App\Http\Controllers\Api\V1\GeneralController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\LoginChallengeController;
-use App\Http\Controllers\Api\V1\Ecommerce\IndexController as EcommerceIndexController;
 use App\Http\Controllers\Api\V1\KYCVerificationController;
 use App\Http\Controllers\Api\V1\Telecom\AirtimeController;
 use App\Http\Controllers\Api\V1\Telecom\BillController;
@@ -312,7 +311,6 @@ Route::post('/job/card-maintenance', [CardMaintenanceController::class, 'chargeA
 
 Route::group(['middleware'=>'auth:api', 'prefix' => 'ecommerce'], function(){
 
-    Route::get('get-category', [EcommerceIndexController::class, 'getCategory'])->name('getCategory');
 
 
 });

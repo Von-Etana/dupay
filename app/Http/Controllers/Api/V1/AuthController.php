@@ -17,7 +17,6 @@ use Auth;
 use App\TraitsFolder\MailTrait;
 use FirebaseUserUpdate;
 use Illuminate\Support\Facades\DB;
-use App\Services\UserSecurityService;
 
 class AuthController extends Controller
 {

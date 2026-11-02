@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\GeneralViewController;
 use App\Http\Controllers\Admin\DashboardController;
 
 Route::group(['prefix' => 'admin'], function () {
