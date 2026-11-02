@@ -8,6 +8,7 @@ import 'package:local_auth_android/local_auth_android.dart';
 import 'package:local_auth_darwin/local_auth_darwin.dart';
 import '../../providers/auth_provider.dart';
 import 'package:dupay/services/notifications/notification_service.dart';
+import 'login_otp_screen.dart';
 import '../../services/storage/secure_storage_service.dart';
 import 'dart:async' show unawaited;
 import '../../services/notifications/fcm_token_sync.dart';
@@ -186,6 +187,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   : '/transactionPinSetup');
       Navigator.of(context).pushReplacementNamed(route);
     } else if (mounted) {
+      final challengeId = authProvider.pendingChallengeId;
+      if (challengeId != null) {
+        Navigator.of(context).pushNamed('/loginOtp', arguments: challengeId);
+        return;
+      }
       final error = ref.read(authErrorProvider);
       if (error != null) {
         _showTopMessage(error);

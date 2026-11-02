@@ -4,6 +4,7 @@ import 'dart:async';
 import 'package:dupay/models/auth/check_user_request.dart';
 import 'package:dupay/models/auth/get_user_info_response.dart';
 import 'package:dupay/models/auth/login_request.dart';
+import 'package:dupay/models/auth/login_response.dart';
 import 'package:dupay/models/auth/register_request.dart';
 import 'package:dupay/models/auth/reset_password_request.dart';
 import 'package:dupay/models/auth/user_model.dart';
@@ -12,6 +13,7 @@ import 'package:dupay/services/cache/cache_service.dart';
 import 'package:dupay/services/notifications/notification_service.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../repositories/auth_repository.dart';
+import 'package:dupay/models/base/api_response.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:dupay/services/auth/session_events.dart';
@@ -54,6 +56,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
   final AuthRepository _authRepository;
   late final StreamSubscription<void> _sessionSubscription;
   int _sessionGeneration = 0;
+  String? pendingChallengeId;
 
   AuthNotifier(this._authRepository) : super(AuthState()) {
     _sessionSubscription = SessionEvents.expired.listen((_) {
@@ -62,6 +65,27 @@ class AuthNotifier extends StateNotifier<AuthState> {
     });
     _initializeAuth();
   }
+
+  Future<ApiResponse<LoginResponse>> verifyLoginOtp({required String challengeId, required String otp}) async {
+    final response = await _authRepository.verifyLoginOtp(challengeId: challengeId, otp: otp);
+    if (response.success && response.data != null) {
+      final userId = response.data!.user.id.toString();
+      await CacheService().clearAllCache();
+      await CacheService().setLastUserId(userId);
+      state = state.copyWith(
+        isLoading: false,
+        isAuthenticated: true,
+        user: response.data!.user,
+        accessToken: response.data!.accessToken,
+        error: null,
+      );
+    } else {
+      state = state.copyWith(isLoading: false, error: response.message);
+    }
+    return response;
+  }
+
+  Future<ApiResponse<LoginResponse>> resendLoginOtp(String challengeId) => _authRepository.resendLoginOtp(challengeId);
 
   @override
   void dispose() {
@@ -167,6 +191,11 @@ class AuthNotifier extends StateNotifier<AuthState> {
         );
         return true;
       } else {
+        pendingChallengeId = response.data?.challengeId;
+        if (response.data?.code == 'otp_required') {
+          state = state.copyWith(isLoading: false, error: null);
+          return false;
+        }
         print('🔐 AuthProvider: Login failed');
         state = state.copyWith(isLoading: false, error: response.message);
         return false;
