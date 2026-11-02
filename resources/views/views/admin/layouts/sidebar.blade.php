@@ -249,14 +249,14 @@
         </li>
 
         <li>
-            <a href="{{ route('admin.security-alerts.index') }}" class="dw-item">
-                <span class="txt">Security Alerts</span>
+            <a href="{{ route('admin.security.2fa') }}" class="dw-item">
+                <span class="txt">Security → Two-Factor Authentication</span>
             </a>
         </li>
 
         <li>
-            <a href="{{ route('admin.security.2fa') }}" class="dw-item">
-                <span class="txt">Security → Two-Factor Authentication</span>
+            <a href="{{ route('admin.security-alerts.index') }}" class="dw-item">
+                <span class="txt">Security Alerts</span>
             </a>
         </li>
 
