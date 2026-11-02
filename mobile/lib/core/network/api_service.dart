@@ -170,7 +170,8 @@ class ApiService {
     dynamic data,
     Map<String, dynamic>? queryParameters,
     String? customIsmartValue, // Optional per-request ismart value
-    Duration? receiveTimeout, // Override for slow endpoints (e.g. card creation)
+    Duration?
+    receiveTimeout, // Override for slow endpoints (e.g. card creation)
   }) async {
     try {
       await _checkConnectivity();
@@ -335,13 +336,14 @@ class ApiService {
   ) {
     final responseData = response.data as Map<String, dynamic>;
 
-    if (responseData['success'] == true) {
+    if (responseData['success'] == true ||
+        responseData['code'] == 'otp_required') {
       // For single response, always pass the entire responseData to fromJson
       // This allows the model to handle the structure as needed
       final data = fromJson(responseData);
 
       return ApiResponse<T>(
-        success: true,
+        success: responseData['success'] == true,
         message: responseData['message'] ?? 'Success',
         data: data,
         statusCode: response.statusCode,
@@ -365,9 +367,10 @@ class ApiService {
         // Backend sometimes returns `data: []` (an empty PHP array serializes
         // to a JSON array, not an object). Guard the cast so a List never
         // crashes the parse — treat any non-object as null.
-        data: responseData['data'] is Map<String, dynamic>
-            ? responseData['data'] as Map<String, dynamic>
-            : null,
+        data:
+            responseData['data'] is Map<String, dynamic>
+                ? responseData['data'] as Map<String, dynamic>
+                : null,
         statusCode: response.statusCode,
       );
     } else {
@@ -422,13 +425,18 @@ class ApiService {
           errors: _extractErrors(responseData),
         );
       case 401:
-        return const AuthenticationException(
-          message: 'Authentication failed. Please login again.',
+        return ServerException(
+          message:
+              _extractErrorMessage(responseData) ??
+              'Authentication failed. Please login again.',
+          statusCode: statusCode,
+          errors: _extractErrors(responseData),
         );
       case 403:
-        return const AuthorizationException(
-          message:
-              'Access denied. You don\'t have permission to perform this action.',
+        return ServerException(
+          message: _extractErrorMessage(responseData) ?? 'Access denied.',
+          statusCode: statusCode,
+          errors: _extractErrors(responseData),
         );
       case 404:
         return const ServerException(message: 'Resource not found');
@@ -461,7 +469,14 @@ class ApiService {
   Map<String, dynamic>? _extractErrors(dynamic responseData) {
     if (responseData is Map<String, dynamic>) {
       final errors = responseData['errors'];
-      return errors is Map<String, dynamic> ? errors : null;
+      final result =
+          errors is Map<String, dynamic>
+              ? Map<String, dynamic>.from(errors)
+              : <String, dynamic>{};
+      if (responseData['code'] is String) result['code'] = responseData['code'];
+      if (responseData['retry_after'] != null)
+        result['retry_after'] = responseData['retry_after'];
+      return result.isEmpty ? null : result;
     }
     return null;
   }

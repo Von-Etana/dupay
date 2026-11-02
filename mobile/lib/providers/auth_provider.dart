@@ -16,7 +16,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:dupay/services/auth/session_events.dart';
 import 'package:dupay/services/storage/secure_storage_service.dart';
-import 'package:uuid/uuid.dart';
+import 'package:dupay/core/exceptions/api_exception.dart';
 
 class AuthState {
   final bool isLoading;
@@ -107,11 +107,6 @@ class AuthNotifier extends StateNotifier<AuthState> {
     state = state.copyWith(isLoading: true, error: null);
 
     try {
-      var deviceId = await SecureStorageService.getDeviceId();
-      if (deviceId == null || deviceId.isEmpty) {
-        deviceId = const Uuid().v4();
-        await SecureStorageService.saveDeviceId(deviceId);
-      }
       LoginRequest request;
 
       if (email != null && email.isNotEmpty) {
@@ -120,7 +115,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
           email: email,
           password: password,
           fcmToken: fcmToken,
-          deviceId: deviceId,
+          deviceId: await SecureStorageService.getOrCreateDeviceId(),
         );
       } else if (phoneNumber != null && phoneNumber.isNotEmpty) {
         print('🔐 AuthProvider: Creating login request with phone');
@@ -128,7 +123,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
           phoneNumber: phoneNumber,
           password: password,
           fcmToken: fcmToken,
-          deviceId: deviceId,
+          deviceId: await SecureStorageService.getOrCreateDeviceId(),
         );
       } else {
         throw Exception('Either email or phone number is required');
@@ -139,6 +134,13 @@ class AuthNotifier extends StateNotifier<AuthState> {
       print(
         '🔐 AuthProvider: Repository response - success: ${response.success}',
       );
+      if (response.data?.code == 'otp_required') {
+        state = state.copyWith(
+          isLoading: false,
+          error: 'otp_required:${response.data!.challengeId}',
+        );
+        return false;
+      }
       if (response.success && response.data != null) {
         print('🔐 AuthProvider: Login successful, updating state');
 
@@ -146,7 +148,11 @@ class AuthNotifier extends StateNotifier<AuthState> {
         // actually changed. Same user (e.g. re-login after a 401) keeps its
         // cache. A null marker (fresh install / first login after this update)
         // is treated as "different" so we start clean exactly once.
-        final newUserId = response.data!.user.id.toString();
+        if (response.data!.user == null) {
+          state = state.copyWith(isLoading: false, error: response.message);
+          return false;
+        }
+        final newUserId = response.data!.user!.id.toString();
         final previousUserId = await CacheService().getLastUserId();
 
         if (previousUserId != newUserId) {
@@ -173,9 +179,58 @@ class AuthNotifier extends StateNotifier<AuthState> {
       }
     } catch (e) {
       if (kDebugMode) print('🔐 AuthProvider: Login exception');
-      state = state.copyWith(isLoading: false, error: e.toString());
+      state = state.copyWith(isLoading: false, error: _authErrorMessage(e));
       return false;
     }
+  }
+
+  Future<bool> verifyLoginOtp(String challengeId, String otp) async {
+    state = state.copyWith(isLoading: true, error: null);
+    try {
+      final response = await _authRepository.verifyLoginOtp(
+        challengeId: challengeId,
+        otp: otp,
+        fcmToken: NotificationService.fcmToken,
+      );
+      final data = response.data;
+      if (response.success &&
+          data != null &&
+          data.accessToken.isNotEmpty &&
+          data.user != null) {
+        await SecureStorageService.saveAccessToken(data.accessToken);
+        await SecureStorageService.saveUserId(data.user!.id.toString());
+        state = state.copyWith(
+          isLoading: false,
+          isAuthenticated: true,
+          user: data.user,
+          accessToken: data.accessToken,
+          error: null,
+        );
+        return true;
+      }
+      state = state.copyWith(isLoading: false, error: response.message);
+      return false;
+    } catch (e) {
+      state = state.copyWith(isLoading: false, error: _authErrorMessage(e));
+      return false;
+    }
+  }
+
+  String _authErrorMessage(Object error) {
+    if (error is ApiException) {
+      switch (error.errors?['code']) {
+        case 'account_locked':
+          return 'Your account is locked. Please try again after the lock expires.';
+        case 'otp_expired':
+          return 'This code has expired. Please sign in again.';
+        case 'otp_retry_limit':
+          return 'Too many incorrect codes. Please sign in again.';
+        case 'email_delivery_failed':
+          return 'We could not send the code. Please try again shortly.';
+      }
+      return error.message;
+    }
+    return error.toString();
   }
 
   Future<bool> register(RegisterRequest request) async {
@@ -191,7 +246,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       if (response.success && response.data != null) {
         // Record the new account so a later re-login is recognised as the
         // same user and keeps its cache (registration itself starts clean).
-        await CacheService().setLastUserId(response.data!.user.id.toString());
+        await CacheService().setLastUserId(response.data!.user!.id.toString());
 
         state = state.copyWith(
           isLoading: false,
@@ -206,7 +261,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         return false;
       }
     } catch (e) {
-      state = state.copyWith(isLoading: false, error: e.toString());
+      state = state.copyWith(isLoading: false, error: _authErrorMessage(e));
       return false;
     }
   }
@@ -220,7 +275,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
   /// like nothing happened. That was the "balance doesn't refresh after
   /// converting" bug: the refresh call was being made, it just never left the
   /// device.
-  Future<GetUserInfoResponse?> getUserInfoWithStats({bool force = false}) async {
+  Future<GetUserInfoResponse?> getUserInfoWithStats({
+    bool force = false,
+  }) async {
     final generation = _sessionGeneration;
     try {
       // Check cache first (unless the caller explicitly asked for fresh data).

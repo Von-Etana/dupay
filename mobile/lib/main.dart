@@ -28,6 +28,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart'
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'screen/auth/splash_screen.dart';
 import 'screen/auth/login_screen.dart';
+import 'screen/auth/login_otp_screen.dart';
 import 'screen/auth/sign_up_screen.dart';
 import 'package:dupay/screen/pos/pos_request_screen.dart';
 import 'package:dupay/screen/data/buy_data_screen.dart';
@@ -134,6 +135,11 @@ class MyApp extends ConsumerWidget {
               routes: {
                 '/': (context) => const SplashScreen(),
                 '/login': (context) => const LoginScreen(),
+                '/loginOtp':
+                    (context) => LoginOtpScreen(
+                      challengeId:
+                          ModalRoute.of(context)!.settings.arguments as String,
+                    ),
                 '/contactSupport': (context) => const ContactSupportScreen(),
                 '/signup': (context) => const SignUpScreen(),
                 '/kyc': (context) => const KycScreen(),

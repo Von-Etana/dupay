@@ -1,0 +1,19 @@
+[Definition]
+failregex = ^.*(authentication failure|Failed password|Invalid user|password authentication failure).*$
+ignoreregex =
+
+[sshd]
+enabled = true
+port = ssh
+logpath = %(sshd_log)s
+maxretry = 5
+bantime = 3600
+findtime = 600
+
+[dupay-nginx]
+enabled = true
+port = http,https
+logpath = /var/log/nginx/access.log
+maxretry = 30
+bantime = 1800
+findtime = 60

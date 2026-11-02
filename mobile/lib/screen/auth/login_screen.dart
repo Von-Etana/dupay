@@ -25,8 +25,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   bool _isPasswordObscured = true;
   final LocalAuthentication _localAuth = LocalAuthentication();
   bool _rememberMe = false;
-  bool _biometricLoading = false;
-  bool _loginSubmitting = false;
+  bool _isBiometricLoading = false;
 
   // ── Top message (replaces bottom SnackBar) ──────────────────────────────────
   OverlayEntry? _topMessageEntry;
@@ -145,9 +144,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _handleLogin() async {
-    if (_loginSubmitting) return;
-    setState(() => _loginSubmitting = true);
-    try {
+    if (ref.read(authLoadingProvider) || _isBiometricLoading) return;
     if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
       _showTopMessage('Please fill in all fields');
       return;
@@ -187,12 +184,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       Navigator.of(context).pushReplacementNamed(route);
     } else if (mounted) {
       final error = ref.read(authErrorProvider);
+      if (error != null && error.startsWith('otp_required:')) {
+        Navigator.of(context).pushNamed(
+          '/loginOtp',
+          arguments: error.substring('otp_required:'.length),
+        );
+        return;
+      }
+      if (mounted) setState(() {});
       if (error != null) {
         _showTopMessage(error);
       }
-    }
-    } finally {
-      if (mounted) setState(() => _loginSubmitting = false);
     }
   }
 
@@ -252,22 +254,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   // platform errors into messages a user can act on.
   // ───────────────────────────────────────────────────────────────────────────
   Future<void> _handleBiometricLogin() async {
-    if (_biometricLoading) return;
-    setState(() => _biometricLoading = true);
-    try {
-      await _performBiometricLogin();
-    } finally {
-      if (mounted) setState(() => _biometricLoading = false);
-    }
-  }
-
-  Future<void> _performBiometricLogin() async {
+    if (_isBiometricLoading || ref.read(authLoadingProvider)) return;
+    if (mounted) setState(() => _isBiometricLoading = true);
     try {
       if (!await SecureStorageService.isBiometricEnabled()) {
         if (mounted)
           _showTopMessage(
             'Sign in with your password to enable biometric login.',
           );
+        if (mounted) setState(() => _isBiometricLoading = false);
         return;
       }
       // A fingerprint proves WHO is holding the phone. It does not prove there
@@ -281,6 +276,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             'Sign in with your password once, then fingerprint login will work.',
           );
         }
+        if (mounted) setState(() => _isBiometricLoading = false);
         return;
       }
 
@@ -291,12 +287,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           _showTopMessage(
             'Biometric authentication not available on this device',
           );
+        if (mounted) setState(() => _isBiometricLoading = false);
         return;
       }
       final List<BiometricType> availableBiometrics =
           await _localAuth.getAvailableBiometrics();
       if (availableBiometrics.isEmpty) {
         if (mounted) _showTopMessage('No biometrics enrolled on this device');
+        if (mounted) setState(() => _isBiometricLoading = false);
         return;
       }
       final bool didAuthenticate = await _localAuth.authenticate(
@@ -333,6 +331,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           _showTopMessage(
             'Could not verify your session. Sign in with your password.',
           );
+          if (mounted) setState(() => _isBiometricLoading = false);
           return;
         }
         final user = ref.read(currentUserProvider);
@@ -346,8 +345,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       } else if (mounted) {
         _showTopMessage('Biometric authentication failed');
       }
+      if (mounted) setState(() => _isBiometricLoading = false);
     } on PlatformException catch (e) {
       if (!mounted) return;
+      setState(() => _isBiometricLoading = false);
 
       // Map the plugin's error codes to something a user can act on, rather
       // than dumping the raw exception into a red banner.
@@ -394,6 +395,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     } catch (e) {
       if (mounted)
         _showTopMessage('Biometric authentication failed. Please try again.');
+      if (mounted) setState(() => _isBiometricLoading = false);
     }
   }
 
@@ -576,7 +578,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                           vertical: 16.h,
                                         ),
                                       ),
-                                      onPressed: _loginSubmitting ? null : _handleLogin,
+                                      onPressed: _handleLogin,
                                       child: Consumer(
                                         builder: (context, ref, child) {
                                           final isLoading = ref.watch(
@@ -653,10 +655,26 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                   children: [
                                     const SizedBox(height: 4),
                                     IconButton(
-                                      onPressed: _biometricLoading ? null : _handleBiometricLogin,
-                                      icon: _biometricLoading
-                                          ? const SizedBox(width: 42, height: 42, child: CircularProgressIndicator(strokeWidth: 3, color: Color(0xFF34544A)))
-                                          : const Icon(Icons.fingerprint_rounded, size: 52, color: Color(0xFF34544A)),
+                                      onPressed:
+                                          _isBiometricLoading
+                                              ? null
+                                              : _handleBiometricLogin,
+                                      icon:
+                                          _isBiometricLoading
+                                              ? const SizedBox(
+                                                height: 38,
+                                                width: 38,
+                                                child:
+                                                    CircularProgressIndicator(
+                                                      strokeWidth: 3,
+                                                      color: Color(0xFF34544A),
+                                                    ),
+                                              )
+                                              : const Icon(
+                                                Icons.fingerprint_rounded,
+                                                size: 52,
+                                                color: Color(0xFF34544A),
+                                              ),
                                     ),
                                   ],
                                 ),

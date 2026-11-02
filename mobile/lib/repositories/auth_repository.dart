@@ -18,11 +18,10 @@ import '../core/constants/api_contants.dart';
 import '../services/storage/secure_storage_service.dart';
 
 class AuthRepository {
-  final ApiService _apiService = ApiService.instance;
+  ApiService get _apiService => ApiService.instance;
 
   // Login
   Future<ApiResponse<LoginResponse>> login(LoginRequest request) async {
-
     final response = await _apiService.post<LoginResponse>(
       ApiConstants.login,
       data: request.toJson(),
@@ -31,11 +30,46 @@ class AuthRepository {
 
     // Save tokens if login successful
     if (response.success && response.data != null) {
-      await SecureStorageService.saveAccessToken(response.data!.accessToken);
-      await SecureStorageService.saveUserId(response.data!.user.id.toString());
+      if (response.data!.accessToken.isNotEmpty &&
+          response.data!.user != null) {
+        await SecureStorageService.saveAccessToken(response.data!.accessToken);
+        await SecureStorageService.saveUserId(
+          response.data!.user!.id.toString(),
+        );
+      }
     }
 
     return response;
+  }
+
+  Future<ApiResponse<Map<String, dynamic>>> sendLoginOtp(
+    String challengeId, {
+    bool resend = false,
+  }) async {
+    return _apiService.postSimple(
+      resend ? ApiConstants.loginOtpResend : ApiConstants.loginOtpSend,
+      data: {
+        'challenge_id': challengeId,
+        'device_id': await SecureStorageService.getOrCreateDeviceId(),
+      },
+    );
+  }
+
+  Future<ApiResponse<LoginResponse>> verifyLoginOtp({
+    required String challengeId,
+    required String otp,
+    String? fcmToken,
+  }) async {
+    return _apiService.post<LoginResponse>(
+      ApiConstants.loginOtpVerify,
+      data: {
+        'challenge_id': challengeId,
+        'otp': otp,
+        'device_id': await SecureStorageService.getOrCreateDeviceId(),
+        if (fcmToken != null) 'fcmToken': fcmToken,
+      },
+      fromJson: LoginResponse.fromJson,
+    );
   }
 
   // Register
@@ -46,7 +80,6 @@ class AuthRepository {
   Future<ApiResponse<RegisterResponse>> register(
     RegisterRequest request,
   ) async {
-
     final formData = await request.toFormData();
 
     final response = await _apiService.post<RegisterResponse>(
@@ -118,7 +151,8 @@ class AuthRepository {
     return await _apiService.post<UserModel>(
       ApiConstants.verifyEmailOtp,
       data: {'email': email, 'code': code},
-      fromJson: (json) => UserModel.fromJson(json['user'] as Map<String, dynamic>),
+      fromJson:
+          (json) => UserModel.fromJson(json['user'] as Map<String, dynamic>),
     );
   }
 

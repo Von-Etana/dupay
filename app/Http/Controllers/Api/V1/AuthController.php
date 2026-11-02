@@ -16,7 +16,6 @@ use Auth;
 use App\TraitsFolder\MailTrait;
 use FirebaseUserUpdate;
 use Illuminate\Support\Facades\DB;
-use App\Services\UserSecurityService;
 
 class AuthController extends Controller
 {
@@ -516,10 +515,11 @@ class AuthController extends Controller
         
         // Validate the input
         $validator = Validator::make($request->all(), [
-            'email' => 'required_without:phone_number',
-            'phone_number' => 'required_without:email',
-            'password' => 'required',
-            'fcmToken' => 'nullable|string'
+            'email' => 'required_without:phone_number|nullable|string',
+            'phone_number' => 'required_without:email|nullable|string',
+            'password' => 'required|string',
+            'fcmToken' => 'nullable|string',
+            'device_id' => 'required|string|min:16|max:255'
         ]);
 
         if ($validator->fails()) {
@@ -544,43 +544,17 @@ class AuthController extends Controller
             'password' => $request->input('password')
         ];
 
-        $candidate = User::where($loginField, $loginType)->first();
-        if ($candidate && (UserSecurityService::passwordLocked($candidate) || UserSecurityService::otpLocked($candidate))) {
-            return response(['success' => false, 'code' => 'account_locked', 'message' => 'Account temporarily locked. Check your email for recovery instructions.'], 423);
-        }
-
-        // Attempt to authenticate the user
-        if (!auth()->attempt($loginData)) {
-            if ($candidate) {
-                UserSecurityService::recordPasswordFailure($candidate);
-            }
+        // Verify the password, then require the short-lived OTP challenge.
+        $challengeService = app(\App\Services\LoginChallengeService::class);
+        $user = User::where($loginField, $loginType)->first();
+        if (!$user) {
+            app(\App\Services\UserSecurityService::class)->recordEvent('password_failed', null, $request);
             return response(['success' => false, 'message' => 'Invalid Login Details']);
         }
-
-        // Fetch the authenticated user
-        $user = User::whereId(auth()->user()->id)->with('profile')->firstOrFail();
-        UserSecurityService::resetPasswordFailures($user);
-
-        // Check if the user is banned
-        if ($user->ban_status == "1") {
-            return response(['success' => false, 'message' => 'Sorry, your account is blocked.']);
-        }
-        
-        if ($request->filled('fcmToken')) {
-            $user->update(['fcmToken' => $request->fcmToken]);
-        }
-
-        // Generate access token
-        $accessToken = auth()->user()->createToken('authToken');
-
-        // Update Firebase user details
-        // (new FirebaseUserUpdate)->updateUser($user);
-
-        return response([
-            'success' => true,
-            'user' => $user,
-            'access_token' => $accessToken->accessToken,
-        ]);
+        $result = $challengeService->begin($user, $loginData['password'], $request);
+        $status = $result['code'] === 'otp_required' ? 200 : ($result['_status'] ?? ($result['success'] ? 200 : 401));
+        unset($result['_status']);
+        return response()->json($result, $status);
     }
 
 

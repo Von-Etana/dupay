@@ -32,9 +32,8 @@ class ApiConstants {
   static const String virtualAccountCreate = '/virtual-account/create';
 
   // ── Recharge card (ePIN) ──────────────────────────────────────────────────  ← added
-  static const String buyEpin    = '/buy-epin';                                
-  static const String fetchEpins = '/user/fetch-epins';                          
-
+  static const String buyEpin = '/buy-epin';
+  static const String fetchEpins = '/user/fetch-epins';
 
   // ── Airtime ───────────────────────────────────────────────────────────────
   static const String airtimeNetwork = '/airtime/networks';
@@ -44,6 +43,10 @@ class ApiConstants {
 
   // ── Auth ──────────────────────────────────────────────────────────────────
   static const String login = '/login';
+  static const String loginOtpSend = '/login/otp/send';
+  static const String loginOtpResend = '/login/otp/resend';
+  static const String loginOtpVerify = '/login/otp/verify';
+  static const String loginUnlock = '/login/unlock';
   static const String logout = '/logout';
   static const String register = '/register';
   static const String resetPassword = '/reset-password';
@@ -121,19 +124,25 @@ class ApiConstants {
 
   // ── Transfer / Send Money ─────────────────────────────────────────────────
   static const String transferUsdToBank = '/bank-transfer/usd-to-bank';
+
   /// POST /fund/transfer  – P2P wallet transfer
   static const String fundTransfer = '/fund/transfer';
+
   /// POST /fund/request   – request money from another user
   static const String fundRequest = '/fund/request';
+
   /// POST /fund/withdraw  – bank withdrawal
   static const String fundWithdraw = '/fund/withdraw';
+
   /// POST /fund/manual-funding
   static const String manualFunding = '/fund/manual-funding';
+
   /// GET  /bank-transfer/banklist
   static const String bankList = '/bank-transfer/banklist';
 
   // ── Users ─────────────────────────────────────────────────────────────────
   static const String updateProfileField = '/update-profile-field';
+
   /// POST /update-fcm-token – keeps the device push token current after login.
   static const String updateFcmToken = '/update-fcm-token';
   static const String allUsers = '/all-users';
@@ -147,28 +156,40 @@ class ApiConstants {
   // ── POS ───────────────────────────────────────────────────────────────────
   /// GET  /pos-request  – fetch existing request details
   static const String posRequest = '/pos-request';
+
   /// POST /post-request – submit new POS request
   static const String posPostRequest = '/post-request';
 
   // ── Foreign Currency ──────────────────────────────────────────────────────
   /// POST /foreign/account/request
   static const String foreignAccountRequest = '/foreign/account/request';
+
   /// POST /foreign/account/create
   static const String foreignAccountCreate = '/foreign/account/create';
+
   /// GET  /foreign/account/fetch/{currency}
   static const String foreignAccountFetch = '/foreign/account/fetch';
+
   /// POST /foreign/account/whitelist/add/{id}
-  static const String foreignAccountWhitelistAdd = '/foreign/account/whitelist/add';
+  static const String foreignAccountWhitelistAdd =
+      '/foreign/account/whitelist/add';
+
   /// POST /foreign/account/whitelist/list/{id}
-  static const String foreignAccountWhitelistList = '/foreign/account/whitelist/list';
+  static const String foreignAccountWhitelistList =
+      '/foreign/account/whitelist/list';
+
   /// POST /foreign/account/whitelist/remove/{id}/{item_id}
-  static const String foreignAccountWhitelistRemove = '/foreign/account/whitelist/remove';
+  static const String foreignAccountWhitelistRemove =
+      '/foreign/account/whitelist/remove';
 
   // ── Currency Conversion ───────────────────────────────────────────────────
   /// POST /foreign/account/convert-currency  (foreign account convert)
-  static const String foreignConvertCurrency = '/foreign/account/convert-currency';
+  static const String foreignConvertCurrency =
+      '/foreign/account/convert-currency';
+
   /// POST /convert-currency  (general NGN↔foreign convert)
   static const String convertCurrency = '/convert-currency';
+
   /// GET  /exchange-rates
   static const String exchangeRates = '/exchange-rates';
 
@@ -212,5 +233,4 @@ class EnvironmentConfig {
 
     return url.toString();
   }
-
 }
