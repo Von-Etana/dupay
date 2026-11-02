@@ -101,6 +101,9 @@ Route::group(['prefix' => 'adminoffice'], function () {
     Route::post('security/users/{user}/revoke-sessions', [UserSecurityController::class, 'revokeSessions'])->middleware('can:manage_security_alerts')->name('security.users.revoke-sessions');
 
     // Two-Factor Authentication Settings
+    Route::get('security', function () {
+        return redirect()->route('admin.security.2fa');
+    })->name('security.index');
     Route::get('security/2fa', [TwoFactorController::class, 'showSettings'])->name('security.2fa');
     Route::post('security/2fa/confirm', [TwoFactorController::class, 'confirmTotp'])->name('security.2fa.confirm');
     Route::post('security/2fa/email', [TwoFactorController::class, 'enableEmail'])->name('security.2fa.email');
