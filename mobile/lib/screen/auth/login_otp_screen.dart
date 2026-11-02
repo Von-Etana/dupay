@@ -5,7 +5,7 @@ import 'package:dupay/providers/auth_provider.dart';
 
 class LoginOtpScreen extends ConsumerStatefulWidget {
   const LoginOtpScreen({super.key});
-  @override State<LoginOtpScreen> createState() => _LoginOtpScreenState();
+  @override ConsumerState<LoginOtpScreen> createState() => _LoginOtpScreenState();
 }
 
 class _LoginOtpScreenState extends ConsumerState<LoginOtpScreen> {
@@ -27,19 +27,33 @@ class _LoginOtpScreenState extends ConsumerState<LoginOtpScreen> {
   Future<void> verify() async {
     if (busy || controller.text.trim().length != 6 || challengeId == null) return;
     setState(() => busy = true);
-    final r = await ref.read(authNotifierProvider.notifier).verifyLoginOtp(
-      challengeId: challengeId!, otp: controller.text.trim());
-    if (!mounted) return;
-    if (r.success) { Navigator.of(context).pushNamedAndRemoveUntil('/homeNav', (_) => false); }
-    else { setState(() => busy = false); ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(r.message.isEmpty ? 'Unable to verify code' : r.message))); }
+    try {
+      final r = await ref.read(authNotifierProvider.notifier).verifyLoginOtp(
+        challengeId: challengeId!, otp: controller.text.trim());
+      if (!mounted) return;
+      if (r.success) {
+        Navigator.of(context).pushNamedAndRemoveUntil('/homeNav', (_) => false);
+      } else {
+        setState(() => busy = false);
+        final code = r.data?.code;
+        _showError(code == 'otp_expired' ? 'This code has expired. Request a new one.' : code == 'otp_retry_limit' || code == 'account_locked' ? 'Too many attempts. Your account is temporarily locked.' : r.message.isEmpty ? 'Incorrect verification code.' : r.message);
+      }
+    } catch (_) {
+      if (mounted) { setState(() => busy = false); _showError('Unable to verify the code. Check your connection and try again.'); }
+    }
   }
+
+  void _showError(String message) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
 
   Future<void> resend() async {
     if (seconds > 0 || busy || challengeId == null) return;
-    final r = await ref.read(authNotifierProvider.notifier).resendLoginOtp(challengeId!);
-    if (!mounted) return;
-    setState(() => seconds = 60);
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(r.message.isEmpty ? 'Code sent' : r.message)));
+    try {
+      final r = await ref.read(authNotifierProvider.notifier).resendLoginOtp(challengeId!);
+      if (!mounted) return;
+      if (r.data?.challengeId != null) challengeId = r.data!.challengeId;
+      setState(() => seconds = 60);
+      _showError(r.message.isEmpty ? 'A new code was sent.' : r.message);
+    } catch (_) { if (mounted) _showError('Please wait before requesting another code.'); }
   }
 
   @override Widget build(BuildContext context) => Scaffold(

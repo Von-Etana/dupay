@@ -164,6 +164,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         '🔐 AuthProvider: Repository response - success: ${response.success}',
       );
       if (response.success && response.data != null) {
+        pendingChallengeId = null;
         print('🔐 AuthProvider: Login successful, updating state');
 
         // Identity-aware cache handling: only wipe the cache when the account
@@ -218,6 +219,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       final response = await _authRepository.register(request);
 
       if (response.success && response.data != null) {
+      pendingChallengeId = null;
         // Record the new account so a later re-login is recognised as the
         // same user and keeps its cache (registration itself starts clean).
         await CacheService().setLastUserId(response.data!.user.id.toString());
