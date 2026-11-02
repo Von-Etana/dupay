@@ -321,6 +321,19 @@ class ApiService {
         statusCode: response.statusCode,
       );
     } else {
+      // Authentication challenges and validation failures may intentionally
+      // return HTTP 200 with success=false and a machine-readable code.
+      if ((response.statusCode ?? 500) >= 200 && (response.statusCode ?? 500) < 300) {
+        return ApiResponse<T>(
+          success: false,
+          message: responseData['message'] ?? 'Request failed',
+          data: fromJson(responseData),
+          statusCode: response.statusCode,
+          errors: responseData['errors'] is Map<String, dynamic>
+              ? Map<String, dynamic>.from(responseData['errors'])
+              : null,
+        );
+      }
       throw ServerException(
         message: responseData['message'] ?? 'Unknown error',
         statusCode: response.statusCode,
