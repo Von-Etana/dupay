@@ -66,8 +66,14 @@ class AuthNotifier extends StateNotifier<AuthState> {
     _initializeAuth();
   }
 
-  Future<ApiResponse<LoginResponse>> verifyLoginOtp({required String challengeId, required String otp}) async {
-    final response = await _authRepository.verifyLoginOtp(challengeId: challengeId, otp: otp);
+  Future<ApiResponse<LoginResponse>> verifyLoginOtp({
+    required String challengeId,
+    required String otp,
+  }) async {
+    final response = await _authRepository.verifyLoginOtp(
+      challengeId: challengeId,
+      otp: otp,
+    );
     if (response.success && response.data != null) {
       final userId = response.data!.user.id.toString();
       await CacheService().clearAllCache();
@@ -85,7 +91,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
     return response;
   }
 
-  Future<ApiResponse<LoginResponse>> resendLoginOtp(String challengeId) => _authRepository.resendLoginOtp(challengeId);
+  Future<ApiResponse<LoginResponse>> resendLoginOtp(String challengeId) =>
+      _authRepository.resendLoginOtp(challengeId);
 
   @override
   void dispose() {
@@ -219,7 +226,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       final response = await _authRepository.register(request);
 
       if (response.success && response.data != null) {
-      pendingChallengeId = null;
+        pendingChallengeId = null;
         // Record the new account so a later re-login is recognised as the
         // same user and keeps its cache (registration itself starts clean).
         await CacheService().setLastUserId(response.data!.user.id.toString());
@@ -251,7 +258,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
   /// like nothing happened. That was the "balance doesn't refresh after
   /// converting" bug: the refresh call was being made, it just never left the
   /// device.
-  Future<GetUserInfoResponse?> getUserInfoWithStats({bool force = false}) async {
+  Future<GetUserInfoResponse?> getUserInfoWithStats({
+    bool force = false,
+  }) async {
     final generation = _sessionGeneration;
     try {
       // Check cache first (unless the caller explicitly asked for fresh data).

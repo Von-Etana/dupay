@@ -22,7 +22,6 @@ class AuthRepository {
 
   // Login
   Future<ApiResponse<LoginResponse>> login(LoginRequest request) async {
-
     final response = await _apiService.post<LoginResponse>(
       ApiConstants.login,
       data: request.toJson(),
@@ -30,7 +29,9 @@ class AuthRepository {
     );
 
     // Save tokens if login successful
-    if (response.success && response.data != null && response.data!.accessToken.isNotEmpty) {
+    if (response.success &&
+        response.data != null &&
+        response.data!.accessToken.isNotEmpty) {
       await SecureStorageService.saveAccessToken(response.data!.accessToken);
       await SecureStorageService.saveUserId(response.data!.user.id.toString());
     }
@@ -38,12 +39,30 @@ class AuthRepository {
     return response;
   }
 
-  Future<ApiResponse<LoginResponse>> verifyLoginOtp({required String challengeId, required String otp}) async {
-    final response = await _apiService.post<LoginResponse>(ApiConstants.loginOtpVerify, data: {'challenge_id': challengeId, 'otp': otp}, fromJson: LoginResponse.fromJson);
-    if (response.success && response.data != null && response.data!.accessToken.isNotEmpty) { await SecureStorageService.saveAccessToken(response.data!.accessToken); await SecureStorageService.saveUserId(response.data!.user.id.toString()); }
+  Future<ApiResponse<LoginResponse>> verifyLoginOtp({
+    required String challengeId,
+    required String otp,
+  }) async {
+    final response = await _apiService.post<LoginResponse>(
+      ApiConstants.loginOtpVerify,
+      data: {'challenge_id': challengeId, 'otp': otp},
+      fromJson: LoginResponse.fromJson,
+    );
+    if (response.success &&
+        response.data != null &&
+        response.data!.accessToken.isNotEmpty) {
+      await SecureStorageService.saveAccessToken(response.data!.accessToken);
+      await SecureStorageService.saveUserId(response.data!.user.id.toString());
+    }
     return response;
   }
-  Future<ApiResponse<LoginResponse>> resendLoginOtp(String challengeId) => _apiService.post<LoginResponse>(ApiConstants.loginOtpResend, data: {'challenge_id': challengeId}, fromJson: LoginResponse.fromJson);
+
+  Future<ApiResponse<LoginResponse>> resendLoginOtp(String challengeId) =>
+      _apiService.post<LoginResponse>(
+        ApiConstants.loginOtpResend,
+        data: {'challenge_id': challengeId},
+        fromJson: LoginResponse.fromJson,
+      );
 
   // Register
   //
@@ -53,7 +72,6 @@ class AuthRepository {
   Future<ApiResponse<RegisterResponse>> register(
     RegisterRequest request,
   ) async {
-
     final formData = await request.toFormData();
 
     final response = await _apiService.post<RegisterResponse>(
@@ -125,7 +143,8 @@ class AuthRepository {
     return await _apiService.post<UserModel>(
       ApiConstants.verifyEmailOtp,
       data: {'email': email, 'code': code},
-      fromJson: (json) => UserModel.fromJson(json['user'] as Map<String, dynamic>),
+      fromJson:
+          (json) => UserModel.fromJson(json['user'] as Map<String, dynamic>),
     );
   }
 
