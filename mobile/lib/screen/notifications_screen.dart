@@ -6,6 +6,10 @@ class NotificationsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final args = ModalRoute.of(context)?.settings.arguments;
+    final detail = args is Map ? args : const {};
+    final detailTitle = detail['title'] as String?;
+    final detailBody = detail['body'] as String?;
     return Scaffold(
       backgroundColor: const Color(0xFF34544A),
       body: SafeArea(
@@ -75,6 +79,13 @@ class NotificationsScreen extends StatelessWidget {
                         vertical: 16,
                       ),
                       children: [
+                        if (detailTitle != null || detailBody != null)
+                          _NotificationDetailCard(
+                            title: detailTitle ?? 'Notification',
+                            body: detailBody ?? '',
+                          ),
+                        if (detailTitle != null || detailBody != null)
+                          const SizedBox(height: 18),
                         // Today
                         _SectionHeader(
                           title: 'TODAY',
@@ -100,6 +111,25 @@ class NotificationsScreen extends StatelessWidget {
       ),
     );
   }
+}
+
+class _NotificationDetailCard extends StatelessWidget {
+  final String title;
+  final String body;
+  const _NotificationDetailCard({required this.title, required this.body});
+  @override
+  Widget build(BuildContext context) => Card(
+        elevation: 2,
+        margin: EdgeInsets.zero,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(title, style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.w700)),
+            const SizedBox(height: 10),
+            Text(body, style: TextStyle(fontSize: 15.sp, color: Colors.black87)),
+          ]),
+        ),
+      );
 }
 
 class _SectionHeader extends StatelessWidget {

@@ -154,9 +154,10 @@ class NotificationService {
             _bannerDismissTimer?.cancel();
             entry.remove();
             _activeTopBanner = null;
-            if (route != null && route.isNotEmpty) {
-              navigatorKey?.currentState?.pushNamed(route);
-            }
+            navigatorKey?.currentState?.pushNamed(
+              (route != null && route.isNotEmpty) ? route : '/notification',
+              arguments: {'title': title, 'body': body},
+            );
           },
           onDismiss: () {
             _bannerDismissTimer?.cancel();
