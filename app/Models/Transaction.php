@@ -16,12 +16,11 @@ class Transaction extends Model
 
     protected static function booted()
     {
-        // Fire an Android push when a transaction is CREATED already-successful.
-        // P2P transfers, maintenance fees, and most instant services insert rows
-        // with status = 'success' directly, so they trigger created(), not updated().
+        // Notify immediately when a transaction is created with a terminal
+        // outcome. This covers both successful and failed transfers.
         static::created(function ($transaction) {
             try {
-                if (strtolower($transaction->status) === 'success') {
+                if (in_array(strtolower($transaction->status), ['success', 'failed', 'unsuccessful'], true)) {
                     $transaction->sendTransactionPush();
                 }
             } catch (\Throwable $e) {
@@ -35,7 +34,7 @@ class Transaction extends Model
             try {
                 if (
                     $transaction->wasChanged('status') &&
-                    strtolower($transaction->status) === 'success'
+                    in_array(strtolower($transaction->status), ['success', 'failed', 'unsuccessful'], true)
                 ) {
                     $transaction->sendTransactionPush();
                 }
@@ -102,10 +101,15 @@ class Transaction extends Model
             : '*****';
 
         // ---- Build the bank-style body ----
-        $title   = 'Transaction Alert';
+        $status  = strtolower((string) ($attrs['status'] ?? ''));
+        $isSuccess = $status === 'success';
+        $title   = $isSuccess ? 'Transfer successful' : 'Transfer failed';
         $lines   = [];
         $lines[] = 'Acct: ' . $maskedAcct;
         $lines[] = 'Amt: ' . $currency . ' ' . $amount . ' ' . $drcr;
+        if (!$isSuccess) {
+            $lines[] = 'Status: Failed';
+        }
         if ($desc !== '') {
             $lines[] = 'Desc: ' . $desc;
         }
@@ -125,7 +129,7 @@ class Transaction extends Model
             'description'   => $desc,
             'reference'     => (string) ($attrs['reference'] ?? ($this->reference ?? '')),
             'transaction'   => (string) $this->id,
-            'status'        => 'success',
+            'status'        => $isSuccess ? 'success' : 'failed',
         ];
 
         // Same proven per-user FCM sender used by the admin "Send Notification"
