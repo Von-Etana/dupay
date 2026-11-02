@@ -570,6 +570,25 @@ class AuthController extends Controller
             $user->update(['fcmToken' => $request->fcmToken]);
         }
 
+        // A device verified through OTP remains trusted until explicitly
+        // revoked. This avoids prompting for OTP on every login while still
+        // requiring OTP for genuinely new devices.
+        $deviceHash = UserSecurityService::deviceHash($request->input('device_id'));
+        $trusted = $deviceHash && DB::table('user_devices')
+            ->where('user_id', $user->id)
+            ->where('device_id_hash', $deviceHash)
+            ->whereNull('revoked_at')
+            ->exists();
+
+        if ($trusted) {
+            DB::table('user_devices')->where('user_id', $user->id)
+                ->where('device_id_hash', $deviceHash)
+                ->update(['last_seen_at' => now(), 'last_ip' => $request->ip(), 'updated_at' => now()]);
+            $accessToken = $user->createToken('authToken');
+            UserSecurityService::recordEvent('trusted_device_login', $user, ['device_id_hash' => $deviceHash]);
+            return response(['success' => true, 'user' => $user, 'access_token' => $accessToken->accessToken]);
+        }
+
         try {
             $challenge = app(LoginChallengeService::class)->begin($user, $request->input('device_id'));
         } catch (\RuntimeException $e) {
