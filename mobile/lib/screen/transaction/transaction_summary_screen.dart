@@ -9,6 +9,8 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter/services.dart';
 import 'transaction_receipt_screen.dart';
 import '../../core/utils/formatters.dart';
+import '../../core/exceptions/api_exception.dart';
+import '../../widgets/limit_notice.dart';
 
 /// Data class carrying all details needed for the summary + receipt screens.
 class TransactionSummaryData {
@@ -108,21 +110,33 @@ class _TransactionSummaryScreenState
     FocusScope.of(context).unfocus();
 
     final enteredPin = _pinController.text;
+    bool loaderShown = false;
 
     try {
       showDialog(
         context: context,
         barrierDismissible: false,
+        useRootNavigator: true,
         builder: (_) => const Center(
           child: CircularProgressIndicator(color: Color(0xFF34544A)),
         ),
       );
+      loaderShown = true;
 
       final result = await widget.data.onConfirm(enteredPin);
       if (!mounted) return;
-      Navigator.of(context).pop(); // Close loader
+      if (loaderShown) {
+        Navigator.of(context, rootNavigator: true).pop(); // Close loader
+        loaderShown = false;
+      }
 
-      final success = result['success'] == true;
+      final success = result['success'] == true ||
+          result['success'] == 'true' ||
+          result['success'] == 1 ||
+          result['status']?.toString().toLowerCase() == 'success' ||
+          result['status']?.toString().toLowerCase() == 'successful' ||
+          result['status']?.toString().toLowerCase() == 'pending';
+
       if (success) {
         // Extract session_id separately so the receipt rendered immediately
         // after a successful transaction shows the same "Session ID" row that
@@ -135,12 +149,14 @@ class _TransactionSummaryScreenState
             ? (result['extra_fields'] as List<ReceiptField>)
             : null;
 
+        final rawStatus = result['status']?.toString() ?? 'success';
+
         final receiptData = TransactionReceiptData(
           service: widget.data.service,
           type: result['type'] ?? widget.data.service,
           description: result['description'] ?? widget.data.description ?? '',
           amount: widget.data.amount,
-          status: 'success',
+          status: rawStatus,
           reference: result['reference'] ?? sessionIdRaw ?? '',
           sessionId: sessionId,
           initialBalance: result['initial_balance']?.toString() ?? '',
@@ -159,27 +175,34 @@ class _TransactionSummaryScreenState
         setState(() => _isProcessing = false);
         // Re-open keyboard so user can retry.
         _openKeyboard();
+        final msg = result['message']?.toString() ?? 'Transaction failed. Please try again.';
+        if (!showLimitNoticeIfNeeded(context, msg)) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(msg),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (!mounted) return;
+      if (loaderShown) {
+        Navigator.of(context, rootNavigator: true).pop(); // Close loader if open
+        loaderShown = false;
+      }
+      _clearPin();
+      setState(() => _isProcessing = false);
+      _openKeyboard();
+      final msg = e is ServerException ? e.message : e.toString().replaceFirst('Exception: ', '');
+      if (!showLimitNoticeIfNeeded(context, msg)) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              result['message'] ?? 'Transaction failed. Please try again.',
-            ),
+            content: Text(msg.isNotEmpty ? msg : 'Error: $e'),
             backgroundColor: Colors.red,
           ),
         );
       }
-    } catch (e) {
-      if (!mounted) return;
-      Navigator.of(context).pop(); // Close loader if open
-      _clearPin();
-      setState(() => _isProcessing = false);
-      _openKeyboard();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
     }
   }
 

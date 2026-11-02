@@ -214,6 +214,7 @@ class _P2PScreenState extends ConsumerState<P2PScreen> {
                   );
               return {
                 'success': response.success,
+                'status': response.data?['status']?.toString() ?? 'success',
                 'message': response.message,
                 'reference': response.data?['reference'] ?? '',
                 'description': 'Transfer to $name',

@@ -691,15 +691,18 @@ class TransferController extends Controller
         (new FirebaseUserUpdate)->updateUser($user);
     
         return response()->json([
-            'success' => $finalStatus === 'success',
+            'success' => in_array($finalStatus, ['success', 'pending']),
             'status' => $finalStatus,
-            'message' => $finalStatus === 'success' ? 'Transfer successful.' : 'Transaction unsuccessful: ' . $resDesc,
+            'message' => $finalStatus === 'success' ? 'Transfer successful.' : ($finalStatus === 'pending' ? 'Transfer is processing.' : 'Transaction unsuccessful: ' . $resDesc),
             'data' => [
                 'service' => "Fund Withdrawal",
                 'amount' => $requestAmount,
                 'charge' => $charge + $p_charge,
                 'reference' => $trx,
+                'session_id' => $sessionId ?? null,
                 'wallet_balance' => $balanceAction['final_balance'],
+                'initial_balance' => $balanceAction['init_balance'] ?? '',
+                'final_balance' => $balanceAction['final_balance'],
                 'from' => "Wallet",
                 'date' => $date,
                 'to' => "{$request->account_number} {$request->account_name}",
@@ -1075,15 +1078,18 @@ class TransferController extends Controller
         (new FirebaseUserUpdate)->updateUser($user);
     
         return response()->json([
-            'success' => $finalStatus === 'success',
+            'success' => in_array($finalStatus, ['success', 'pending']),
             'status' => $finalStatus,
-            'message' => $finalStatus === 'success' ? 'Transfer successful.' : 'Transaction unsuccessful: ' . $resDesc,
+            'message' => $finalStatus === 'success' ? 'Transfer successful.' : ($finalStatus === 'pending' ? 'Transfer is processing.' : 'Transaction unsuccessful: ' . $resDesc),
             'data' => [
                 'service' => "Fund Withdrawal",
                 'amount' => $requestAmount,
                 'charge' => $charge + $p_charge,
                 'reference' => $trx,
+                'session_id' => $sessionId ?? null,
                 'wallet_balance' => $balanceAction['final_balance'],
+                'initial_balance' => $balanceAction['init_balance'] ?? '',
+                'final_balance' => $balanceAction['final_balance'],
                 'from' => "Wallet",
                 'date' => $date,
                 'to' => "{$request->account_number} {$request->account_name}",
@@ -1741,7 +1747,7 @@ class TransferController extends Controller
                    
                     'message' => "Transfer Successful",
                     'data' => [
-                        'service' => "Fund Transafer",
+                        'service' => "Fund Transfer",
                         'amount' => $request->amount,
                         "charge" => $charge,
                         'from' => $user->profile->username,
@@ -1749,7 +1755,9 @@ class TransferController extends Controller
                         "for" => $request->comment,
                         'date' => $date,
                         'reference' => $trx,
-                        'wallet_balance' => $Rfinal_balance,
+                        'wallet_balance' => $final_balance,
+                        'initial_balance' => $init_balance,
+                        'final_balance' => $final_balance,
                     ],
                 ]);
             }

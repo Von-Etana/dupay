@@ -1079,6 +1079,7 @@ class _BankTransferScreenState extends ConsumerState<BankTransferScreen> {
               );
               return {
                 'success':         response.success,
+                'status':          response.data?['status']?.toString() ?? 'success',
                 'message':         response.message,
                 'reference':       response.data?['reference']?.toString() ?? '',
                 // Prefer session_id echoed back by the backend; fall back to

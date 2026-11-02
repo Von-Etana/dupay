@@ -8,6 +8,7 @@ import 'bank_transfer_screen.dart';
 import 'p2p_screen.dart';
 import '../../core/utils/formatters.dart';
 import '../../widgets/limit_notice.dart';
+import '../transaction/transaction_receipt_screen.dart';
 
 class SendMoneyScreen extends ConsumerStatefulWidget {
   const SendMoneyScreen({super.key});
@@ -105,13 +106,24 @@ class _SendMoneyScreenState extends ConsumerState<SendMoneyScreen> {
                         Navigator.pop(context); // Close loading dialog
 
                         if (response.success) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Fund transfer successful!'),
-                              backgroundColor: Colors.green,
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => TransactionReceiptScreen(
+                                data: TransactionReceiptData(
+                                  service: 'P2P Transfer',
+                                  type: 'Fund Transfer',
+                                  description: 'Transfer to ${receiverController.text}',
+                                  amount: '₦${amountController.text}',
+                                  status: 'success',
+                                  reference: response.data?['reference']?.toString() ?? '',
+                                  initialBalance: response.data?['initial_balance']?.toString() ?? '',
+                                  finalBalance: response.data?['final_balance']?.toString() ?? '',
+                                  date: DateTime.now(),
+                                ),
+                              ),
                             ),
                           );
-                          Navigator.pop(context); // Go back to previous screen
                         } else if (!showLimitNoticeIfNeeded(
                             context, response.message)) {
                           ScaffoldMessenger.of(context).showSnackBar(
