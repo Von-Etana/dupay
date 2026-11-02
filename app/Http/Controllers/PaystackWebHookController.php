@@ -21,15 +21,16 @@ class PaystackWebHookController extends Controller
 
     {
         //$this->verifHash = "ismartTechVerifyAsh9393nnhfeotdeket";
-        $this->gateWay = PaymentGateway::where("name", "like", "%Paystack%")->FirstOrFail();
-        $this->apiPayLoad = json_decode($this->gateWay->value_key, true);
-        if (!$this->gateWay || $this->apiPayLoad == null ||  !is_array($this->apiPayLoad)) {
-            return [
-                "success" => false,
-                "message" => "Payment Value Key not valid contact developer"
-            ];
-        }
-        $this->secret_key = $this->apiPayLoad["secret_key"];
+        // Do not query payment configuration with firstOrFail() in a
+        // controller constructor: artisan route discovery must work even when
+        // an optional gateway is not configured.
+        $this->gateWay = PaymentGateway::where("name", "like", "%Paystack%")->first();
+        $this->apiPayLoad = $this->gateWay
+            ? json_decode($this->gateWay->value_key, true)
+            : null;
+        $this->secret_key = is_array($this->apiPayLoad)
+            ? ($this->apiPayLoad['secret_key'] ?? null)
+            : null;
     }
 
 
@@ -39,7 +40,7 @@ class PaystackWebHookController extends Controller
 
         $json = $request->getContent();
         $signature = $request->header('x-paystack-signature');
-        if (!$request->isMethod('post') || !$signature || !$this->secret_key || !hash_equals(hash_hmac('sha512', $json, $this->secret_key), $signature)) {
+        if (!$this->secret_key || !$request->isMethod('post') || !$signature || !hash_equals(hash_hmac('sha512', $json, $this->secret_key), $signature)) {
             return response()->json(['message' => 'Invalid signature'], 403);
         }
         $response = json_decode($json);
