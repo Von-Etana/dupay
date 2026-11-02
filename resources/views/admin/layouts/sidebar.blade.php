@@ -340,7 +340,7 @@
                    onmouseout="this.style.background='transparent'; this.style.borderLeftColor='transparent';">
                     <div style="display:flex; align-items:center; gap:12px; flex:1;">
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
-                        <span style="{{ $spanStyle }}">2FA Security</span>
+                        <span style="{{ $spanStyle }}">Security → Two-Factor Authentication</span>
                     </div>
                 </a>
             </li>

@@ -157,6 +157,10 @@
 
                     @else
                         {{-- 2FA INACTIVE / SETUP STATE --}}
+                        <div class="alert alert-info border mb-4">
+                            <strong>Recovery codes are created when 2FA is enabled.</strong>
+                            Enable Authenticator App or Email 2FA below; the one-time backup codes will be shown immediately after setup.
+                        </div>
                         <div class="row">
                             <div class="col-lg-7 col-md-12 mb-4">
                                 <div class="card border rounded-3 p-4 h-100">
