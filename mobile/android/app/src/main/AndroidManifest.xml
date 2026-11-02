@@ -38,7 +38,7 @@
          request, and the camera then fails with a SecurityException. -->
 
     <application
-        android:label="dupay"
+        android:label="Dupay"
         android:name="${applicationName}"
         android:allowBackup="false"
         android:fullBackupContent="@xml/backup_rules"
