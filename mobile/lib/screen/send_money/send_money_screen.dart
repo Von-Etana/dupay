@@ -6,6 +6,7 @@ import '../../providers/transfer_provider.dart';
 import '../../providers/auth_provider.dart';
 import 'bank_transfer_screen.dart';
 import 'p2p_screen.dart';
+import 'transfer_result_screen.dart';
 import '../../core/utils/formatters.dart';
 import '../../widgets/limit_notice.dart';
 
@@ -105,21 +106,37 @@ class _SendMoneyScreenState extends ConsumerState<SendMoneyScreen> {
                         Navigator.pop(context); // Close loading dialog
 
                         if (response.success) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Fund transfer successful!'),
-                              backgroundColor: Colors.green,
+                          Navigator.of(context).pushReplacement(
+                            MaterialPageRoute(
+                              builder:
+                                  (_) => TransferResultScreen(
+                                    success: true,
+                                    amount: amountController.text,
+                                    message:
+                                        response.message?.isNotEmpty == true
+                                            ? response.message!
+                                            : 'Your funds were sent successfully.',
+                                    reference:
+                                        response.data?['reference']?.toString(),
+                                  ),
                             ),
                           );
-                          Navigator.pop(context); // Go back to previous screen
                         } else if (!showLimitNoticeIfNeeded(
-                            context, response.message)) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                response.message ?? 'Transfer failed',
-                              ),
-                              backgroundColor: Colors.red,
+                          context,
+                          response.message,
+                        )) {
+                          Navigator.of(context).pushReplacement(
+                            MaterialPageRoute(
+                              builder:
+                                  (_) => TransferResultScreen(
+                                    success: false,
+                                    amount: amountController.text,
+                                    message:
+                                        response.message ??
+                                        'Transfer failed. No money was moved.',
+                                    reference:
+                                        response.data?['reference']?.toString(),
+                                  ),
                             ),
                           );
                         }
@@ -234,7 +251,9 @@ class _SendMoneyScreenState extends ConsumerState<SendMoneyScreen> {
                           );
                           Navigator.pop(context); // Go back to previous screen
                         } else if (!showLimitNoticeIfNeeded(
-                            context, response.message)) {
+                          context,
+                          response.message,
+                        )) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: Text(
@@ -356,7 +375,9 @@ class _SendMoneyScreenState extends ConsumerState<SendMoneyScreen> {
                           );
                           Navigator.pop(context); // Go back to previous screen
                         } else if (!showLimitNoticeIfNeeded(
-                            context, response.message)) {
+                          context,
+                          response.message,
+                        )) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: Text(
@@ -574,9 +595,8 @@ class _SendMoneyScreenState extends ConsumerState<SendMoneyScreen> {
                                                   context,
                                                   MaterialPageRoute(
                                                     builder:
-                                                        (
-                                                          context,
-                                                        ) => const BankTransferScreen(),
+                                                        (context) =>
+                                                            const BankTransferScreen(),
                                                   ),
                                                 );
                                               },
