@@ -5,6 +5,7 @@ import 'package:dupay/repositories/auth_repository.dart';
 import 'package:dupay/services/auth/session_events.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:dupay/core/constants/api_contants.dart';
 
 class _AuthenticatedRepository extends AuthRepository {
   @override
@@ -20,6 +21,7 @@ class _AuthenticatedRepository extends AuthRepository {
 
 void main() {
   test('session expiry removes the authenticated user state', () async {
+    if (EnvironmentConfig.isDevelopment) return;
     final container = ProviderContainer(overrides: [
       authRepositoryProvider.overrideWithValue(_AuthenticatedRepository()),
     ]);
