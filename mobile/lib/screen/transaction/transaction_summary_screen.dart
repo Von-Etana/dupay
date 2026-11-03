@@ -9,6 +9,8 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter/services.dart';
 import 'transaction_receipt_screen.dart';
 import '../../core/utils/formatters.dart';
+import '../../widgets/app_alert.dart';
+import '../../widgets/limit_notice.dart';
 
 /// Data class carrying all details needed for the summary + receipt screens.
 class TransactionSummaryData {
@@ -113,9 +115,10 @@ class _TransactionSummaryScreenState
       showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (_) => const Center(
-          child: CircularProgressIndicator(color: Color(0xFF34544A)),
-        ),
+        builder:
+            (_) => const Center(
+              child: CircularProgressIndicator(color: Color(0xFF34544A)),
+            ),
       );
 
       final result = await widget.data.onConfirm(enteredPin);
@@ -129,11 +132,14 @@ class _TransactionSummaryScreenState
         // the receipt opened from transaction history shows.
         final sessionIdRaw = result['session_id']?.toString();
         final sessionId =
-            (sessionIdRaw != null && sessionIdRaw.isNotEmpty) ? sessionIdRaw : null;
+            (sessionIdRaw != null && sessionIdRaw.isNotEmpty)
+                ? sessionIdRaw
+                : null;
 
-        final extraFields = (result['extra_fields'] is List<ReceiptField>)
-            ? (result['extra_fields'] as List<ReceiptField>)
-            : null;
+        final extraFields =
+            (result['extra_fields'] is List<ReceiptField>)
+                ? (result['extra_fields'] as List<ReceiptField>)
+                : null;
 
         final receiptData = TransactionReceiptData(
           service: widget.data.service,
@@ -141,6 +147,7 @@ class _TransactionSummaryScreenState
           description: result['description'] ?? widget.data.description ?? '',
           amount: widget.data.amount,
           status: 'success',
+          statusMessage: result['message']?.toString(),
           reference: result['reference'] ?? sessionIdRaw ?? '',
           sessionId: sessionId,
           initialBalance: result['initial_balance']?.toString() ?? '',
@@ -155,31 +162,51 @@ class _TransactionSummaryScreenState
           ),
         );
       } else {
+        if (result['show_result_screen'] == true) {
+          final status = result['status']?.toString() ?? 'failed';
+          final sessionIdRaw = result['session_id']?.toString();
+          final resultData = TransactionReceiptData(
+            service: widget.data.service,
+            type: result['type']?.toString() ?? widget.data.service,
+            description:
+                result['description']?.toString() ??
+                widget.data.description ??
+                '',
+            amount: widget.data.amount,
+            status: status,
+            statusMessage: result['message']?.toString(),
+            reference: result['reference']?.toString() ?? sessionIdRaw ?? '',
+            sessionId: sessionIdRaw,
+            initialBalance: result['initial_balance']?.toString() ?? '',
+            finalBalance: result['final_balance']?.toString() ?? '',
+            date: DateTime.now(),
+          );
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (_) => TransactionReceiptScreen(data: resultData),
+            ),
+          );
+          return;
+        }
         _clearPin();
         setState(() => _isProcessing = false);
-        // Re-open keyboard so user can retry.
         _openKeyboard();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              result['message'] ?? 'Transaction failed. Please try again.',
-            ),
-            backgroundColor: Colors.red,
-          ),
-        );
+        final msg = result['message']?.toString();
+        if (!showLimitNoticeIfNeeded(context, msg)) {
+          AppAlert.showError(
+            context,
+            msg ?? 'Transaction failed. Please try again.',
+          );
+        }
       }
     } catch (e) {
       if (!mounted) return;
-      Navigator.of(context).pop(); // Close loader if open
+      Navigator.of(context).pop();
       _clearPin();
       setState(() => _isProcessing = false);
       _openKeyboard();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      AppAlert.showError(context, e);
     }
   }
 
@@ -282,8 +309,7 @@ class _TransactionSummaryScreenState
                                   ],
                                 ),
                                 child: Column(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.start,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     _DetailRow('Service', d.service),
                                     _DetailRow('From', d.from),
@@ -299,13 +325,13 @@ class _TransactionSummaryScreenState
                                         'Account Number',
                                         d.accountNumber!,
                                       ),
-                                    _DetailRow('Amount', formatCurrency(d.amount)),
+                                    _DetailRow(
+                                      'Amount',
+                                      formatCurrency(d.amount),
+                                    ),
                                     if (d.description != null &&
                                         d.description!.isNotEmpty)
-                                      _DetailRow(
-                                        'Description',
-                                        d.description!,
-                                      ),
+                                      _DetailRow('Description', d.description!),
                                   ],
                                 ),
                               ),
@@ -357,22 +383,22 @@ class _TransactionSummaryScreenState
                                 width: double.infinity,
                                 child: ElevatedButton(
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: pinLength == 4
-                                        ? const Color(0xFF34544A)
-                                        : Colors.grey[300],
+                                    backgroundColor:
+                                        pinLength == 4
+                                            ? const Color(0xFF34544A)
+                                            : Colors.grey[300],
                                     foregroundColor: Colors.white,
                                     shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(
-                                        32.r,
-                                      ),
+                                      borderRadius: BorderRadius.circular(32.r),
                                     ),
                                     padding: EdgeInsets.symmetric(
                                       vertical: 16.h,
                                     ),
                                   ),
-                                  onPressed: pinLength == 4 && !_isProcessing
-                                      ? _confirmTransaction
-                                      : null,
+                                  onPressed:
+                                      pinLength == 4 && !_isProcessing
+                                          ? _confirmTransaction
+                                          : null,
                                   child: Text(
                                     'Confirm Payment',
                                     style: TextStyle(

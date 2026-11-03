@@ -8,10 +8,10 @@ import 'package:local_auth_android/local_auth_android.dart';
 import 'package:local_auth_darwin/local_auth_darwin.dart';
 import '../../providers/auth_provider.dart';
 import 'package:dupay/services/notifications/notification_service.dart';
-import 'login_otp_screen.dart';
 import '../../services/storage/secure_storage_service.dart';
 import 'dart:async' show unawaited;
 import '../../services/notifications/fcm_token_sync.dart';
+import 'package:dupay/widgets/app_alert.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -28,89 +28,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   bool _rememberMe = false;
   bool _biometricLoading = false;
   bool _loginSubmitting = false;
-
-  // ── Top message (replaces bottom SnackBar) ──────────────────────────────────
-  OverlayEntry? _topMessageEntry;
-
   void _showTopMessage(String message, {bool isError = true}) {
-    // Remove any existing message first
-    _topMessageEntry?.remove();
-    _topMessageEntry = null;
-
-    final overlay = Overlay.of(context);
-    final entry = OverlayEntry(
-      builder:
-          (ctx) => Positioned(
-            top: MediaQuery.of(ctx).padding.top + 12,
-            left: 16,
-            right: 16,
-            child: Material(
-              color: Colors.transparent,
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 14,
-                ),
-                decoration: BoxDecoration(
-                  color: isError ? Colors.red : const Color(0xFF34544A),
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.15),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      isError ? Icons.error_outline : Icons.info_outline,
-                      color: Colors.white,
-                      size: 20,
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        message,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 14,
-                        ),
-                      ),
-                    ),
-                    GestureDetector(
-                      onTap: () {
-                        _topMessageEntry?.remove();
-                        _topMessageEntry = null;
-                      },
-                      child: const Icon(
-                        Icons.close,
-                        color: Colors.white,
-                        size: 18,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-    );
-
-    overlay.insert(entry);
-    _topMessageEntry = entry;
-
-    // Auto-dismiss after 3 seconds
-    Future.delayed(const Duration(seconds: 3), () {
-      if (_topMessageEntry == entry) {
-        _topMessageEntry?.remove();
-        _topMessageEntry = null;
-      }
-    });
+    if (!mounted) return;
+    if (isError) {
+      AppAlert.showError(context, message);
+    } else {
+      AppAlert.showSuccess(context, message);
+    }
   }
 
-  @override
   void initState() {
     super.initState();
     _loadSavedCredentials();
@@ -138,8 +64,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   @override
   void dispose() {
-    _topMessageEntry?.remove();
-    _topMessageEntry = null;
     _passwordController.dispose();
     _emailController.dispose();
     super.dispose();
@@ -193,8 +117,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         return;
       }
       final error = ref.read(authErrorProvider);
-      if (error != null) {
-        _showTopMessage(error);
+      final rawError = (error != null && error.trim().isNotEmpty) ? error : 'Invalid email or password. Please try again.';
+      if (rawError.toLowerCase().contains('locked') || rawError.toLowerCase().contains('blocked')) {
+        AppAlert.showAccountLockedDialog(context, message: rawError);
+      } else {
+        _showTopMessage(rawError);
       }
     }
     } finally {

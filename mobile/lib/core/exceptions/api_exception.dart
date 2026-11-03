@@ -42,3 +42,12 @@ class ServerException extends ApiException {
     Map<String, dynamic>? errors,
   }) : super(message: message, statusCode: statusCode, errors: errors);
 }
+
+class AccountLockedException extends ApiException {
+  final int? lockMinutes;
+  const AccountLockedException({
+    required String message,
+    this.lockMinutes,
+    int? statusCode,
+  }) : super(message: message, statusCode: statusCode ?? 423);
+}

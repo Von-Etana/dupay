@@ -14,6 +14,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:logger/logger.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:dupay/screen/transaction/transaction_receipt_screen.dart';
 
 /// Must be a top-level function (not a class method) and annotated so the
 /// Flutter engine can find it when the app is killed/in the background.
@@ -126,23 +127,65 @@ class NotificationService {
 
   /// Handles user tapping on a notification banner or notification list item.
   static void handleNotificationTap(RemoteMessage message) {
-    final targetRoute = resolveRoute(message.data);
-    if (targetRoute == null) return;
+    final data = message.data;
+    final title = message.notification?.title ?? data['title']?.toString() ?? 'DuPay Notification';
+    final body = message.notification?.body ?? data['body']?.toString() ?? data['message']?.toString() ?? '';
+
+    final type = data['type']?.toString().toLowerCase() ?? '';
+    final isTransaction = data.containsKey('reference') ||
+        data.containsKey('transaction_id') ||
+        type == 'transfer' ||
+        type == 'transaction' ||
+        type == 'credit' ||
+        type == 'debit' ||
+        title.toLowerCase().contains('transfer') ||
+        title.toLowerCase().contains('credited') ||
+        title.toLowerCase().contains('debited') ||
+        body.toLowerCase().contains('transfer') ||
+        body.toLowerCase().contains('credited') ||
+        body.toLowerCase().contains('debited');
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final nav = navigatorKey?.currentState;
-      if (nav != null) {
+      if (nav == null) return;
+
+      if (isTransaction && (data['reference'] != null || data['amount'] != null)) {
+        // Direct to detailed transaction receipt
+        final receiptData = TransactionReceiptData(
+          service: data['service']?.toString() ?? (title.isNotEmpty ? title : 'Transfer'),
+          type: data['type']?.toString() ?? 'Transfer',
+          description: body,
+          amount: data['amount']?.toString() ?? '₦0.00',
+          status: data['status']?.toString() ?? 'success',
+          reference: data['reference']?.toString() ?? '',
+          sessionId: data['session_id']?.toString(),
+          initialBalance: data['initial_balance']?.toString() ?? '',
+          finalBalance: data['final_balance']?.toString() ?? '',
+          date: DateTime.now(),
+          phoneNumber: data['phone_number']?.toString(),
+        );
+
+        nav.push(
+          MaterialPageRoute(
+            builder: (_) => TransactionReceiptScreen(
+              data: receiptData,
+              isNewTransaction: false,
+            ),
+          ),
+        );
+      } else {
+        // Open Notification Center and reveal the detailed notification
         nav.pushNamed(
-          targetRoute,
+          '/notification',
           arguments: {
-            'title':
-                message.notification?.title ??
-                message.data['title']?.toString(),
-            'body':
-                message.notification?.body ??
-                message.data['body']?.toString() ??
-                message.data['message']?.toString(),
-            'route': targetRoute,
+            'title': title,
+            'body': body,
+            'type': type.isNotEmpty ? type : 'info',
+            'amount': data['amount']?.toString(),
+            'reference': data['reference']?.toString(),
+            'session_id': data['session_id']?.toString(),
+            'status': data['status']?.toString() ?? 'success',
+            'service': data['service']?.toString(),
           },
         );
       }
@@ -178,9 +221,14 @@ class NotificationService {
             _bannerDismissTimer?.cancel();
             entry.remove();
             _activeTopBanner = null;
-            navigatorKey?.currentState?.pushNamed(
-              (route != null && route.isNotEmpty) ? route : '/notification',
-              arguments: {'title': title, 'body': body},
+            handleNotificationTap(
+              RemoteMessage(
+                data: {
+                  if (route != null) 'route': route,
+                  'title': title,
+                  'body': body,
+                },
+              ),
             );
           },
           onDismiss: () {

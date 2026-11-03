@@ -9,6 +9,7 @@ import 'package:dupay/models/auth/register_request.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:dupay/widgets/app_alert.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../providers/auth_provider.dart';
@@ -142,9 +143,8 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
   }
 
   void _showError(String msg) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(msg), backgroundColor: Colors.red));
+    if (!mounted) return;
+    AppAlert.showError(context, msg);
   }
 
   bool _validateStep(int step) {

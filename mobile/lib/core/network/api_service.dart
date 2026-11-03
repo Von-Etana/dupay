@@ -170,7 +170,9 @@ class ApiService {
     dynamic data,
     Map<String, dynamic>? queryParameters,
     String? customIsmartValue, // Optional per-request ismart value
-    Duration? receiveTimeout, // Override for slow endpoints (e.g. card creation)
+    Duration?
+    receiveTimeout, // Override for slow endpoints (e.g. card creation)
+    bool allowFailureResponse = false,
   }) async {
     try {
       await _checkConnectivity();
@@ -181,11 +183,17 @@ class ApiService {
       // waiting on a third party (StroWallet). Allow callers to raise it just
       // for those requests instead of loosening the default for everything.
       Options? options;
-      if (customIsmartValue != null || receiveTimeout != null) {
+      if (customIsmartValue != null ||
+          receiveTimeout != null ||
+          allowFailureResponse) {
         options = Options(
           headers:
               customIsmartValue != null ? {'ismart': customIsmartValue} : null,
           receiveTimeout: receiveTimeout,
+          validateStatus:
+              allowFailureResponse
+                  ? (status) => status != null && status < 500
+                  : null,
         );
       }
 
@@ -196,7 +204,10 @@ class ApiService {
         options: options,
       );
 
-      return _handleSimpleResponse(response);
+      return _handleSimpleResponse(
+        response,
+        allowFailureResponse: allowFailureResponse,
+      );
     } catch (e) {
       throw _handleError(e);
     }
@@ -348,15 +359,17 @@ class ApiService {
       );
     } else {
       // Preserve machine-readable auth challenge responses returned as HTTP 200.
-      if ((response.statusCode ?? 500) >= 200 && (response.statusCode ?? 500) < 300) {
+      if ((response.statusCode ?? 500) >= 200 &&
+          (response.statusCode ?? 500) < 300) {
         return ApiResponse<T>(
           success: false,
           message: responseData['message'] ?? 'Request failed',
           data: fromJson(responseData),
           statusCode: response.statusCode,
-          errors: responseData['errors'] is Map<String, dynamic>
-              ? Map<String, dynamic>.from(responseData['errors'])
-              : null,
+          errors:
+              responseData['errors'] is Map<String, dynamic>
+                  ? Map<String, dynamic>.from(responseData['errors'])
+                  : null,
         );
       }
       throw ServerException(
@@ -367,19 +380,27 @@ class ApiService {
     }
   }
 
-  ApiResponse<Map<String, dynamic>> _handleSimpleResponse(Response response) {
+  ApiResponse<Map<String, dynamic>> _handleSimpleResponse(
+    Response response, {
+    bool allowFailureResponse = false,
+  }) {
     final responseData = response.data as Map<String, dynamic>;
 
-    if (responseData['success'] == true) {
+    if (responseData['success'] == true || allowFailureResponse) {
       return ApiResponse<Map<String, dynamic>>(
-        success: true,
-        message: responseData['message'] ?? 'Success',
+        success: responseData['success'] == true,
+        message:
+            responseData['message'] ??
+            (responseData['success'] == true
+                ? 'Success'
+                : 'Request was not completed.'),
         // Backend sometimes returns `data: []` (an empty PHP array serializes
         // to a JSON array, not an object). Guard the cast so a List never
         // crashes the parse — treat any non-object as null.
-        data: responseData['data'] is Map<String, dynamic>
-            ? responseData['data'] as Map<String, dynamic>
-            : null,
+        data:
+            responseData['data'] is Map<String, dynamic>
+                ? responseData['data'] as Map<String, dynamic>
+                : (allowFailureResponse ? responseData : null),
         statusCode: response.statusCode,
       );
     } else {
@@ -426,6 +447,41 @@ class ApiService {
   ApiException _handleBadResponse(DioException error) {
     final statusCode = error.response?.statusCode;
     final responseData = error.response?.data;
+
+    if (responseData is Map<String, dynamic>) {
+      final code = responseData['code']?.toString();
+      if (code == 'otp_expired') {
+        return const ValidationException(
+          message:
+              'This verification code has expired. Request a new code and try again.',
+        );
+      }
+      if (code == 'otp_delivery_failed') {
+        return const NetworkException(
+          message:
+              'We could not send your verification code. Check your email delivery settings or contact support, then try again.',
+        );
+      }
+      if (code == 'otp_resend_cooldown') {
+        return ValidationException(
+          message:
+              _extractErrorMessage(responseData) ??
+              'Please wait before requesting another verification code.',
+        );
+      }
+    }
+
+    if (statusCode == 423 ||
+        (responseData is Map<String, dynamic> &&
+            (responseData['code'] == 'account_locked' ||
+                responseData['code'] == 'otp_retry_limit'))) {
+      return AccountLockedException(
+        message:
+            _extractErrorMessage(responseData) ??
+            'Your account has been temporarily locked for security. Please check your email or contact support.',
+        statusCode: statusCode ?? 423,
+      );
+    }
 
     switch (statusCode) {
       case 400:
