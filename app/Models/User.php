@@ -59,6 +59,10 @@ class User extends Authenticatable
      */
     protected $casts = [
         'email_verified_at' => 'datetime',
+        'login_locked_until' => 'datetime',
+        'otp_locked_until' => 'datetime',
+        'failed_login_attempts' => 'integer',
+        'otp_failed_attempts' => 'integer',
     ];
 
     public function rules ($id=0, $merge=[]) {

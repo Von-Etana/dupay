@@ -594,7 +594,7 @@ class AuthController extends Controller
         } catch (\RuntimeException $e) {
             return response(['success'=>false,'code'=>'otp_delivery_failed','message'=>'Unable to deliver login code. Please try again.'], 503);
         }
-        return response(['success'=>false,'code'=>'otp_required','challenge_id'=>$challenge->id], 200);
+        return response(['success'=>false,'code'=>'otp_required','challenge_id'=>$challenge->id,'send_count'=>1,'remaining_sends'=>5], 200);
 
         // Generate access token
         $accessToken = auth()->user()->createToken('authToken');

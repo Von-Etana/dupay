@@ -66,6 +66,51 @@
         @endif
 
         <div class="widget-content widget-content-area br-8 p-4 mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div>
+                    <h4 class="mb-1">Accounts currently locked</h4>
+                    <p class="text-muted mb-0 small">Active login locks, their expiry time, and early unlock controls.</p>
+                </div>
+                <span class="badge bg-danger">{{ $lockedUsers->total() }} locked</span>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light"><tr><th>User</th><th>Email</th><th>Lock type</th><th>Expires / time remaining</th><th>Action</th></tr></thead>
+                    <tbody>
+                    @forelse($lockedUsers as $lockedUser)
+                        @php
+                            $lockUntil = $lockedUser->otp_locked_until && $lockedUser->otp_locked_until->isFuture()
+                                ? $lockedUser->otp_locked_until
+                                : $lockedUser->login_locked_until;
+                            $lockType = $lockedUser->otp_locked_until && $lockedUser->otp_locked_until->isFuture() ? 'OTP verification' : 'Password login';
+                        @endphp
+                        <tr>
+                            <td><a href="{{ route('admin.user.show', $lockedUser->id) }}">{{ $lockedUser->profile->username ?? $lockedUser->email ?? ('User #' . $lockedUser->id) }}</a></td>
+                            <td>{{ $lockedUser->email }}</td>
+                            <td><span class="badge bg-warning text-dark">{{ $lockType }}</span></td>
+                            <td>{{ $lockUntil?->format('d M Y H:i') }} <span class="text-muted">({{ $lockUntil?->diffForHumans() }})</span></td>
+                            <td>
+                                @can('manage_security_alerts')
+                                    <form method="POST" action="{{ route('admin.security.users.unlock', $lockedUser) }}" class="d-flex gap-2" style="min-width: 300px;">
+                                        @csrf
+                                        <input class="form-control form-control-sm" name="reason" minlength="5" maxlength="500" required placeholder="Reason for unlocking" aria-label="Reason for unlocking">
+                                        <button class="btn btn-sm btn-danger" type="submit">Unlock</button>
+                                    </form>
+                                @else
+                                    <span class="text-muted small">Unlock permission required</span>
+                                @endcan
+                            </td>
+                        </tr>
+                    @empty
+                        <tr><td colspan="5" class="text-center text-muted py-4">No accounts are currently locked.</td></tr>
+                    @endforelse
+                    </tbody>
+                </table>
+            </div>
+            <div class="mt-3">{{ $lockedUsers->links() }}</div>
+        </div>
+
+        <div class="widget-content widget-content-area br-8 p-4 mb-4">
             <h4 class="mb-3">Recent admin activity</h4>
             <div class="table-responsive"><table class="table table-hover align-middle">
                 <thead><tr><th>Time</th><th>Admin</th><th>Action</th><th>Module</th><th>IP</th></tr></thead>
@@ -189,6 +234,13 @@
                                     </td>
                                     <td class="text-end">
                                         @can('manage_security_alerts')
+                                            @if($alert->type === 'otp_account_locked' && !empty($alert->metadata['user_id']))
+                                                <form method="POST" action="{{ route('admin.security.users.unlock', $alert->metadata['user_id']) }}" class="mb-1">
+                                                    @csrf
+                                                    <input class="form-control form-control-sm mb-1" name="reason" minlength="5" maxlength="500" required placeholder="Reason for unlocking">
+                                                    <button class="btn btn-sm btn-danger" type="submit">Unlock account</button>
+                                                </form>
+                                            @endif
                                             @if(!$alert->acknowledged_at)
                                                 <form method="POST" action="{{ route('admin.security-alerts.acknowledge', $alert) }}" class="d-inline">
                                                     @csrf

@@ -1,3 +1,4 @@
+import 'package:dupay/core/exceptions/api_exception.dart';
 // lib/providers/auth_provider.dart
 import 'dart:async';
 
@@ -57,6 +58,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
   late final StreamSubscription<void> _sessionSubscription;
   int _sessionGeneration = 0;
   String? pendingChallengeId;
+  int? pendingOtpRemainingSends;
 
   AuthNotifier(this._authRepository) : super(AuthState()) {
     _sessionSubscription = SessionEvents.expired.listen((_) {
@@ -70,25 +72,35 @@ class AuthNotifier extends StateNotifier<AuthState> {
     required String challengeId,
     required String otp,
   }) async {
-    final response = await _authRepository.verifyLoginOtp(
-      challengeId: challengeId,
-      otp: otp,
-    );
-    if (response.success && response.data != null) {
-      final userId = response.data!.user.id.toString();
-      await CacheService().clearAllCache();
-      await CacheService().setLastUserId(userId);
-      state = state.copyWith(
-        isLoading: false,
-        isAuthenticated: true,
-        user: response.data!.user,
-        accessToken: response.data!.accessToken,
-        error: null,
+    try {
+      final response = await _authRepository.verifyLoginOtp(
+        challengeId: challengeId,
+        otp: otp,
       );
-    } else {
-      state = state.copyWith(isLoading: false, error: response.message);
+      if (response.success && response.data != null) {
+        pendingChallengeId = null;
+        pendingOtpRemainingSends = null;
+        final userId = response.data!.user.id.toString();
+        await CacheService().clearAllCache();
+        await CacheService().setLastUserId(userId);
+        state = state.copyWith(
+          isLoading: false,
+          isAuthenticated: true,
+          user: response.data!.user,
+          accessToken: response.data!.accessToken,
+          error: null,
+        );
+      } else {
+        state = state.copyWith(isLoading: false, error: response.message);
+      }
+      return response;
+    } on ApiException catch (e) {
+      state = state.copyWith(isLoading: false, error: e.message);
+      rethrow;
+    } catch (e) {
+      state = state.copyWith(isLoading: false, error: e.toString());
+      rethrow;
     }
-    return response;
   }
 
   Future<ApiResponse<LoginResponse>> resendLoginOtp(String challengeId) =>
@@ -172,6 +184,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       );
       if (response.success && response.data != null) {
         pendingChallengeId = null;
+        pendingOtpRemainingSends = null;
         print('🔐 AuthProvider: Login successful, updating state');
 
         // Identity-aware cache handling: only wipe the cache when the account
@@ -200,6 +213,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         return true;
       } else {
         pendingChallengeId = response.data?.challengeId;
+        pendingOtpRemainingSends = response.data?.remainingSends;
         if (response.data?.code == 'otp_required') {
           state = state.copyWith(isLoading: false, error: null);
           return false;
@@ -208,6 +222,10 @@ class AuthNotifier extends StateNotifier<AuthState> {
         state = state.copyWith(isLoading: false, error: response.message);
         return false;
       }
+    } on ApiException catch (e) {
+      if (kDebugMode) print('🔐 AuthProvider: Login API exception: ');
+      state = state.copyWith(isLoading: false, error: e.message);
+      return false;
     } catch (e) {
       if (kDebugMode) print('🔐 AuthProvider: Login exception');
       state = state.copyWith(isLoading: false, error: e.toString());

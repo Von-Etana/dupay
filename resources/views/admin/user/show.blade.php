@@ -214,6 +214,28 @@
 		</div>
 		<!-- /BREADCRUMB -->
 		<div class="row layout-spacing ">
+			@php
+				$activeOtpLock = $data->otp_locked_until && $data->otp_locked_until->isFuture();
+				$activePasswordLock = $data->login_locked_until && $data->login_locked_until->isFuture();
+				$activeSecurityLock = $activeOtpLock ? $data->otp_locked_until : ($activePasswordLock ? $data->login_locked_until : null);
+			@endphp
+			@if($activeSecurityLock)
+			<div class="col-12 layout-top-spacing">
+				<div class="alert alert-danger d-flex flex-wrap justify-content-between align-items-center gap-3 mb-0">
+					<div>
+						<strong>Account temporarily locked</strong>
+						<div>{{ $activeOtpLock ? 'Six incorrect OTP attempts' : 'Repeated password failures' }}. Lock expires {{ $activeSecurityLock->format('d M Y H:i') }} ({{ $activeSecurityLock->diffForHumans() }}).</div>
+					</div>
+					@can('manage_security_alerts')
+					<form method="POST" action="{{ route('admin.security.users.unlock', $data) }}" class="d-flex flex-wrap gap-2">
+						@csrf
+						<input class="form-control" name="reason" minlength="5" maxlength="500" required placeholder="Reason for unlocking" aria-label="Reason for unlocking">
+						<button class="btn btn-danger" type="submit">Unlock account now</button>
+					</form>
+					@endcan
+				</div>
+			</div>
+			@endif
 			<!-- Content -->
 			<div class="col-xl-4 col-lg-12 col-md-12 col-sm-12 layout-top-spacing">
 				<div class="user-profile">
