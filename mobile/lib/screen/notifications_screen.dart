@@ -602,6 +602,16 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                               height: 1.5,
                             ),
                           ),
+                          if (item.details != null &&
+                              item.details!.isNotEmpty) ...[
+                            SizedBox(height: 16.h),
+                            const Divider(height: 1),
+                            SizedBox(height: 8.h),
+                            for (final row in _generalDetailRows(item)) ...[
+                              row,
+                              SizedBox(height: 8.h),
+                            ],
+                          ],
                           SizedBox(height: 14.h),
                           Row(
                             children: [
@@ -645,6 +655,58 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
           ),
     );
   }
+
+  List<Widget> _generalDetailRows(AppNotificationModel item) {
+    const hiddenKeys = {
+      'title',
+      'body',
+      'message',
+      'route',
+      'screen',
+      'type',
+      'status',
+      'amount',
+      'reference',
+      'paymentreference',
+      'service',
+      'description',
+      'otp',
+      'password',
+      'pin',
+      'access_token',
+      'fcm_token',
+      'device_id_hash',
+    };
+    final entries = item.details!.entries.where((entry) {
+      final key = entry.key.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+      final value = entry.value;
+      return !hiddenKeys.contains(key) &&
+          value != null &&
+          value.toString().trim().isNotEmpty &&
+          value is! Map &&
+          value is! List;
+    });
+    return [
+      for (final entry in entries)
+        _DetailRow(
+          _prettyDetailLabel(entry.key),
+          _formatTransactionDetail(entry.key, entry.value.toString()),
+        ),
+    ];
+  }
+
+  String _prettyDetailLabel(String key) => key
+      .replaceAll(RegExp(r'([a-z])([A-Z])'), r'$1 $2')
+      .replaceAll('_', ' ')
+      .replaceAll('-', ' ')
+      .split(' ')
+      .map(
+        (word) =>
+            word.isEmpty
+                ? word
+                : '${word[0].toUpperCase()}${word.substring(1)}',
+      )
+      .join(' ');
 
   List<Widget> _transactionDetailRows(AppNotificationModel item) {
     const hiddenKeys = {

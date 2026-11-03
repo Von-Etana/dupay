@@ -263,6 +263,7 @@ class NotificationService {
     required String title,
     required String body,
     String? route,
+    Map<String, dynamic>? details,
   }) {
     final navState = navigatorKey?.currentState;
     final navContext = navState?.context;
@@ -293,6 +294,7 @@ class NotificationService {
                   if (route != null) 'route': route,
                   'title': title,
                   'body': body,
+                  if (details != null) ...details,
                 },
               ),
             );
@@ -417,6 +419,7 @@ class NotificationService {
                 ),
               ),
               payload: jsonEncode({
+                ...message.data,
                 'route': targetRoute,
                 'title': title,
                 'body': body,
@@ -426,7 +429,12 @@ class NotificationService {
 
           // B. Show in-app drop-down top bar notification banner
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            showInAppTopBanner(title: title, body: body, route: targetRoute);
+            showInAppTopBanner(
+              title: title,
+              body: body,
+              route: targetRoute,
+              details: message.data,
+            );
           });
         }
 

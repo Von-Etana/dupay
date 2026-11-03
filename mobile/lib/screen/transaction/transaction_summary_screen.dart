@@ -162,7 +162,8 @@ class _TransactionSummaryScreenState
           ),
         );
       } else {
-        if (result['show_result_screen'] == true) {
+        final isTransfer = widget.data.service.toLowerCase().contains('transfer');
+        if (result['show_result_screen'] == true || isTransfer) {
           final status = result['status']?.toString() ?? 'failed';
           final sessionIdRaw = result['session_id']?.toString();
           final resultData = TransactionReceiptData(
@@ -203,6 +204,9 @@ class _TransactionSummaryScreenState
     } catch (e) {
       if (!mounted) return;
       Navigator.of(context).pop();
+      if (mounted && Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
+      }
       _clearPin();
       setState(() => _isProcessing = false);
       if (widget.data.service.toLowerCase().contains('transfer')) {
