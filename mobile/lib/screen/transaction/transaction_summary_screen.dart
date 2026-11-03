@@ -205,6 +205,28 @@ class _TransactionSummaryScreenState
       Navigator.of(context).pop();
       _clearPin();
       setState(() => _isProcessing = false);
+      if (widget.data.service.toLowerCase().contains('transfer')) {
+        final pendingData = TransactionReceiptData(
+          service: widget.data.service,
+          type: widget.data.service,
+          description: widget.data.description ?? '',
+          amount: widget.data.amount,
+          status: 'pending',
+          statusMessage:
+              'We could not confirm whether this transfer completed. Check your transaction history before trying again.',
+          reference: '',
+          initialBalance: '',
+          finalBalance: '',
+          date: DateTime.now(),
+        );
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => TransactionReceiptScreen(data: pendingData),
+          ),
+        );
+        return;
+      }
       _openKeyboard();
       AppAlert.showError(context, e);
     }

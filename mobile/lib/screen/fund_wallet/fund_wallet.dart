@@ -143,7 +143,7 @@ class _FundWalletScreenState extends ConsumerState<FundWalletScreen> {
               color: Colors.grey[800])),
       const SizedBox(height: 8),
       Text(
-        'Create a virtual account to receive bank transfers directly into your DuPay wallet.',
+        'Create a virtual account to receive bank transfers directly into your Dupay wallet.',
         textAlign: TextAlign.center,
         style: TextStyle(
             fontSize: 14.sp, color: Colors.grey[600], height: 1.5),

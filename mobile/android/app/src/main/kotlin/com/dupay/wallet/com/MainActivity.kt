@@ -15,8 +15,8 @@ class MainActivity : FlutterFragmentActivity() {
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channelId = "dupay_channel"
-            val channelName = "DuPay Notifications"
-            val channelDescription = "Default notification channel for DuPay transaction and security alerts"
+            val channelName = "Dupay Notifications"
+            val channelDescription = "Default notification channel for Dupay transaction and security alerts"
             val importance = NotificationManager.IMPORTANCE_HIGH
             val channel = NotificationChannel(channelId, channelName, importance).apply {
                 description = channelDescription

@@ -5,7 +5,7 @@ import 'package:dupay/core/constants/api_contants.dart';
 class AppInitializationService {
   /// Initialize the app with required configurations
   static Future<void> initialize() async {
-    print('🚀 AppInitializationService: Starting DuPay initialization');
+    print('🚀 AppInitializationService: Starting Dupay initialization');
 
     try {
       // Initialize ismart header
@@ -14,7 +14,7 @@ class AppInitializationService {
       // Add other initialization tasks here if needed
       // await _initializeOtherServices();
 
-      print('✅ AppInitializationService: DuPay initialization completed');
+      print('✅ AppInitializationService: Dupay initialization completed');
     } catch (e) {
       print('❌ AppInitializationService: Initialization failed - $e');
       rethrow;

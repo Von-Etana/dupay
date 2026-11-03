@@ -301,8 +301,8 @@ class _KycScreenState extends State<KycScreen> {
       _snack(
         denied
             ? (source == ImageSource.camera
-                ? 'Camera access is blocked. Enable it for DuPay in your phone settings.'
-                : 'Photo access is blocked. Enable it for DuPay in your phone settings.')
+                ? 'Camera access is blocked. Enable it for Dupay in your phone settings.'
+                : 'Photo access is blocked. Enable it for Dupay in your phone settings.')
             : 'Could not open the ${source == ImageSource.camera ? 'camera' : 'gallery'}. Please try again.',
         error: true,
       );

@@ -91,7 +91,7 @@ class NotificationService {
       const channelHigh = AndroidNotificationChannel(
         'high_importance',
         'High importance notifications',
-        description: 'DuPay transaction and security alerts',
+        description: 'Dupay transaction and security alerts',
         importance: Importance.max,
         playSound: true,
         enableVibration: true,
@@ -99,8 +99,8 @@ class NotificationService {
       );
       const channelDefault = AndroidNotificationChannel(
         'dupay_channel',
-        'DuPay General Notifications',
-        description: 'DuPay updates and notifications',
+        'Dupay General Notifications',
+        description: 'Dupay updates and notifications',
         importance: Importance.max,
         playSound: true,
         enableVibration: true,
@@ -128,11 +128,19 @@ class NotificationService {
   /// Handles user tapping on a notification banner or notification list item.
   static void handleNotificationTap(RemoteMessage message) {
     final data = message.data;
-    final title = message.notification?.title ?? data['title']?.toString() ?? 'DuPay Notification';
-    final body = message.notification?.body ?? data['body']?.toString() ?? data['message']?.toString() ?? '';
+    final title =
+        message.notification?.title ??
+        data['title']?.toString() ??
+        'Dupay Notification';
+    final body =
+        message.notification?.body ??
+        data['body']?.toString() ??
+        data['message']?.toString() ??
+        '';
 
     final type = data['type']?.toString().toLowerCase() ?? '';
-    final isTransaction = data.containsKey('reference') ||
+    final isTransaction =
+        data.containsKey('reference') ||
         data.containsKey('transaction_id') ||
         type == 'transfer' ||
         type == 'transaction' ||
@@ -149,28 +157,35 @@ class NotificationService {
       final nav = navigatorKey?.currentState;
       if (nav == null) return;
 
-      if (isTransaction && (data['reference'] != null || data['amount'] != null)) {
+      if (isTransaction &&
+          (data['reference'] != null || data['amount'] != null)) {
         // Direct to detailed transaction receipt
         final receiptData = TransactionReceiptData(
-          service: data['service']?.toString() ?? (title.isNotEmpty ? title : 'Transfer'),
+          service:
+              data['service']?.toString() ??
+              (title.isNotEmpty ? title : 'Transfer'),
           type: data['type']?.toString() ?? 'Transfer',
           description: body,
           amount: data['amount']?.toString() ?? '₦0.00',
-          status: data['status']?.toString() ?? 'success',
+          // A push without an explicit status must never be presented as a
+          // successful payment; the backend may still be processing it.
+          status: data['status']?.toString() ?? 'pending',
           reference: data['reference']?.toString() ?? '',
           sessionId: data['session_id']?.toString(),
           initialBalance: data['initial_balance']?.toString() ?? '',
           finalBalance: data['final_balance']?.toString() ?? '',
           date: DateTime.now(),
           phoneNumber: data['phone_number']?.toString(),
+          extraFields: _notificationReceiptFields(data),
         );
 
         nav.push(
           MaterialPageRoute(
-            builder: (_) => TransactionReceiptScreen(
-              data: receiptData,
-              isNewTransaction: false,
-            ),
+            builder:
+                (_) => TransactionReceiptScreen(
+                  data: receiptData,
+                  isNewTransaction: false,
+                ),
           ),
         );
       } else {
@@ -184,12 +199,63 @@ class NotificationService {
             'amount': data['amount']?.toString(),
             'reference': data['reference']?.toString(),
             'session_id': data['session_id']?.toString(),
-            'status': data['status']?.toString() ?? 'success',
+            'status': data['status']?.toString() ?? 'pending',
             'service': data['service']?.toString(),
+            'details': Map<String, dynamic>.from(data),
           },
         );
       }
     });
+  }
+
+  static List<ReceiptField>? _notificationReceiptFields(
+    Map<String, dynamic> data,
+  ) {
+    const excluded = {
+      'type',
+      'amount',
+      'status',
+      'reference',
+      'paymentreference',
+      'service',
+      'description',
+      'sessionid',
+      'session_id',
+      'phone_number',
+      'initial_balance',
+      'final_balance',
+      'title',
+      'body',
+      'message',
+      'route',
+    };
+    final fields = <ReceiptField>[];
+    for (final entry in data.entries) {
+      final key = entry.key.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+      final value = entry.value?.toString().trim() ?? '';
+      if (excluded.contains(key) ||
+          value.isEmpty ||
+          key.contains('token') ||
+          key.contains('password') ||
+          key.contains('pin') ||
+          key.contains('otp')) {
+        continue;
+      }
+      final label = entry.key
+          .replaceAll(RegExp(r'([a-z])([A-Z])'), r'$1 $2')
+          .replaceAll('_', ' ')
+          .replaceAll('-', ' ')
+          .split(' ')
+          .map(
+            (word) =>
+                word.isEmpty
+                    ? word
+                    : '${word[0].toUpperCase()}${word.substring(1)}',
+          )
+          .join(' ');
+      fields.add(ReceiptField(label, value));
+    }
+    return fields.isEmpty ? null : fields;
   }
 
   /// Displays an in-app drop-down notification banner in the top bar of the screen.
@@ -312,7 +378,7 @@ class NotificationService {
         final title =
             message.notification?.title ??
             message.data['title']?.toString() ??
-            'DuPay';
+            'Dupay';
         final body =
             message.notification?.body ??
             message.data['body']?.toString() ??
@@ -331,7 +397,7 @@ class NotificationService {
                 android: AndroidNotificationDetails(
                   'high_importance',
                   'High importance notifications',
-                  channelDescription: 'DuPay transaction and security alerts',
+                  channelDescription: 'Dupay transaction and security alerts',
                   importance: Importance.max,
                   priority: Priority.max,
                   playSound: true,
@@ -340,7 +406,7 @@ class NotificationService {
                   channelShowBadge: true,
                   visibility: NotificationVisibility.public,
                   category: AndroidNotificationCategory.message,
-                  ticker: 'DuPay Notification',
+                  ticker: 'Dupay Notification',
                 ),
                 iOS: DarwinNotificationDetails(
                   presentAlert: true,
@@ -546,7 +612,7 @@ class _InAppTopBannerWidgetState extends State<_InAppTopBannerWidget>
                   vertical: 12,
                 ),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF1E3A34), // DuPay brand dark green
+                  color: const Color(0xFF1E3A34), // Dupay brand dark green
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: const [
                     BoxShadow(

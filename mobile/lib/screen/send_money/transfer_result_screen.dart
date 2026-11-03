@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
+import '../../core/utils/formatters.dart';
 
 class TransferResultScreen extends StatelessWidget {
   final bool success;
+  final bool pending;
   final String message;
   final String amount;
   final String? reference;
   const TransferResultScreen({
     super.key,
     required this.success,
+    this.pending = false,
     required this.message,
     required this.amount,
     this.reference,
@@ -15,7 +18,10 @@ class TransferResultScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = success ? const Color(0xFF1DBF73) : const Color(0xFFE53935);
+    final color =
+        pending
+            ? Colors.orange
+            : (success ? const Color(0xFF1DBF73) : const Color(0xFFE53935));
     return Scaffold(
       appBar: AppBar(
         title: const Text('Transfer result'),
@@ -31,14 +37,18 @@ class TransferResultScreen extends StatelessWidget {
                 radius: 42,
                 backgroundColor: color.withOpacity(.12),
                 child: Icon(
-                  success ? Icons.check_rounded : Icons.close_rounded,
+                  pending
+                      ? Icons.access_time_rounded
+                      : (success ? Icons.check_rounded : Icons.close_rounded),
                   size: 52,
                   color: color,
                 ),
               ),
               const SizedBox(height: 24),
               Text(
-                success ? 'Transfer successful' : 'Transfer failed',
+                pending
+                    ? 'Transfer status unconfirmed'
+                    : (success ? 'Transfer successful' : 'Transfer failed'),
                 style: const TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.w700,
@@ -53,7 +63,7 @@ class TransferResultScreen extends StatelessWidget {
               const SizedBox(height: 24),
               if (amount.isNotEmpty)
                 Text(
-                  'Amount: ₦$amount',
+                  'Amount: ${formatCurrency(amount)}',
                   style: const TextStyle(fontWeight: FontWeight.w600),
                 ),
               if (reference != null && reference!.isNotEmpty) ...[
@@ -72,7 +82,9 @@ class TransferResultScreen extends StatelessWidget {
                         (route) =>
                             route.isFirst || route.settings.name == '/homeNav',
                       ),
-                  child: Text(success ? 'Back to dashboard' : 'Try again'),
+                  child: Text(
+                    success || pending ? 'Back to dashboard' : 'Try again',
+                  ),
                 ),
               ),
             ],

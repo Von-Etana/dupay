@@ -218,7 +218,7 @@ class _WalletOverviewScreenState extends ConsumerState<WalletOverviewScreen>
                 await SharePlus.instance.share(
                   ShareParams(
                     text: text,
-                    subject: 'My DuPay Account Details',
+                    subject: 'My Dupay Account Details',
                     sharePositionOrigin: origin,
                   ),
                 );

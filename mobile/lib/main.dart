@@ -92,7 +92,7 @@ void main() async {
   }
 
   try {
-    print('🚀 Starting DuPay app initialization...');
+    print('🚀 Starting Dupay app initialization...');
 
     await AppInitializationService.initialize();
 

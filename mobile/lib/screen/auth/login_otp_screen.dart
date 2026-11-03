@@ -252,7 +252,7 @@ class _LoginOtpScreenState extends ConsumerState<LoginOtpScreen> {
                       ),
                       const Spacer(),
                       Text(
-                        'DuPay Security',
+                        'Dupay security',
                         style: TextStyle(
                           color: _brandAccent,
                           fontWeight: FontWeight.w600,
@@ -503,7 +503,10 @@ class _LoginOtpScreenState extends ConsumerState<LoginOtpScreen> {
                                 Text(
                                   '${_remainingSends!} more ${_remainingSends == 1 ? 'code' : 'codes'} available for this login',
                                   textAlign: TextAlign.center,
-                                  style: TextStyle(fontSize: 12.sp, color: Colors.grey[600]),
+                                  style: TextStyle(
+                                    fontSize: 12.sp,
+                                    color: Colors.grey[600],
+                                  ),
                                 ),
                               ],
 

@@ -28,6 +28,7 @@ class AppNotificationModel {
   final String? sessionId;
   final String? status;
   final String? service;
+  final Map<String, dynamic>? details;
   final DateTime timestamp;
   bool isRead;
 
@@ -41,6 +42,7 @@ class AppNotificationModel {
     this.sessionId,
     this.status,
     this.service,
+    this.details,
     required this.timestamp,
     this.isRead = false,
   });
@@ -81,7 +83,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
         if (title != null || body != null) {
           final customNotification = AppNotificationModel(
             id: 'incoming_${DateTime.now().millisecondsSinceEpoch}',
-            title: title ?? 'DuPay Notification',
+            title: title ?? 'Dupay Notification',
             body: body ?? '',
             type: (args['type'] as String?) ?? 'info',
             amount: args['amount'] as String?,
@@ -89,6 +91,10 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
             sessionId: args['session_id'] as String?,
             status: args['status'] as String? ?? 'success',
             service: args['service'] as String?,
+            details:
+                args['details'] is Map
+                    ? Map<String, dynamic>.from(args['details'] as Map)
+                    : null,
             timestamp: DateTime.now(),
             isRead: false,
           );
@@ -119,7 +125,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
         id: 'notif_tx_1',
         title: 'Wallet Funding Confirmed',
         body:
-            'Your deposit was successful. Funds have been credited to your DuPay wallet.',
+            'Your deposit was successful. Funds have been credited to your Dupay wallet.',
         type: 'credit',
         amount: '₦5,000.00',
         reference: 'DUPAY-DEP-849201',
@@ -163,25 +169,41 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
     if (transactions != null) {
       for (final tx in transactions.take(6)) {
         final isCredit = tx.type == '1' || tx.type.toLowerCase() == 'credit';
+        final normalizedStatus = tx.status.trim().toLowerCase();
         final title =
             isCredit
-                ? 'Transfer Received (${formatCurrency(tx.amount)})'
-                : 'Payment Completed (${formatCurrency(tx.amount)})';
+                ? 'Transfer received (${formatCurrency(tx.amount)})'
+                : (normalizedStatus == 'success' ||
+                        normalizedStatus == 'successful' ||
+                        normalizedStatus == '1'
+                    ? 'Payment completed (${formatCurrency(tx.amount)})'
+                    : (normalizedStatus == 'pending'
+                        ? 'Payment pending (${formatCurrency(tx.amount)})'
+                        : 'Payment failed (${formatCurrency(tx.amount)})'));
 
         if (!combined.any((n) => n.reference == tx.reference)) {
           combined.add(
             AppNotificationModel(
               id: 'tx_${tx.id}',
               title: title,
-              body: tx.description ?? 'Transaction processed successfully.',
+              body:
+                  tx.description ??
+                  (normalizedStatus == 'pending'
+                      ? 'This transaction is still being processed.'
+                      : (normalizedStatus == 'success' ||
+                              normalizedStatus == 'successful' ||
+                              normalizedStatus == '1'
+                          ? 'Transaction processed successfully.'
+                          : 'This transaction was not completed.')),
               type: isCredit ? 'credit' : 'debit',
               amount: formatCurrency(tx.amount),
               reference: tx.reference ?? tx.id,
               sessionId: tx.metadata?['session_id']?.toString(),
-              status: tx.status,
+              status: tx.status.isEmpty ? 'unknown' : tx.status,
               service:
                   tx.metadata?['service_type']?.toString() ??
                   (isCredit ? 'Credit Transfer' : 'Debit Payment'),
+              details: tx.metadata,
               timestamp: tx.createdAt,
               isRead: true,
             ),
@@ -254,6 +276,9 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
       backgroundColor: Colors.transparent,
       builder:
           (ctx) => Container(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(ctx).size.height * 0.88,
+            ),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.only(
@@ -262,359 +287,466 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
               ),
             ),
             padding: EdgeInsets.fromLTRB(22.w, 14.h, 22.w, 32.h),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Drag indicator handle
-                Center(
-                  child: Container(
-                    width: 44.w,
-                    height: 4.h,
-                    decoration: BoxDecoration(
-                      color: Colors.grey[300],
-                      borderRadius: BorderRadius.circular(10.r),
-                    ),
-                  ),
-                ),
-                SizedBox(height: 18.h),
-
-                // Modal Header
-                Row(
-                  children: [
-                    Container(
-                      width: 46.w,
-                      height: 46.h,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Drag indicator handle
+                  Center(
+                    child: Container(
+                      width: 44.w,
+                      height: 4.h,
                       decoration: BoxDecoration(
-                        color: _iconBgColor(item.type),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        _typeIcon(item.type),
-                        color: _iconColor(item.type),
-                        size: 24.sp,
-                      ),
-                    ),
-                    SizedBox(width: 14.w),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            item.service ??
-                                (isTx
-                                    ? 'Transaction Details'
-                                    : 'Security Alert'),
-                            style: TextStyle(
-                              fontSize: 12.sp,
-                              color: _brandAccent,
-                              fontWeight: FontWeight.w600,
-                              letterSpacing: 0.3,
-                            ),
-                          ),
-                          Text(
-                            item.title,
-                            style: TextStyle(
-                              fontSize: 16.5.sp,
-                              fontWeight: FontWeight.bold,
-                              color: const Color(0xFF1A1A1A),
-                            ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                      ),
-                    ),
-                    IconButton(
-                      icon: Icon(
-                        Icons.close_rounded,
-                        size: 22.sp,
-                        color: Colors.grey[600],
-                      ),
-                      onPressed: () => Navigator.of(ctx).pop(),
-                    ),
-                  ],
-                ),
-
-                Padding(
-                  padding: EdgeInsets.symmetric(vertical: 14.h),
-                  child: Divider(color: Colors.grey[200], height: 1),
-                ),
-
-                // If it's a transaction/transfer notification: show full financial breakdown
-                if (isTx) ...[
-                  if (item.amount != null) ...[
-                    Center(
-                      child: Column(
-                        children: [
-                          Text(
-                            'Amount',
-                            style: TextStyle(
-                              fontSize: 12.sp,
-                              color: Colors.grey[500],
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          SizedBox(height: 4.h),
-                          Text(
-                            item.amount!,
-                            style: TextStyle(
-                              fontSize: 28.sp,
-                              fontWeight: FontWeight.w800,
-                              color: _brandColor,
-                              letterSpacing: -0.5,
-                            ),
-                          ),
-                          SizedBox(height: 6.h),
-                          Container(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: 12.w,
-                              vertical: 4.h,
-                            ),
-                            decoration: BoxDecoration(
-                              color: statusColor.withOpacity(0.12),
-                              borderRadius: BorderRadius.circular(20.r),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  statusIcon,
-                                  size: 14.sp,
-                                  color: statusColor,
-                                ),
-                                SizedBox(width: 4.w),
-                                Text(
-                                  (item.status ?? 'Successful').toUpperCase(),
-                                  style: TextStyle(
-                                    fontSize: 11.sp,
-                                    fontWeight: FontWeight.bold,
-                                    color: statusColor,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    SizedBox(height: 18.h),
-                  ],
-
-                  Container(
-                    padding: EdgeInsets.all(14.w),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF8FAF9),
-                      borderRadius: BorderRadius.circular(16.r),
-                      border: Border.all(color: const Color(0xFFE5EAE7)),
-                    ),
-                    child: Column(
-                      children: [
-                        _DetailRow('Description', item.body),
-                        if (item.reference != null &&
-                            item.reference!.isNotEmpty) ...[
-                          SizedBox(height: 10.h),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                'Reference',
-                                style: TextStyle(
-                                  fontSize: 13.sp,
-                                  color: Colors.grey[600],
-                                ),
-                              ),
-                              InkWell(
-                                onTap: () {
-                                  Clipboard.setData(
-                                    ClipboardData(text: item.reference!),
-                                  );
-                                  HapticFeedback.lightImpact();
-                                  AppAlert.showSuccess(
-                                    context,
-                                    'Reference copied to clipboard',
-                                  );
-                                },
-                                child: Row(
-                                  children: [
-                                    Text(
-                                      item.reference!,
-                                      style: TextStyle(
-                                        fontSize: 13.sp,
-                                        fontWeight: FontWeight.w600,
-                                        color: const Color(0xFF1A1A1A),
-                                      ),
-                                    ),
-                                    SizedBox(width: 6.w),
-                                    Icon(
-                                      Icons.copy_rounded,
-                                      size: 14.sp,
-                                      color: _brandColor,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                        if (item.sessionId != null &&
-                            item.sessionId!.isNotEmpty) ...[
-                          SizedBox(height: 10.h),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                'Session ID',
-                                style: TextStyle(
-                                  fontSize: 13.sp,
-                                  color: Colors.grey[600],
-                                ),
-                              ),
-                              InkWell(
-                                onTap: () {
-                                  Clipboard.setData(
-                                    ClipboardData(text: item.sessionId!),
-                                  );
-                                  HapticFeedback.lightImpact();
-                                  AppAlert.showSuccess(
-                                    context,
-                                    'Session ID copied to clipboard',
-                                  );
-                                },
-                                child: Row(
-                                  children: [
-                                    Text(
-                                      item.sessionId!,
-                                      style: TextStyle(
-                                        fontSize: 13.sp,
-                                        fontWeight: FontWeight.w600,
-                                        color: const Color(0xFF1A1A1A),
-                                      ),
-                                    ),
-                                    SizedBox(width: 6.w),
-                                    Icon(
-                                      Icons.copy_rounded,
-                                      size: 14.sp,
-                                      color: _brandColor,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                        SizedBox(height: 10.h),
-                        _DetailRow(
-                          'Date & Time',
-                          _formatTimestamp(item.timestamp),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  SizedBox(height: 20.h),
-
-                  // Button: View Full Receipt
-                  SizedBox(
-                    height: 50.h,
-                    child: ElevatedButton.icon(
-                      onPressed: () {
-                        Navigator.of(ctx).pop();
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder:
-                                (_) => TransactionReceiptScreen(
-                                  data: TransactionReceiptData(
-                                    service: item.service ?? 'Transaction',
-                                    type: item.type,
-                                    description: item.body,
-                                    amount: item.amount ?? '₦0.00',
-                                    status: item.status ?? 'success',
-                                    reference: item.reference ?? '',
-                                    sessionId: item.sessionId,
-                                    initialBalance: '',
-                                    finalBalance: '',
-                                    date: item.timestamp,
-                                  ),
-                                  isNewTransaction: false,
-                                ),
-                          ),
-                        );
-                      },
-                      icon: Icon(Icons.receipt_long_rounded, size: 18.sp),
-                      label: const Text('View Full Digital Receipt'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: _brandColor,
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12.r),
-                        ),
+                        color: Colors.grey[300],
+                        borderRadius: BorderRadius.circular(10.r),
                       ),
                     ),
                   ),
-                ] else ...[
-                  // General / Security Information Message
-                  Container(
-                    padding: EdgeInsets.all(16.w),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF8FAF9),
-                      borderRadius: BorderRadius.circular(16.r),
-                      border: Border.all(color: const Color(0xFFE5EAE7)),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          item.body,
-                          style: TextStyle(
-                            fontSize: 14.sp,
-                            color: const Color(0xFF2D3748),
-                            height: 1.5,
-                          ),
+                  SizedBox(height: 18.h),
+
+                  // Modal Header
+                  Row(
+                    children: [
+                      Container(
+                        width: 46.w,
+                        height: 46.h,
+                        decoration: BoxDecoration(
+                          color: _iconBgColor(item.type),
+                          shape: BoxShape.circle,
                         ),
-                        SizedBox(height: 14.h),
-                        Row(
+                        child: Icon(
+                          _typeIcon(item.type),
+                          color: _iconColor(item.type),
+                          size: 24.sp,
+                        ),
+                      ),
+                      SizedBox(width: 14.w),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Icon(
-                              Icons.access_time_rounded,
-                              size: 14.sp,
-                              color: Colors.grey[500],
-                            ),
-                            SizedBox(width: 6.w),
                             Text(
-                              _formatTimestamp(item.timestamp),
+                              item.service ??
+                                  (isTx
+                                      ? 'Transaction Details'
+                                      : 'Security Alert'),
                               style: TextStyle(
                                 fontSize: 12.sp,
-                                color: Colors.grey[600],
+                                color: _brandAccent,
+                                fontWeight: FontWeight.w600,
+                                letterSpacing: 0.3,
+                              ),
+                            ),
+                            Text(
+                              item.title,
+                              style: TextStyle(
+                                fontSize: 16.5.sp,
+                                fontWeight: FontWeight.bold,
+                                color: const Color(0xFF1A1A1A),
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        icon: Icon(
+                          Icons.close_rounded,
+                          size: 22.sp,
+                          color: Colors.grey[600],
+                        ),
+                        onPressed: () => Navigator.of(ctx).pop(),
+                      ),
+                    ],
+                  ),
+
+                  Padding(
+                    padding: EdgeInsets.symmetric(vertical: 14.h),
+                    child: Divider(color: Colors.grey[200], height: 1),
+                  ),
+
+                  // If it's a transaction/transfer notification: show full financial breakdown
+                  if (isTx) ...[
+                    if (item.amount != null) ...[
+                      Center(
+                        child: Column(
+                          children: [
+                            Text(
+                              'Amount',
+                              style: TextStyle(
+                                fontSize: 12.sp,
+                                color: Colors.grey[500],
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            SizedBox(height: 4.h),
+                            Text(
+                              item.amount!,
+                              style: TextStyle(
+                                fontSize: 28.sp,
+                                fontWeight: FontWeight.w800,
+                                color: _brandColor,
+                                letterSpacing: -0.5,
+                              ),
+                            ),
+                            SizedBox(height: 6.h),
+                            Container(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: 12.w,
+                                vertical: 4.h,
+                              ),
+                              decoration: BoxDecoration(
+                                color: statusColor.withOpacity(0.12),
+                                borderRadius: BorderRadius.circular(20.r),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    statusIcon,
+                                    size: 14.sp,
+                                    color: statusColor,
+                                  ),
+                                  SizedBox(width: 4.w),
+                                  Text(
+                                    (item.status ?? 'Successful').toUpperCase(),
+                                    style: TextStyle(
+                                      fontSize: 11.sp,
+                                      fontWeight: FontWeight.bold,
+                                      color: statusColor,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ],
                         ),
-                      ],
+                      ),
+                      SizedBox(height: 18.h),
+                    ],
+
+                    Container(
+                      padding: EdgeInsets.all(14.w),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF8FAF9),
+                        borderRadius: BorderRadius.circular(16.r),
+                        border: Border.all(color: const Color(0xFFE5EAE7)),
+                      ),
+                      child: Column(
+                        children: [
+                          _DetailRow('Description', item.body),
+                          if (item.reference != null &&
+                              item.reference!.isNotEmpty) ...[
+                            SizedBox(height: 10.h),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  'Reference',
+                                  style: TextStyle(
+                                    fontSize: 13.sp,
+                                    color: Colors.grey[600],
+                                  ),
+                                ),
+                                InkWell(
+                                  onTap: () {
+                                    Clipboard.setData(
+                                      ClipboardData(text: item.reference!),
+                                    );
+                                    HapticFeedback.lightImpact();
+                                    AppAlert.showSuccess(
+                                      context,
+                                      'Reference copied to clipboard',
+                                    );
+                                  },
+                                  child: Row(
+                                    children: [
+                                      Text(
+                                        item.reference!,
+                                        style: TextStyle(
+                                          fontSize: 13.sp,
+                                          fontWeight: FontWeight.w600,
+                                          color: const Color(0xFF1A1A1A),
+                                        ),
+                                      ),
+                                      SizedBox(width: 6.w),
+                                      Icon(
+                                        Icons.copy_rounded,
+                                        size: 14.sp,
+                                        color: _brandColor,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                          if (item.sessionId != null &&
+                              item.sessionId!.isNotEmpty) ...[
+                            SizedBox(height: 10.h),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  'Session ID',
+                                  style: TextStyle(
+                                    fontSize: 13.sp,
+                                    color: Colors.grey[600],
+                                  ),
+                                ),
+                                InkWell(
+                                  onTap: () {
+                                    Clipboard.setData(
+                                      ClipboardData(text: item.sessionId!),
+                                    );
+                                    HapticFeedback.lightImpact();
+                                    AppAlert.showSuccess(
+                                      context,
+                                      'Session ID copied to clipboard',
+                                    );
+                                  },
+                                  child: Row(
+                                    children: [
+                                      Text(
+                                        item.sessionId!,
+                                        style: TextStyle(
+                                          fontSize: 13.sp,
+                                          fontWeight: FontWeight.w600,
+                                          color: const Color(0xFF1A1A1A),
+                                        ),
+                                      ),
+                                      SizedBox(width: 6.w),
+                                      Icon(
+                                        Icons.copy_rounded,
+                                        size: 14.sp,
+                                        color: _brandColor,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                          ..._transactionDetailRows(item),
+                          SizedBox(height: 10.h),
+                          _DetailRow(
+                            'Date & Time',
+                            _formatTimestamp(item.timestamp),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  SizedBox(height: 20.h),
-                  SizedBox(
-                    height: 48.h,
-                    child: ElevatedButton(
-                      onPressed: () => Navigator.of(ctx).pop(),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: _brandColor,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12.r),
+
+                    SizedBox(height: 20.h),
+
+                    // Button: View Full Receipt
+                    SizedBox(
+                      height: 50.h,
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          Navigator.of(ctx).pop();
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder:
+                                  (_) => TransactionReceiptScreen(
+                                    data: TransactionReceiptData(
+                                      service: item.service ?? 'Transaction',
+                                      type: item.type,
+                                      description: item.body,
+                                      amount: item.amount ?? '₦0.00',
+                                      status: item.status ?? 'success',
+                                      reference: item.reference ?? '',
+                                      sessionId: item.sessionId,
+                                      initialBalance: '',
+                                      finalBalance: '',
+                                      date: item.timestamp,
+                                      extraFields: _receiptFields(item),
+                                    ),
+                                    isNewTransaction: false,
+                                  ),
+                            ),
+                          );
+                        },
+                        icon: Icon(Icons.receipt_long_rounded, size: 18.sp),
+                        label: const Text('View Full Digital Receipt'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _brandColor,
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12.r),
+                          ),
                         ),
                       ),
-                      child: const Text('Got it'),
                     ),
-                  ),
+                  ] else ...[
+                    // General / Security Information Message
+                    Container(
+                      padding: EdgeInsets.all(16.w),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF8FAF9),
+                        borderRadius: BorderRadius.circular(16.r),
+                        border: Border.all(color: const Color(0xFFE5EAE7)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            item.body,
+                            style: TextStyle(
+                              fontSize: 14.sp,
+                              color: const Color(0xFF2D3748),
+                              height: 1.5,
+                            ),
+                          ),
+                          SizedBox(height: 14.h),
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.access_time_rounded,
+                                size: 14.sp,
+                                color: Colors.grey[500],
+                              ),
+                              SizedBox(width: 6.w),
+                              Text(
+                                _formatTimestamp(item.timestamp),
+                                style: TextStyle(
+                                  fontSize: 12.sp,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    SizedBox(height: 20.h),
+                    SizedBox(
+                      height: 48.h,
+                      child: ElevatedButton(
+                        onPressed: () => Navigator.of(ctx).pop(),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _brandColor,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12.r),
+                          ),
+                        ),
+                        child: const Text('Got it'),
+                      ),
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
           ),
     );
+  }
+
+  List<Widget> _transactionDetailRows(AppNotificationModel item) {
+    const hiddenKeys = {
+      'amount',
+      'reference',
+      'paymentreference',
+      'session_id',
+      'sessionid',
+      'status',
+      'type',
+      'service_type',
+      'servicetype',
+      'description',
+      'otp',
+      'password',
+      'pin',
+      'token',
+      'access_token',
+      'fcm_token',
+      'device_id_hash',
+    };
+    final entries =
+        item.details?.entries.where((entry) {
+          final key = entry.key.toLowerCase().replaceAll(
+            RegExp(r'[^a-z0-9]'),
+            '',
+          );
+          final value = entry.value;
+          return !hiddenKeys.contains(key) &&
+              value != null &&
+              value.toString().trim().isNotEmpty &&
+              value is! Map &&
+              value is! List;
+        }).toList() ??
+        const [];
+
+    return [
+      for (final entry in entries) ...[
+        SizedBox(height: 10.h),
+        _DetailRow(
+          entry.key
+              .replaceAll(RegExp(r'([a-z])([A-Z])'), r'$1 $2')
+              .replaceAll('_', ' ')
+              .replaceAll('-', ' ')
+              .split(' ')
+              .map(
+                (word) =>
+                    word.isEmpty
+                        ? word
+                        : '${word[0].toUpperCase()}${word.substring(1)}',
+              )
+              .join(' '),
+          _formatTransactionDetail(entry.key, entry.value.toString()),
+        ),
+      ],
+    ];
+  }
+
+  List<ReceiptField>? _receiptFields(AppNotificationModel item) {
+    final rows = _transactionDetailRows(item);
+    // Keep the receipt clean when no extra transaction metadata is available.
+    return rows.isEmpty
+        ? null
+        : [
+          for (final entry in item.details!.entries)
+            if (entry.value != null &&
+                entry.value.toString().trim().isNotEmpty &&
+                !const {
+                  'amount',
+                  'reference',
+                  'paymentreference',
+                  'session_id',
+                  'status',
+                  'type',
+                  'service_type',
+                  'description',
+                  'otp',
+                  'password',
+                  'pin',
+                  'token',
+                  'access_token',
+                  'fcm_token',
+                  'device_id_hash',
+                }.contains(
+                  entry.key.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), ''),
+                ))
+              ReceiptField(
+                entry.key.replaceAll('_', ' '),
+                _formatTransactionDetail(entry.key, entry.value.toString()),
+              ),
+        ];
+  }
+
+  String _formatTransactionDetail(String key, String value) {
+    final normalizedKey = key.toLowerCase();
+    if (normalizedKey.contains('amount') ||
+        normalizedKey.contains('balance') ||
+        normalizedKey.contains('fee') ||
+        normalizedKey.contains('charge')) {
+      return formatCurrency(value);
+    }
+    return value;
   }
 
   IconData _typeIcon(String type) {

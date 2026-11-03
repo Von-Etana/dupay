@@ -150,7 +150,14 @@ class _TransactionReceiptScreenState extends State<TransactionReceiptScreen> {
         trimmed.startsWith('€') ||
         trimmed.startsWith('£') ||
         RegExp(r'^[A-Za-z]{3}\b').hasMatch(trimmed)) {
-      return trimmed;
+      final currencyCode = RegExp(r'^([A-Za-z]{3})\s*').firstMatch(trimmed);
+      if (currencyCode != null) {
+        final number = trimmed.substring(currencyCode.end);
+        return '${currencyCode.group(1)} ${formatNumber(number)}';
+      }
+      final symbol = trimmed[0];
+      final number = trimmed.substring(1);
+      return '$symbol${formatNumber(number)}';
     }
     return formatCurrency(trimmed);
   }
@@ -225,27 +232,27 @@ class _TransactionReceiptScreenState extends State<TransactionReceiptScreen> {
       await Share.shareXFiles(
         [XFile(file.path, mimeType: 'image/png', name: 'dupay_receipt.png')],
         text:
-            'DuPay Transaction Receipt\nAmount: ${_displayAmount(widget.data.amount)}\nRef: ${widget.data.reference}',
-        subject: 'DuPay Transaction Receipt',
+            'Dupay Transaction Receipt\nAmount: ${_displayAmount(widget.data.amount)}\nRef: ${widget.data.reference}',
+        subject: 'Dupay Transaction Receipt',
         sharePositionOrigin: sharePosition,
       );
     } catch (e) {
       if (!context.mounted) return;
       try {
         await Share.share(
-          'DuPay Transaction Receipt\n'
+          'Dupay Transaction Receipt\n'
           'Service: ${widget.data.service}\n'
           'Amount: ${_displayAmount(widget.data.amount)}\n'
           'Status: ${widget.data.status}\n'
           'Ref: ${widget.data.reference}'
           '${widget.data.sessionId != null && widget.data.sessionId!.isNotEmpty ? '\nSession ID: ${widget.data.sessionId}' : ''}\n'
           'Date: $_formattedDate',
-          subject: 'DuPay Transaction Receipt',
+          subject: 'Dupay Transaction Receipt',
           sharePositionOrigin: sharePosition,
         );
       } catch (_) {
         _copyToClipboard(
-          'DuPay Receipt\nService: ${widget.data.service}\nAmount: ${_displayAmount(widget.data.amount)}\nRef: ${widget.data.reference}',
+          'Dupay Receipt\nService: ${widget.data.service}\nAmount: ${_displayAmount(widget.data.amount)}\nRef: ${widget.data.reference}',
           'Receipt details',
         );
       }
@@ -505,7 +512,7 @@ class _TransactionReceiptScreenState extends State<TransactionReceiptScreen> {
                                             CrossAxisAlignment.start,
                                         children: [
                                           Text(
-                                            'DuPay Receipt',
+                                            'Dupay Receipt',
                                             style: TextStyle(
                                               fontSize: 14.sp,
                                               fontWeight: FontWeight.bold,
@@ -672,7 +679,7 @@ class _TransactionReceiptScreenState extends State<TransactionReceiptScreen> {
                                   ] else ...[
                                     _ReceiptItem(
                                       label: f.label,
-                                      value: f.value,
+                                      value: _formatReceiptField(f),
                                       isBold: f.isBold,
                                     ),
                                     SizedBox(height: 8.h),
@@ -931,6 +938,17 @@ class _TransactionReceiptScreenState extends State<TransactionReceiptScreen> {
         ),
       ),
     );
+  }
+
+  String _formatReceiptField(ReceiptField field) {
+    final label = field.label.toLowerCase();
+    if (label.contains('amount') ||
+        label.contains('balance') ||
+        label.contains('fee') ||
+        label.contains('charge')) {
+      return _displayAmount(field.value);
+    }
+    return field.value;
   }
 }
 

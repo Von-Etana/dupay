@@ -1,15 +1,15 @@
 # Push Notifications Architecture & Verification Guide (Android & iOS)
 
-This document outlines the complete push notifications architecture for DuPay, the changes implemented, and step-by-step verification instructions for both platforms.
+This document outlines the complete push notifications architecture for Dupay, the changes implemented, and step-by-step verification instructions for both platforms.
 
 ---
 
 ## 1. Architecture Overview
 
-Push notifications in DuPay are powered by **Firebase Cloud Messaging (FCM)** with direct APNs integration for iOS.
+Push notifications in Dupay are powered by **Firebase Cloud Messaging (FCM)** with direct APNs integration for iOS.
 
 ```
-       [ DuPay Backend ]
+       [ Dupay Backend ]
                │
                ▼ (FCM HTTP v1 API)
        [ Firebase Cloud Messaging ]
@@ -22,7 +22,7 @@ Push notifications in DuPay are powered by **Firebase Cloud Messaging (FCM)** wi
          │                     │
          └──────────┬──────────┘
                     ▼
-          [ DuPay Flutter App ]
+          [ Dupay Flutter App ]
           • Token Sync to backend (/update-fcm-token)
           • Foreground SnackBar with 'View' Action
           • Background Tap Routing

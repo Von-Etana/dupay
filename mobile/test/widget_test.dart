@@ -10,8 +10,8 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   testWidgets('login screen renders', (WidgetTester tester) async {
-    await tester.pumpWidget(const MaterialApp(home: Text('DuPay')));
+    await tester.pumpWidget(const MaterialApp(home: Text('Dupay')));
     await tester.pump();
-    expect(find.text('DuPay'), findsOneWidget);
+    expect(find.text('Dupay'), findsOneWidget);
   });
 }

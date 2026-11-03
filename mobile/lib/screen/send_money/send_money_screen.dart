@@ -2,6 +2,7 @@ import 'package:dupay/screen/qr_code/scan_qrcode.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import '../../core/exceptions/api_exception.dart';
 import '../../providers/transfer_provider.dart';
 import '../../providers/auth_provider.dart';
 import 'bank_transfer_screen.dart';
@@ -140,12 +141,49 @@ class _SendMoneyScreenState extends ConsumerState<SendMoneyScreen> {
                             ),
                           );
                         }
-                      } catch (e) {
+                      } on ApiException catch (error) {
+                        if (!context.mounted) return;
                         Navigator.pop(context); // Close loading dialog
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('Error: $e'),
-                            backgroundColor: Colors.red,
+                        if (error.statusCode != null &&
+                            error.statusCode! >= 400 &&
+                            error.statusCode! < 500) {
+                          Navigator.of(context).pushReplacement(
+                            MaterialPageRoute(
+                              builder:
+                                  (_) => TransferResultScreen(
+                                    success: false,
+                                    amount: amountController.text,
+                                    message: error.message,
+                                  ),
+                            ),
+                          );
+                        } else {
+                          Navigator.of(context).pushReplacement(
+                            MaterialPageRoute(
+                              builder:
+                                  (_) => TransferResultScreen(
+                                    success: false,
+                                    pending: true,
+                                    amount: amountController.text,
+                                    message:
+                                        'We could not confirm whether this transfer completed. Check your transaction history before trying again.',
+                                  ),
+                            ),
+                          );
+                        }
+                      } catch (error) {
+                        if (!context.mounted) return;
+                        Navigator.pop(context); // Close loading dialog
+                        Navigator.of(context).pushReplacement(
+                          MaterialPageRoute(
+                            builder:
+                                (_) => TransferResultScreen(
+                                  success: false,
+                                  pending: true,
+                                  amount: amountController.text,
+                                  message:
+                                      'We could not confirm whether this transfer completed. Check your transaction history before trying again.',
+                                ),
                           ),
                         );
                       }

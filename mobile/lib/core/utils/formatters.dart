@@ -41,6 +41,9 @@ String formatNumber(dynamic amount, {int decimalDigits = 2}) {
 
   if (value == null) return '0.00';
 
-  final formatter = NumberFormat.decimalPattern('en_NG');
-  return '${formatter.format(value)}${decimalDigits == 0 ? '' : ''}';
+  final formatter =
+      NumberFormat.decimalPattern('en_NG')
+        ..minimumFractionDigits = decimalDigits
+        ..maximumFractionDigits = decimalDigits;
+  return formatter.format(value);
 }

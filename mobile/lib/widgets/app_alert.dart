@@ -486,7 +486,7 @@ class AppAlert {
                           SizedBox(width: 8.w),
                           Expanded(
                             child: Text(
-                              'Security Lockout: 30-minute cooldown',
+                              'Account lock: 30 minutes',
                               style: TextStyle(
                                 fontSize: 12.sp,
                                 fontWeight: FontWeight.w600,
