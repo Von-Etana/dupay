@@ -101,6 +101,46 @@ class _TransactionSummaryScreenState
     _pinController.clear();
   }
 
+  String _normalizedTransferStatus(
+    dynamic rawStatus, {
+    required bool succeeded,
+  }) {
+    final status = rawStatus?.toString().trim().toLowerCase() ?? '';
+    if ({
+      'success',
+      'successful',
+      'completed',
+      'complete',
+      'approved',
+      '1',
+      'true',
+    }.contains(status)) {
+      return 'success';
+    }
+    if ({
+      'pending',
+      'processing',
+      'queued',
+      'in_progress',
+      'in progress',
+    }.contains(status)) {
+      return 'pending';
+    }
+    if ({
+      'failed',
+      'failure',
+      'declined',
+      'rejected',
+      'cancelled',
+      'canceled',
+      '0',
+      'false',
+    }.contains(status)) {
+      return 'failed';
+    }
+    return succeeded ? 'success' : 'failed';
+  }
+
   Future<void> _confirmTransaction() async {
     if (_isProcessing) return;
     if (_pinController.text.length != 4) return;
@@ -146,7 +186,7 @@ class _TransactionSummaryScreenState
           type: result['type'] ?? widget.data.service,
           description: result['description'] ?? widget.data.description ?? '',
           amount: widget.data.amount,
-          status: 'success',
+          status: _normalizedTransferStatus(result['status'], succeeded: true),
           statusMessage: result['message']?.toString(),
           reference: result['reference'] ?? sessionIdRaw ?? '',
           sessionId: sessionId,
@@ -162,9 +202,14 @@ class _TransactionSummaryScreenState
           ),
         );
       } else {
-        final isTransfer = widget.data.service.toLowerCase().contains('transfer');
+        final isTransfer = widget.data.service.toLowerCase().contains(
+          'transfer',
+        );
         if (result['show_result_screen'] == true || isTransfer) {
-          final status = result['status']?.toString() ?? 'failed';
+          final status = _normalizedTransferStatus(
+            result['status'],
+            succeeded: false,
+          );
           final sessionIdRaw = result['session_id']?.toString();
           final resultData = TransactionReceiptData(
             service: widget.data.service,
