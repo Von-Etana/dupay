@@ -10,17 +10,21 @@ function sendTransactionSms($user, $message, $select_wallet_id = null)
 {
     $smsCharge = (float) getSiteSettings('sms_charges');
 
-    if ($user->profile->receive_sms != 1 || $user->balance < $smsCharge) {
-                Log::info('SMS Sent:', ['response' => 'bad']);
+    if (!$user->profile || (int) $user->profile->receive_sms !== 1 || (float) $user->balance < $smsCharge || empty($user->phone_number)) {
+        return false;
+    }
 
+    $publicKey = config('services.strowallet.public_key');
+    if (empty($publicKey)) {
+        Log::error('Transaction SMS unavailable: StroWallet public key is missing');
         return false;
     }
 
     try {
-        $client = new Client();
+        $client = new Client(['timeout' => 15, 'connect_timeout' => 5]);
         $response = $client->request('POST', 'https://strowallet.com/api/bulk-sms/', [
             'query' => [
-                'public_key' => env('STROWALLET_PUBLIC_KEY'),
+                'public_key' => $publicKey,
                 'sender_id' => 'Dupay',
                 'message' => $message,
                 'phone' => $user->phone_number,
@@ -31,7 +35,14 @@ function sendTransactionSms($user, $message, $select_wallet_id = null)
         ]);
 
         $body = json_decode($response->getBody(), true);
-        Log::info('SMS Sent:', ['response' => $body]);
+        if (!is_array($body) ||
+            (array_key_exists('success', $body) && $body['success'] === false) ||
+            (isset($body['status']) && in_array(strtolower((string) $body['status']), ['error', 'failed', 'failure'], true))) {
+            Log::error('Transaction SMS rejected by provider', ['response' => $body]);
+            return false;
+        }
+
+        Log::info('Transaction SMS accepted by provider', ['response' => $body]);
 
         $check_balance = checkUserWallet($user, $smsCharge, "1");
         if (!$check_balance) {

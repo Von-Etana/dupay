@@ -1732,7 +1732,15 @@ class TransferController extends Controller
                 }
 
                 //update firebase
-                (new FirebaseUserUpdate)->updateUser($user);
+                try {
+                    (new FirebaseUserUpdate)->updateUser($user);
+                } catch (\Throwable $e) {
+                    \Log::warning('P2P transfer completed but Firebase user sync failed', [
+                        'user_id' => $user->id,
+                        'reference' => $trx,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
                 return response()->json([
                     'success' => true,
                     'code' => 200,

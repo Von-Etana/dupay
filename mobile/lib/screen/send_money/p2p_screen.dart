@@ -229,7 +229,15 @@ class _P2PScreenState extends ConsumerState<P2PScreen> {
                     'message': response.message,
                     'status':
                         response.data?['status']?.toString() ??
-                        (response.success ? 'success' : 'failed'),
+                        (response.success
+                            ? 'success'
+                            : (response.statusCode == null ||
+                                    response.statusCode! >= 500 ||
+                                    response.message.toLowerCase().contains(
+                                      'internal server error',
+                                    )
+                                ? 'pending'
+                                : 'failed')),
                     'show_result_screen': true,
                     'reference': response.data?['reference'] ?? '',
                     'description': 'Transfer to $name',
