@@ -9,6 +9,21 @@ import 'order_summary_screen.dart';
 import '../../core/utils/formatters.dart';
 import '../../core/utils/phone_validator.dart';
 
+String? _airtimeLogoAsset(String? name) {
+  switch (name?.trim().toLowerCase()) {
+    case 'mtn':
+      return 'assets/images/mtnlogo.jpg';
+    case 'airtel':
+      return 'assets/images/airtellogo.png';
+    case 'glo':
+      return 'assets/images/glologo.png';
+    case '9mobile':
+      return 'assets/images/9mobilelogo.png';
+    default:
+      return null;
+  }
+}
+
 class AirtimeScreen extends ConsumerStatefulWidget {
   const AirtimeScreen({super.key});
 
@@ -57,175 +72,181 @@ class _AirtimeScreenState extends ConsumerState<AirtimeScreen> {
       ),
       builder: (context) {
         return StatefulBuilder(
-          builder: (context, setModalState) => Padding(
-          padding: EdgeInsets.only(
-            left: 24,
-            right: 24,
-            top: 24,
-            bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-          ),
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    GestureDetector(
-                      onTap: () => Navigator.of(context).pop(),
-                      child: const Icon(
-                        Icons.close,
-                        color: Colors.red,
-                        size: 28,
+          builder:
+              (context, setModalState) => Padding(
+                padding: EdgeInsets.only(
+                  left: 24,
+                  right: 24,
+                  top: 24,
+                  bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+                ),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          GestureDetector(
+                            onTap: () => Navigator.of(context).pop(),
+                            child: const Icon(
+                              Icons.close,
+                              color: Colors.red,
+                              size: 28,
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Airtime',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black54,
-                    fontSize: 16.sp,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                CircleAvatar(
-                  backgroundImage:
-                      network.image != null
-                          ? NetworkImage(network.image!)
-                          : null,
-                  radius: 40,
-                  backgroundColor: Colors.white,
-                  child:
-                      network.image == null
-                          ? const Icon(
-                            Icons.phone_android,
-                            size: 40,
-                            color: Color(0xFF34544A),
-                          )
-                          : null,
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  network.name ?? 'Unknown Network',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: const Color(0xFF34544A),
-                    fontSize: 18.sp,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Airtime',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: const Color(0xFF23235B),
-                    fontSize: 22.sp,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  formatCurrency(amount),
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black,
-                    fontSize: 20.sp,
-                  ),
-                ),
-                const SizedBox(height: 24),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    'Phone Number',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black,
-                      fontSize: 15.sp,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: phoneController,
-                  keyboardType: TextInputType.phone,
-                  maxLength: 11,
-                  inputFormatters: [
-                    FilteringTextInputFormatter.digitsOnly,
-                  ],
-                  onChanged: (_) {
-                    // Clear the error as soon as the user starts fixing it.
-                    if (phoneError != null) {
-                      setModalState(() => phoneError = null);
-                    }
-                  },
-                  decoration: InputDecoration(
-                    counterText: '',
-                    errorText: phoneError,
-                    prefixIcon:
-                        const Icon(Icons.phone, color: Colors.grey),
-                    hintText: 'Enter phone number',
-                    border: const UnderlineInputBorder(),
-                    enabledBorder: const UnderlineInputBorder(),
-                    focusedBorder: const UnderlineInputBorder(
-                      borderSide: BorderSide(
-                        color: Color(0xFF34544A),
-                        width: 2,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 24),
-                SizedBox(
-                  width: double.infinity,
-                  height: 48,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF34544A),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    onPressed: () {
-                      final error =
-                          validateNigerianPhone(phoneController.text);
-                      if (error != null) {
-                        setModalState(() => phoneError = error);
-                        return;
-                      }
-                      // Send the tidied 11-digit local form so the provider
-                      // always receives 0XXXXXXXXXX.
-                      final phone =
-                          normalizeNigerianPhone(phoneController.text);
-                      Navigator.of(context).pop();
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder:
-                              (context) => OrderSummaryScreen(
-                                network: network.name ?? 'Unknown Network',
-                                logo: network.image ?? '',
-                                amount: amount,
-                                phoneNumber: phone,
-                              ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Airtime',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black54,
+                          fontSize: 16.sp,
                         ),
-                      );
-                    },
-                    child: const Text(
-                      'Continue',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18,
-                        color: Colors.white,
                       ),
-                    ),
+                      const SizedBox(height: 8),
+                      CircleAvatar(
+                        backgroundImage: null,
+                        radius: 40,
+                        backgroundColor: Colors.white,
+                        child:
+                            _airtimeLogoAsset(network.name) != null
+                                ? Image.asset(
+                                  _airtimeLogoAsset(network.name)!,
+                                  fit: BoxFit.cover,
+                                )
+                                : const Icon(
+                                  Icons.phone_android,
+                                  size: 40,
+                                  color: Color(0xFF34544A),
+                                ),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        network.name ?? 'Unknown Network',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFF34544A),
+                          fontSize: 18.sp,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Airtime',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFF23235B),
+                          fontSize: 22.sp,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        formatCurrency(amount),
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black,
+                          fontSize: 20.sp,
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          'Phone Number',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black,
+                            fontSize: 15.sp,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      TextField(
+                        controller: phoneController,
+                        keyboardType: TextInputType.phone,
+                        maxLength: 11,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                        ],
+                        onChanged: (_) {
+                          // Clear the error as soon as the user starts fixing it.
+                          if (phoneError != null) {
+                            setModalState(() => phoneError = null);
+                          }
+                        },
+                        decoration: InputDecoration(
+                          counterText: '',
+                          errorText: phoneError,
+                          prefixIcon: const Icon(
+                            Icons.phone,
+                            color: Colors.grey,
+                          ),
+                          hintText: 'Enter phone number',
+                          border: const UnderlineInputBorder(),
+                          enabledBorder: const UnderlineInputBorder(),
+                          focusedBorder: const UnderlineInputBorder(
+                            borderSide: BorderSide(
+                              color: Color(0xFF34544A),
+                              width: 2,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 48,
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF34544A),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          onPressed: () {
+                            final error = validateNigerianPhone(
+                              phoneController.text,
+                            );
+                            if (error != null) {
+                              setModalState(() => phoneError = error);
+                              return;
+                            }
+                            // Send the tidied 11-digit local form so the provider
+                            // always receives 0XXXXXXXXXX.
+                            final phone = normalizeNigerianPhone(
+                              phoneController.text,
+                            );
+                            Navigator.of(context).pop();
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder:
+                                    (context) => OrderSummaryScreen(
+                                      network:
+                                          network.name ?? 'Unknown Network',
+                                      logo: network.image ?? '',
+                                      amount: amount,
+                                      phoneNumber: phone,
+                                    ),
+                              ),
+                            );
+                          },
+                          child: const Text(
+                            'Continue',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 18,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 24),
-              ],
-            ),
-          ),
-          ),
+              ),
         );
       },
     );
@@ -305,7 +326,6 @@ class _AirtimeScreenState extends ConsumerState<AirtimeScreen> {
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                           
                             Text(
                               '..',
                               style: TextStyle(
@@ -439,20 +459,23 @@ class _AirtimeScreenState extends ConsumerState<AirtimeScreen> {
                                           CircleAvatar(
                                             radius: 28,
                                             backgroundColor: Colors.white,
-                                            backgroundImage:
-                                                networks[i].image != null
-                                                    ? NetworkImage(
-                                                      networks[i].image!,
-                                                    )
-                                                    : null,
+                                            backgroundImage: null,
                                             child:
-                                                networks[i].image == null
-                                                    ? const Icon(
+                                                _airtimeLogoAsset(
+                                                          networks[i].name,
+                                                        ) !=
+                                                        null
+                                                    ? Image.asset(
+                                                      _airtimeLogoAsset(
+                                                        networks[i].name,
+                                                      )!,
+                                                      fit: BoxFit.cover,
+                                                    )
+                                                    : const Icon(
                                                       Icons.phone_android,
                                                       size: 28,
                                                       color: Color(0xFF34544A),
-                                                    )
-                                                    : null,
+                                                    ),
                                           ),
                                           if (isSelected)
                                             Positioned(
@@ -500,18 +523,18 @@ class _AirtimeScreenState extends ConsumerState<AirtimeScreen> {
                                 CircleAvatar(
                                   radius: 48,
                                   backgroundColor: Colors.white,
-                                  backgroundImage:
-                                      network.image != null
-                                          ? NetworkImage(network.image!)
-                                          : null,
+                                  backgroundImage: null,
                                   child:
-                                      network.image == null
-                                          ? const Icon(
+                                      _airtimeLogoAsset(network.name) != null
+                                          ? Image.asset(
+                                            _airtimeLogoAsset(network.name)!,
+                                            fit: BoxFit.cover,
+                                          )
+                                          : const Icon(
                                             Icons.phone_android,
                                             size: 48,
                                             color: Color(0xFF34544A),
-                                          )
-                                          : null,
+                                          ),
                                 ),
                                 const SizedBox(height: 16),
                                 Text(
@@ -635,7 +658,9 @@ class _AirtimeScreenState extends ConsumerState<AirtimeScreen> {
 class _ThousandsSeparatorFormatter extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(
-      TextEditingValue oldValue, TextEditingValue newValue) {
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
     final raw = newValue.text.replaceAll(RegExp(r'[^\d]'), '');
     if (raw.isEmpty) return newValue.copyWith(text: '');
 

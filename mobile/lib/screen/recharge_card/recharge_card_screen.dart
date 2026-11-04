@@ -28,19 +28,13 @@ class _RechargeCardScreenState extends ConsumerState<RechargeCardScreen> {
 
   // Local asset fallbacks keyed by lower-cased network name.
   static const Map<String, String> _logoAssets = {
-    'mtn':     'assets/images/mtnlogo.jpg',
+    'mtn': 'assets/images/mtnlogo.jpg',
     '9mobile': 'assets/images/9mobilelogo.png',
-    'airtel':  'assets/images/airtellogo.png',
-    'glo':     'assets/images/glologo.png',
+    'airtel': 'assets/images/airtellogo.png',
+    'glo': 'assets/images/glologo.png',
   };
 
-  final List<String> denominations = [
-    '100',
-    '200',
-    '500',
-    '1000',
- 
-  ];
+  final List<String> denominations = ['100', '200', '500', '1000'];
   final List<int> suggestedQuantities = [5, 10, 15, 20];
 
   @override
@@ -60,16 +54,21 @@ class _RechargeCardScreenState extends ConsumerState<RechargeCardScreen> {
   /// showing a blank circle.
   Widget _networkLogo(AirtimeNetworkModel n, {required double radius}) {
     final size = radius * 2;
-    final bg   = _networkColor(n);
-    final url  = n.image;
+    final bg = _networkColor(n);
+    final url = n.image;
 
     Widget fallback() {
       // Try a bundled asset first; if that's missing, show the network's
       // initial(s) on the brand colour so the circle is never blank.
       final asset = _logoAssets[(n.name ?? '').toLowerCase()];
       if (asset != null) {
-        return Image.asset(asset, fit: BoxFit.cover, width: size, height: size,
-            errorBuilder: (_, __, ___) => _initialsBadge(n, size));
+        return Image.asset(
+          asset,
+          fit: BoxFit.cover,
+          width: size,
+          height: size,
+          errorBuilder: (_, __, ___) => _initialsBadge(n, size),
+        );
       }
       return _initialsBadge(n, size);
     }
@@ -88,7 +87,9 @@ class _RechargeCardScreenState extends ConsumerState<RechargeCardScreen> {
               width: size * 0.35,
               height: size * 0.35,
               child: const CircularProgressIndicator(
-                  strokeWidth: 2, color: Colors.white),
+                strokeWidth: 2,
+                color: Colors.white,
+              ),
             ),
           );
         },
@@ -101,19 +102,17 @@ class _RechargeCardScreenState extends ConsumerState<RechargeCardScreen> {
     return Container(
       width: size,
       height: size,
-      decoration: BoxDecoration(
-        color: bg,
-        shape: BoxShape.circle,
-      ),
+      decoration: BoxDecoration(color: bg, shape: BoxShape.circle),
       child: ClipOval(child: content),
     );
   }
 
   Widget _initialsBadge(AirtimeNetworkModel n, double size) {
     final name = (n.name ?? '?').trim();
-    final initials = name.isEmpty
-        ? '?'
-        : name.length <= 3
+    final initials =
+        name.isEmpty
+            ? '?'
+            : name.length <= 3
             ? name.toUpperCase()
             : name.substring(0, 2).toUpperCase();
     return Center(
@@ -137,22 +136,32 @@ class _RechargeCardScreenState extends ConsumerState<RechargeCardScreen> {
   /// which only has the network's display name (e.g. "AIRTEL" from the API).
   static Color _networkColorByName(String name) {
     switch (name.toLowerCase()) {
-      case 'mtn':     return const Color(0xFFFFCC00); // MTN yellow
-      case 'airtel':  return const Color(0xFFED1C24); // Airtel red
-      case 'glo':     return const Color(0xFF50B848); // Glo green
-      case '9mobile': return const Color(0xFF006E34); // 9mobile green
-      default:        return Colors.white;
+      case 'mtn':
+        return const Color(0xFFFFCC00); // MTN yellow
+      case 'airtel':
+        return const Color(0xFFED1C24); // Airtel red
+      case 'glo':
+        return const Color(0xFF50B848); // Glo green
+      case '9mobile':
+        return const Color(0xFF006E34); // 9mobile green
+      default:
+        return Colors.white;
     }
   }
 
   /// Pick a readable text colour for a network badge based on its brand colour.
   static Color _networkTextColorByName(String name) {
     switch (name.toLowerCase()) {
-      case 'mtn':     return Colors.black; // black on yellow
-      case 'airtel':  return Colors.white; // white on red
-      case 'glo':     return Colors.white; // white on green
-      case '9mobile': return Colors.white; // white on dark green
-      default:        return Colors.black;
+      case 'mtn':
+        return Colors.black; // black on yellow
+      case 'airtel':
+        return Colors.white; // white on red
+      case 'glo':
+        return Colors.white; // white on green
+      case '9mobile':
+        return Colors.white; // white on dark green
+      default:
+        return Colors.black;
     }
   }
 
@@ -342,70 +351,78 @@ class _RechargeCardScreenState extends ConsumerState<RechargeCardScreen> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (_) => TransactionSummaryScreen(
-                              data: TransactionSummaryData(
-                                service: 'Recharge Card',
-                                from: 'Wallet',
-                                accountName: network.name ?? '',
-                                amount: formatCurrency(totalAmount),
-                                description:
-                                    '$selectedQuantity × ₦$selectedDenomination'
-                                    ' • ${network.name ?? ''}',
-                                onConfirm: (pin) async {
-                                  final result = await ref
-                                      .read(rechargeCardNotifierProvider
-                                          .notifier)
-                                      .buyEpin(
-                                        networkId:      networkId,
-                                        value:          denominationInt,
-                                        quantity:       selectedQuantity,
-                                        transactionPin: pin,
-                                      );
+                            builder:
+                                (_) => TransactionSummaryScreen(
+                                  data: TransactionSummaryData(
+                                    service: 'Recharge Card',
+                                    from: 'Wallet',
+                                    accountName: network.name ?? '',
+                                    amount: formatCurrency(totalAmount),
+                                    description:
+                                        '$selectedQuantity × ₦$selectedDenomination'
+                                        ' • ${network.name ?? ''}',
+                                    onConfirm: (pin) async {
+                                      final result = await ref
+                                          .read(
+                                            rechargeCardNotifierProvider
+                                                .notifier,
+                                          )
+                                          .buyEpin(
+                                            networkId: networkId,
+                                            value: denominationInt,
+                                            quantity: selectedQuantity,
+                                            transactionPin: pin,
+                                          );
 
-                                  // On success, share the freshly purchased
-                                  // cards once the receipt screen is shown.
-                                  if (result.success &&
-                                      result.purchase != null &&
-                                      result.purchase!.cards.isNotEmpty) {
-                                    final purchase = result.purchase!;
-                                    // Convert API cards to the shape the
-                                    // existing share helper expects.
-                                    final shareCards = purchase.cards
-                                        .map((c) => {
-                                              'pin':       c.pin,
-                                              'reference': c.serial,
-                                            })
-                                        .toList();
-                                    // Fire and forget — share dialog appears
-                                    // after the user dismisses the receipt.
-                                    Future.delayed(
-                                      const Duration(milliseconds: 600),
-                                      () {
-                                        if (!mounted) return;
-                                        _shareRechargeCards(
-                                          purchase.cardNetwork.isNotEmpty
-                                              ? purchase.cardNetwork
-                                              : (network.name ?? ''),
-                                          selectedDenomination,
-                                          shareCards,
+                                      // On success, share the freshly purchased
+                                      // cards once the receipt screen is shown.
+                                      if (result.success &&
+                                          result.purchase != null &&
+                                          result.purchase!.cards.isNotEmpty) {
+                                        final purchase = result.purchase!;
+                                        // Convert API cards to the shape the
+                                        // existing share helper expects.
+                                        final shareCards =
+                                            purchase.cards
+                                                .map(
+                                                  (c) => {
+                                                    'pin': c.pin,
+                                                    'reference': c.serial,
+                                                  },
+                                                )
+                                                .toList();
+                                        // Fire and forget — share dialog appears
+                                        // after the user dismisses the receipt.
+                                        Future.delayed(
+                                          const Duration(milliseconds: 600),
+                                          () {
+                                            if (!mounted) return;
+                                            _shareRechargeCards(
+                                              purchase.cardNetwork.isNotEmpty
+                                                  ? purchase.cardNetwork
+                                                  : (network.name ?? ''),
+                                              selectedDenomination,
+                                              shareCards,
+                                            );
+                                          },
                                         );
-                                      },
-                                    );
-                                  }
+                                      }
 
-                                  return {
-                                    'success':     result.success,
-                                    'message':     result.message,
-                                    'type':        'Debit',
-                                    'reference':   result.purchase?.trxid ?? '',
-                                    'description':
-                                        '$selectedQuantity × '
-                                        '₦$selectedDenomination ${network.name ?? ''}'
-                                        ' recharge card(s)',
-                                  };
-                                },
-                              ),
-                            ),
+                                      return {
+                                        'success': result.success,
+                                        'status': result.status,
+                                        'message': result.message,
+                                        'type': 'Debit',
+                                        'reference':
+                                            result.purchase?.trxid ?? '',
+                                        'description':
+                                            '$selectedQuantity × '
+                                            '₦$selectedDenomination ${network.name ?? ''}'
+                                            ' recharge card(s)',
+                                      };
+                                    },
+                                  ),
+                                ),
                           ),
                         );
                       },
@@ -481,37 +498,38 @@ class _RechargeCardScreenState extends ConsumerState<RechargeCardScreen> {
         barrierDismissible: false,
         // Transparent dialog so only the spinner + caption show on top of the
         // dim barrier — no pill background.
-        builder: (context) => Dialog(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          child: Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: const [
-                SizedBox(
-                  width: 22,
-                  height: 22,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2.2,
-                    color: Colors.white,
-                  ),
+        builder:
+            (context) => Dialog(
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: const [
+                    SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.2,
+                        color: Colors.white,
+                      ),
+                    ),
+                    SizedBox(height: 10),
+                    Text(
+                      'Generating recharge cards...',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
                 ),
-                SizedBox(height: 10),
-                Text(
-                  'Generating recharge cards...',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
+              ),
             ),
-          ),
-        ),
       );
 
       // Create the image widget for capture - offscreen
@@ -609,10 +627,15 @@ class _RechargeCardScreenState extends ConsumerState<RechargeCardScreen> {
     // sheet silently fails to appear on iPhone and crashes on iPad. Android
     // ignores this parameter. Derive it from the current screen.
     final box = context.findRenderObject() as RenderBox?;
-    final Rect sharePosition = box != null
-        ? box.localToGlobal(Offset.zero) & box.size
-        : Rect.fromLTWH(0, 0, MediaQuery.of(context).size.width,
-            MediaQuery.of(context).size.height / 2);
+    final Rect sharePosition =
+        box != null
+            ? box.localToGlobal(Offset.zero) & box.size
+            : Rect.fromLTWH(
+              0,
+              0,
+              MediaQuery.of(context).size.width,
+              MediaQuery.of(context).size.height / 2,
+            );
 
     try {
       // Method 1: Try sharing with file
@@ -631,15 +654,17 @@ class _RechargeCardScreenState extends ConsumerState<RechargeCardScreen> {
     } catch (e1) {
       try {
         // Method 2: Try sharing with bytes directly
-        await Share.shareXFiles([
-          XFile.fromData(
-            pngBytes,
-            name: 'recharge_cards.png',
-            mimeType: 'image/png',
-          ),
-        ],
-            text: 'Recharge Cards - $networkName $denomination',
-            sharePositionOrigin: sharePosition);
+        await Share.shareXFiles(
+          [
+            XFile.fromData(
+              pngBytes,
+              name: 'recharge_cards.png',
+              mimeType: 'image/png',
+            ),
+          ],
+          text: 'Recharge Cards - $networkName $denomination',
+          sharePositionOrigin: sharePosition,
+        );
       } catch (e2) {
         // Method 3: Show manual share dialog as fallback
         if (mounted) {
@@ -799,14 +824,25 @@ class _RechargeCardScreenState extends ConsumerState<RechargeCardScreen> {
                         shape: BoxShape.circle,
                       ),
                       child: Center(
-                        child: Text(
-                          networkName,
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 8,
-                            color: _networkTextColorByName(networkName),
-                          ),
-                        ),
+                        child:
+                            _logoAssets[networkName.trim().toLowerCase()] !=
+                                    null
+                                ? Image.asset(
+                                  _logoAssets[networkName
+                                      .trim()
+                                      .toLowerCase()]!,
+                                  width: 26,
+                                  height: 26,
+                                  fit: BoxFit.contain,
+                                )
+                                : Text(
+                                  networkName,
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 8,
+                                    color: _networkTextColorByName(networkName),
+                                  ),
+                                ),
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -989,11 +1025,11 @@ class _RechargeCardScreenState extends ConsumerState<RechargeCardScreen> {
                                 ref.watch(airtimeNotifierProvider).networks,
                             isLoading:
                                 ref.watch(airtimeNotifierProvider).isLoading,
-                            error:
-                                ref.watch(airtimeNotifierProvider).error,
-                            onRetry: () => ref
-                                .read(airtimeNotifierProvider.notifier)
-                                .getAirtimeNetworks(forceRefresh: true),
+                            error: ref.watch(airtimeNotifierProvider).error,
+                            onRetry:
+                                () => ref
+                                    .read(airtimeNotifierProvider.notifier)
+                                    .getAirtimeNetworks(forceRefresh: true),
                             onTap: _showRechargeCardDetails,
                             logoBuilder: (n) => _networkLogo(n, radius: 28),
                           ),
@@ -1078,33 +1114,39 @@ class _RechargeCardScreenState extends ConsumerState<RechargeCardScreen> {
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 24),
               child: Center(
-                child: CircularProgressIndicator(
-                    color: Color(0xFF34544A)),
+                child: CircularProgressIndicator(color: Color(0xFF34544A)),
               ),
             )
           else if (state.error != null && epins.isEmpty)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 16),
-              child: Column(children: [
-                Text(state.error!,
+              child: Column(
+                children: [
+                  Text(
+                    state.error!,
                     style: TextStyle(color: Colors.grey[600], fontSize: 13),
-                    textAlign: TextAlign.center),
-                const SizedBox(height: 8),
-                TextButton(
-                  onPressed: () => ref
-                      .read(rechargeCardNotifierProvider.notifier)
-                      .fetchEpins(),
-                  child: const Text('Retry'),
-                ),
-              ]),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 8),
+                  TextButton(
+                    onPressed:
+                        () =>
+                            ref
+                                .read(rechargeCardNotifierProvider.notifier)
+                                .fetchEpins(),
+                    child: const Text('Retry'),
+                  ),
+                ],
+              ),
             )
           else if (epins.isEmpty)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 24),
               child: Center(
-                child: Text('No previous orders yet',
-                    style:
-                        TextStyle(color: Colors.grey[500], fontSize: 13)),
+                child: Text(
+                  'No previous orders yet',
+                  style: TextStyle(color: Colors.grey[500], fontSize: 13),
+                ),
               ),
             )
           else
@@ -1124,8 +1166,7 @@ class _RechargeCardScreenState extends ConsumerState<RechargeCardScreen> {
                   return ListTile(
                     title: Text(
                       '${epin.quantity} × ${formatCurrency(epin.value)}',
-                      style: const TextStyle(
-                          fontWeight: FontWeight.bold),
+                      style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                     subtitle: Text(
                       '${_networkNameById(epin.networkId)} • '
@@ -1136,14 +1177,12 @@ class _RechargeCardScreenState extends ConsumerState<RechargeCardScreen> {
                       children: [
                         GestureDetector(
                           onTap: () => _sharePreviousOrder(epin),
-                          child:
-                              const Icon(Icons.share, color: Colors.grey),
+                          child: const Icon(Icons.share, color: Colors.grey),
                         ),
                         const SizedBox(width: 8),
                         GestureDetector(
                           onTap: () => _downloadPreviousOrder(epin),
-                          child: const Icon(Icons.download,
-                              color: Colors.grey),
+                          child: const Icon(Icons.download, color: Colors.grey),
                         ),
                       ],
                     ),
@@ -1158,8 +1197,18 @@ class _RechargeCardScreenState extends ConsumerState<RechargeCardScreen> {
 
   String _formatEpinDate(DateTime d) {
     const months = [
-      'Jan','Feb','Mar','Apr','May','Jun',
-      'Jul','Aug','Sep','Oct','Nov','Dec'
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     return '${months[d.month - 1]} ${d.day}, ${d.year}';
   }
@@ -1168,14 +1217,12 @@ class _RechargeCardScreenState extends ConsumerState<RechargeCardScreen> {
   void _sharePreviousOrder(EpinModel epin) {
     if (epin.cards.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('No PINs available for this order')),
+        const SnackBar(content: Text('No PINs available for this order')),
       );
       return;
     }
-    final cards = epin.cards
-        .map((c) => {'pin': c.pin, 'reference': c.serial})
-        .toList();
+    final cards =
+        epin.cards.map((c) => {'pin': c.pin, 'reference': c.serial}).toList();
     _shareRechargeCards(
       _networkNameById(epin.networkId),
       epin.value.toStringAsFixed(0),
@@ -1298,45 +1345,50 @@ class _NetworkGrid extends StatelessWidget {
       return const Padding(
         padding: EdgeInsets.symmetric(vertical: 30),
         child: Center(
-            child:
-                CircularProgressIndicator(color: Color(0xFF34544A))),
+          child: CircularProgressIndicator(color: Color(0xFF34544A)),
+        ),
       );
     }
     if ((networks == null || networks!.isEmpty)) {
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
-        child: Column(children: [
-          Text(
-            error ?? 'No networks available',
-            style: TextStyle(color: Colors.grey[600], fontSize: 13),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 8),
-          TextButton(onPressed: onRetry, child: const Text('Retry')),
-        ]),
+        child: Column(
+          children: [
+            Text(
+              error ?? 'No networks available',
+              style: TextStyle(color: Colors.grey[600], fontSize: 13),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            TextButton(onPressed: onRetry, child: const Text('Retry')),
+          ],
+        ),
       );
     }
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 60.0),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: networks!.map((n) {
-          return GestureDetector(
-            onTap: () => onTap(n),
-            child: Column(children: [
-              logoBuilder(n),
-              const SizedBox(height: 6),
-              Text(
-                n.name ?? '',
-                style: TextStyle(
-                  fontSize: 13.sp,
-                  color: Colors.black,
-                  fontWeight: FontWeight.w500,
+        children:
+            networks!.map((n) {
+              return GestureDetector(
+                onTap: () => onTap(n),
+                child: Column(
+                  children: [
+                    logoBuilder(n),
+                    const SizedBox(height: 6),
+                    Text(
+                      n.name ?? '',
+                      style: TextStyle(
+                        fontSize: 13.sp,
+                        color: Colors.black,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-            ]),
-          );
-        }).toList(),
+              );
+            }).toList(),
       ),
     );
   }

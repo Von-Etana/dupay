@@ -1,4 +1,5 @@
 // lib/core/network/api_service.dart
+import 'dart:math';
 import 'package:dio/dio.dart';
 import 'package:dupay/models/base/api_response.dart';
 import '../constants/api_contants.dart';
@@ -174,6 +175,20 @@ class ApiService {
     receiveTimeout, // Override for slow endpoints (e.g. card creation)
     bool allowFailureResponse = false,
   }) async {
+    const moneyPaths = {
+      '/fund/transfer',
+      '/fund/withdraw',
+      '/fund/withdraw/two',
+      '/buy/airtime',
+      '/buy/data',
+      '/buy/data-card',
+      '/buy/cable',
+      '/buy/exam-pin',
+      '/buy-epin',
+      '/pay-bill',
+    };
+    final moneyRequest = moneyPaths.contains(endpoint);
+    final requestId = moneyRequest ? _newMoneyRequestId() : null;
     try {
       await _checkConnectivity();
       _validateIsmartHeader(customIsmartValue);
@@ -183,15 +198,18 @@ class ApiService {
       // waiting on a third party (StroWallet). Allow callers to raise it just
       // for those requests instead of loosening the default for everything.
       Options? options;
-      if (customIsmartValue != null ||
+      if (moneyRequest ||
+          customIsmartValue != null ||
           receiveTimeout != null ||
           allowFailureResponse) {
         options = Options(
-          headers:
-              customIsmartValue != null ? {'ismart': customIsmartValue} : null,
+          headers: {
+            if (customIsmartValue != null) 'ismart': customIsmartValue,
+            if (requestId != null) 'Idempotency-Key': requestId,
+          },
           receiveTimeout: receiveTimeout,
           validateStatus:
-              allowFailureResponse
+              (allowFailureResponse || moneyRequest)
                   ? (status) => status != null && status < 500
                   : null,
         );
@@ -204,13 +222,72 @@ class ApiService {
         options: options,
       );
 
+      if (moneyRequest && response.statusCode == 202) {
+        return await _recoverMoneyRequest(endpoint, requestId!);
+      }
       return _handleSimpleResponse(
         response,
-        allowFailureResponse: allowFailureResponse,
+        allowFailureResponse: allowFailureResponse || moneyRequest,
       );
     } catch (e) {
+      if (moneyRequest &&
+          requestId != null &&
+          e is DioException &&
+          (e.type == DioExceptionType.connectionTimeout ||
+              e.type == DioExceptionType.sendTimeout ||
+              e.type == DioExceptionType.receiveTimeout ||
+              e.type == DioExceptionType.connectionError ||
+              (e.response?.statusCode ?? 0) >= 500)) {
+        return await _recoverMoneyRequest(endpoint, requestId);
+      }
       throw _handleError(e);
     }
+  }
+
+  String _newMoneyRequestId() {
+    final random = Random.secure();
+    final bytes = List<int>.generate(24, (_) => random.nextInt(256));
+    const alphabet =
+        'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-';
+    return bytes.map((byte) => alphabet[byte & 63]).join();
+  }
+
+  Future<ApiResponse<Map<String, dynamic>>> _recoverMoneyRequest(
+    String endpoint,
+    String requestId,
+  ) async {
+    for (var attempt = 0; attempt < 3; attempt++) {
+      if (attempt > 0) await Future.delayed(const Duration(seconds: 2));
+      try {
+        final response = await _dio.get(
+          '/transactions/request-status/$requestId',
+          queryParameters: {'endpoint': endpoint.substring(1)},
+        );
+        final body = response.data;
+        if (body is Map &&
+            body['status'] == 'completed' &&
+            body['result'] is Map) {
+          final result = Map<String, dynamic>.from(body['result'] as Map);
+          return _handleSimpleResponse(
+            Response(
+              requestOptions: response.requestOptions,
+              statusCode: body['http_status'] as int? ?? 200,
+              data: result,
+            ),
+            allowFailureResponse: true,
+          );
+        }
+      } catch (_) {
+        // Status may not be available yet. Never repeat the money request here.
+      }
+    }
+    return ApiResponse<Map<String, dynamic>>(
+      success: false,
+      message:
+          'We could not confirm this transaction. Check transaction history before trying again.',
+      data: {'status': 'pending', 'request_id': requestId},
+      statusCode: 202,
+    );
   }
 
   // Generic PUT request

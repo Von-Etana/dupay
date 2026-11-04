@@ -8,6 +8,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/auth_provider.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../providers/transfer_provider.dart';
+import '../../repositories/transaction_repository.dart';
+import '../../core/network/api_service.dart';
 import '../../providers/user_provider.dart';
 import '../transaction/transaction_summary_screen.dart';
 import '../../core/utils/formatters.dart';
@@ -216,6 +218,7 @@ class _P2PScreenState extends ConsumerState<P2PScreen> {
                 amount: '₦${formatNumber(cleanAmount)}',
                 description: message,
                 onConfirm: (pin) async {
+                  final submittedAt = DateTime.now();
                   final response = await ref
                       .read(transferNotifierProvider.notifier)
                       .fundTransfer(
@@ -224,6 +227,53 @@ class _P2PScreenState extends ConsumerState<P2PScreen> {
                         comment: message.isEmpty ? null : message,
                         transactionPin: pin,
                       );
+                  if (!response.success &&
+                      (response.statusCode == null ||
+                          response.statusCode! >= 500 ||
+                          response.message.toLowerCase().contains(
+                            'internal server error',
+                          ))) {
+                    try {
+                      final history = await TransactionRepository(
+                        ApiService.instance,
+                      ).searchTransactions(page: 1, limit: 20);
+                      final confirmed =
+                          history.data?.where((transaction) {
+                            final sameAmount =
+                                transaction.amountValue ==
+                                (double.tryParse(cleanAmount) ?? -1);
+                            final recent = transaction.createdAt.isAfter(
+                              submittedAt.subtract(const Duration(seconds: 10)),
+                            );
+                            final recipient =
+                                transaction.description?.toLowerCase().contains(
+                                  name.toString().toLowerCase(),
+                                ) ??
+                                false;
+                            final debit =
+                                transaction.type == '0' ||
+                                transaction.type.toLowerCase() == 'debit';
+                            return sameAmount &&
+                                recent &&
+                                recipient &&
+                                debit &&
+                                transaction.isSuccessful;
+                          }).firstOrNull;
+                      if (confirmed != null) {
+                        return {
+                          'success': true,
+                          'status': 'success',
+                          'message': 'Transfer completed successfully.',
+                          'reference': confirmed.reference ?? '',
+                          'description':
+                              confirmed.description ?? 'Transfer to $name',
+                          'show_result_screen': true,
+                        };
+                      }
+                    } catch (_) {
+                      // Keep the status unconfirmed if history is unavailable.
+                    }
+                  }
                   return {
                     'success': response.success,
                     'message': response.message,

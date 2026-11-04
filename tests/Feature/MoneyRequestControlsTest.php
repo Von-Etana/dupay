@@ -25,6 +25,10 @@ class MoneyRequestControlsTest extends TestCase
             $table->char('key_hash', 64);
             $table->char('payload_hash', 64);
             $table->timestamp('created_at');
+            $table->string('status', 20)->default('processing');
+            $table->unsignedSmallInteger('http_status')->nullable();
+            $table->longText('response_body')->nullable();
+            $table->timestamp('completed_at')->nullable();
             $table->unique(['user_id', 'endpoint_hash', 'key_hash']);
         });
     }
@@ -43,7 +47,7 @@ class MoneyRequestControlsTest extends TestCase
         return $request;
     }
 
-    public function test_repeated_key_is_rejected_before_money_moves(): void
+    public function test_repeated_key_replays_result_without_moving_money_twice(): void
     {
         $middleware = new DeduplicateMoneyRequest();
         $calls = 0;
@@ -51,7 +55,7 @@ class MoneyRequestControlsTest extends TestCase
         $key = 'transfer-request-123456';
 
         $this->assertSame(200, $middleware->handle($this->request('{"amount":"100"}', $key), $next)->status());
-        $this->assertSame(409, $middleware->handle($this->request('{"amount":"100"}', $key), $next)->status());
+        $this->assertSame(200, $middleware->handle($this->request('{"amount":"100"}', $key), $next)->status());
         $this->assertSame(409, $middleware->handle($this->request('{"amount":"200"}', $key), $next)->status());
         $this->assertSame(1, $calls);
         $this->assertSame(1, DB::table('money_request_keys')->count());
@@ -67,6 +71,23 @@ class MoneyRequestControlsTest extends TestCase
         $this->assertSame(409, $middleware->handle($this->request('{"amount":"100"}'), $next)->status());
         $this->assertSame(400, $middleware->handle($this->request('{"amount":"100"}', 'bad'), $next)->status());
         $this->assertSame(1, $calls);
+    }
+
+    public function test_concurrent_duplicate_is_processing_until_first_result_is_saved(): void
+    {
+        $middleware = new DeduplicateMoneyRequest();
+        $key = 'concurrent-request-123456';
+        $calls = 0;
+        $next = function () use (&$calls, $middleware, $key) {
+            $calls++;
+            $duplicate = $middleware->handle($this->request('{"amount":"100"}', $key),
+                fn () => $this->fail('Concurrent request executed twice'));
+            $this->assertSame(202, $duplicate->status());
+            return response()->json(['success' => true, 'reference' => 'abc']);
+        };
+        $middleware->handle($this->request('{"amount":"100"}', $key), $next);
+        $this->assertSame(1, $calls);
+        $this->assertSame('completed', DB::table('money_request_keys')->first()->status);
     }
 
     public function test_logout_revokes_only_the_current_token(): void

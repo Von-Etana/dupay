@@ -97,26 +97,48 @@ class _OrderSummaryScreenState extends ConsumerState<OrderSummaryScreen> {
       // Navigate to success screen
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
-          builder: (context) => TransactionReceiptScreen(
-            data: TransactionReceiptData(
-              service: 'Airtime',
-              type: widget.network,
-              description: 'Airtime recharge for ${widget.phoneNumber}',
-              amount: '\u20A6${widget.amount}',
-              status: 'success',
-              reference: response.data?['reference']?.toString() ?? '',
-              initialBalance: response.data?['initial_balance']?.toString() ?? '',
-              finalBalance: response.data?['final_balance']?.toString() ?? '',
-              date: DateTime.now(),
-              phoneNumber: widget.phoneNumber,
-            ),
-          ),
+          builder:
+              (context) => TransactionReceiptScreen(
+                data: TransactionReceiptData(
+                  service: 'Airtime',
+                  type: widget.network,
+                  description: 'Airtime recharge for ${widget.phoneNumber}',
+                  amount: '\u20A6${widget.amount}',
+                  status: 'success',
+                  reference: response.data?['reference']?.toString() ?? '',
+                  initialBalance:
+                      response.data?['initial_balance']?.toString() ?? '',
+                  finalBalance:
+                      response.data?['final_balance']?.toString() ?? '',
+                  date: DateTime.now(),
+                  phoneNumber: widget.phoneNumber,
+                ),
+              ),
         ),
       );
-    } else if (!showLimitNoticeIfNeeded(context, response.message)) {
-      // Show error
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(response.message), backgroundColor: Colors.red),
+    } else {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder:
+              (_) => TransactionReceiptScreen(
+                data: TransactionReceiptData(
+                  service: 'Airtime',
+                  type: widget.network,
+                  description: 'Airtime recharge for ${widget.phoneNumber}',
+                  amount: '\u20A6${widget.amount}',
+                  status:
+                      response.data?['status'] == 'pending'
+                          ? 'pending'
+                          : 'failed',
+                  statusMessage: response.message,
+                  reference: response.data?['reference']?.toString() ?? '',
+                  initialBalance: '',
+                  finalBalance: '',
+                  date: DateTime.now(),
+                  phoneNumber: widget.phoneNumber,
+                ),
+              ),
+        ),
       );
     }
   }
@@ -174,121 +196,121 @@ class _OrderSummaryScreenState extends ConsumerState<OrderSummaryScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                      Text(
-                        'Airtime Order Summary',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16.sp,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Container(
-                        width: double.infinity,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: const Color(0xFFE0E0E0)),
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _summaryRow('Service', 'Airtime Topup'),
-                              _summaryRow('Airtime', widget.network),
-                              _summaryRow('Type', 'VTU'),
-                              _summaryRow(
-                                'Price',
-                                formatCurrency(widget.amount),
-                              ),
-                              _summaryRow('Phone Number', widget.phoneNumber),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 32),
-                      Center(
-                        child: Text(
-                          'Enter Transaction Pin',
+                        Text(
+                          'Airtime Order Summary',
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
-                            fontSize: 15.sp,
+                            fontSize: 16.sp,
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 16),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: List.generate(4, (i) {
-                          return Container(
-                            width: 48,
-                            margin: const EdgeInsets.symmetric(horizontal: 8),
-                            child: TextField(
-                              controller: pinControllers[i],
-                              obscureText: true,
-                              maxLength: 1,
-                              keyboardType: TextInputType.number,
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                fontSize: 24,
-                                letterSpacing: 2,
+                        const SizedBox(height: 16),
+                        Container(
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: const Color(0xFFE0E0E0)),
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _summaryRow('Service', 'Airtime Topup'),
+                                _summaryRow('Airtime', widget.network),
+                                _summaryRow('Type', 'VTU'),
+                                _summaryRow(
+                                  'Price',
+                                  formatCurrency(widget.amount),
+                                ),
+                                _summaryRow('Phone Number', widget.phoneNumber),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 32),
+                        Center(
+                          child: Text(
+                            'Enter Transaction Pin',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15.sp,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: List.generate(4, (i) {
+                            return Container(
+                              width: 48,
+                              margin: const EdgeInsets.symmetric(horizontal: 8),
+                              child: TextField(
+                                controller: pinControllers[i],
+                                obscureText: true,
+                                maxLength: 1,
+                                keyboardType: TextInputType.number,
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  fontSize: 24,
+                                  letterSpacing: 2,
+                                ),
+                                decoration: InputDecoration(
+                                  counterText: '',
+                                  filled: true,
+                                  fillColor: Colors.white,
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                ),
+                                onChanged: (val) {
+                                  if (val.length == 1 && i < 3) {
+                                    FocusScope.of(context).nextFocus();
+                                  }
+                                },
                               ),
-                              decoration: InputDecoration(
-                                counterText: '',
-                                filled: true,
-                                fillColor: Colors.white,
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(8),
+                            );
+                          }),
+                        ),
+                        const SizedBox(height: 24),
+                        Center(
+                          child: SizedBox(
+                            width: 200,
+                            height: 48,
+                            child: ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF34544A),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
                                 ),
                               ),
-                              onChanged: (val) {
-                                if (val.length == 1 && i < 3) {
-                                  FocusScope.of(context).nextFocus();
-                                }
-                              },
-                            ),
-                          );
-                        }),
-                      ),
-                      const SizedBox(height: 24),
-                      Center(
-                        child: SizedBox(
-                          width: 200,
-                          height: 48,
-                          child: ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF34544A),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                            onPressed: isLoading ? null : _onSubmit,
-                            child:
-                                isLoading
-                                    ? const SizedBox(
-                                      width: 20,
-                                      height: 20,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        valueColor:
-                                            AlwaysStoppedAnimation<Color>(
-                                              Colors.white,
-                                            ),
+                              onPressed: isLoading ? null : _onSubmit,
+                              child:
+                                  isLoading
+                                      ? const SizedBox(
+                                        width: 20,
+                                        height: 20,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          valueColor:
+                                              AlwaysStoppedAnimation<Color>(
+                                                Colors.white,
+                                              ),
+                                        ),
+                                      )
+                                      : const Text(
+                                        'Submit',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 18,
+                                          color: Colors.white,
+                                        ),
                                       ),
-                                    )
-                                    : const Text(
-                                      'Submit',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 18,
-                                        color: Colors.white,
-                                      ),
-                                    ),
+                            ),
                           ),
                         ),
-                      ),
-                    ],
-                  ),
+                      ],
+                    ),
                   ),
                 ),
               ),

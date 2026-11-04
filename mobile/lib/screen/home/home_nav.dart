@@ -198,7 +198,6 @@
 //             ),
 //             const SizedBox(height: 16),
 
-
 //             // P2P Transfer
 //             _SendOption(
 //               icon: Icons.people_outline,
@@ -211,8 +210,6 @@
 //               },
 //             ),
 //             const SizedBox(height: 12),
-
-            
 
 //           ],
 //         ),
@@ -245,7 +242,7 @@
 //       onRefresh: () async {
 //         await ref.read(authNotifierProvider.notifier).refreshUser();
 //         if (!context.mounted) return;
-       
+
 //       },
 //       child: Container(
 //         color: Colors.white,
@@ -356,12 +353,12 @@
 //                                       .read(authNotifierProvider.notifier)
 //                                       .refreshUser();
 //                                   if (!context.mounted) return;
-                                 
+
 //                                 },
 //                               ),
 //                             ),
 //                             const SizedBox(width: 8),
-                          
+
 //                           ],
 //                         ),
 //                       ],
@@ -576,7 +573,6 @@
 //                       },
 //                     ),
 
-                      
 //                     ServiceCard(
 //                       icon: Icons.receipt_outlined,
 //                       label: 'Bill Payment',
@@ -584,9 +580,7 @@
 //                         Navigator.pushNamed(context, '/billpayment');
 //                       },
 //                     ),
-                 
 
-                 
 //                        ServiceCard(
 //                       icon: Icons.point_of_sale_outlined,
 //                       label: 'POS',
@@ -594,7 +588,7 @@
 //                         Navigator.pushNamed(context, '/posrequest');
 //                       },
 //                     ),
-                 
+
 //                   ],
 //                 ),
 //               ),
@@ -663,7 +657,6 @@
 //     );
 //   }
 // }
-
 
 import 'dart:async';
 import 'package:dupay/screen/activity/activity_screen.dart';
@@ -909,62 +902,71 @@ class _HomeDashboardState extends ConsumerState<HomeDashboard>
       context: context,
       backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-      builder: (_) => Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 40, height: 4,
-                decoration: BoxDecoration(
-                    color: Colors.grey[300],
-                    borderRadius: BorderRadius.circular(2)),
-              ),
-            ),
-            const SizedBox(height: 20),
-            const Text('Send Money',
-                style: TextStyle(
-                    fontSize: 20, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 4),
-            Text('Choose transfer type',
-                style: TextStyle(fontSize: 14, color: Colors.grey[600])),
-            const SizedBox(height: 24),
-
-            // Bank Transfer
-            _SendOption(
-              icon: Icons.account_balance_outlined,
-              title: 'Bank Transfer',
-              subtitle: 'Send to any Nigerian bank account',
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(context,
-                    MaterialPageRoute(builder: (_) => const BankTransferScreen()));
-              },
-            ),
-            const SizedBox(height: 16),
-
-
-            // P2P Transfer
-            _SendOption(
-              icon: Icons.people_outline,
-              title: 'Dupay to Dupay Transfer',
-              subtitle: 'Send to another Dupay user instantly',
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(context,
-                    MaterialPageRoute(builder: (_) => const P2PScreen()));
-              },
-            ),
-            const SizedBox(height: 12),
-
-            
-
-          ],
-        ),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
+      builder:
+          (_) => Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[300],
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                const Text(
+                  'Send Money',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Choose transfer type',
+                  style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                ),
+                const SizedBox(height: 24),
+
+                // Bank Transfer
+                _SendOption(
+                  icon: Icons.account_balance_outlined,
+                  title: 'Bank Transfer',
+                  subtitle: 'Send to any Nigerian bank account',
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const BankTransferScreen(),
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(height: 16),
+
+                // P2P Transfer
+                _SendOption(
+                  icon: Icons.people_outline,
+                  title: 'Dupay to Dupay Transfer',
+                  subtitle: 'Send to another Dupay user instantly',
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const P2PScreen()),
+                    );
+                  },
+                ),
+                const SizedBox(height: 12),
+              ],
+            ),
+          ),
     );
   }
 
@@ -993,7 +995,6 @@ class _HomeDashboardState extends ConsumerState<HomeDashboard>
       onRefresh: () async {
         await ref.read(authNotifierProvider.notifier).refreshUser();
         if (!context.mounted) return;
-       
       },
       child: Container(
         color: Colors.white,
@@ -1087,31 +1088,6 @@ class _HomeDashboardState extends ConsumerState<HomeDashboard>
                           ],
                         ),
                         const Spacer(),
-                        Row(
-                          children: [
-                            Container(
-                              decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.15),
-                                shape: BoxShape.circle,
-                              ),
-                              child: IconButton(
-                                icon: const Icon(
-                                  Icons.refresh,
-                                  color: Colors.white,
-                                ),
-                                onPressed: () async {
-                                  await ref
-                                      .read(authNotifierProvider.notifier)
-                                      .refreshUser();
-                                  if (!context.mounted) return;
-                                 
-                                },
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                          
-                          ],
-                        ),
                       ],
                     ),
                     const SizedBox(height: 16),
@@ -1178,24 +1154,35 @@ class _HomeDashboardState extends ConsumerState<HomeDashboard>
                         ActionButton(
                           icon: Icons.send,
                           label: 'Send',
-                          onTap: () => _guardVerified(
-                              context, () => _showSendOptions(context)),
+                          onTap:
+                              () => _guardVerified(
+                                context,
+                                () => _showSendOptions(context),
+                              ),
                         ),
                         ActionButton(
                           icon: Icons.account_balance_wallet,
                           label: 'Fund Wallet',
                           onTap: () async {
-                            final fwState = ref.read(fundWalletNotifierProvider);
+                            final fwState = ref.read(
+                              fundWalletNotifierProvider,
+                            );
                             // Load account if not yet loaded
-                            if (!fwState.hasAccount && fwState.virtualAccount == null) {
-                              await ref.read(fundWalletNotifierProvider.notifier).loadVirtualAccount();
+                            if (!fwState.hasAccount &&
+                                fwState.virtualAccount == null) {
+                              await ref
+                                  .read(fundWalletNotifierProvider.notifier)
+                                  .loadVirtualAccount();
                             }
-                            final updated = ref.read(fundWalletNotifierProvider);
+                            final updated = ref.read(
+                              fundWalletNotifierProvider,
+                            );
 
                             // Treat "no account" as either: no account at all,
                             // or an account record with no/empty account number.
                             final account = updated.virtualAccount;
-                            final hasAccountNumber = updated.hasAccount &&
+                            final hasAccountNumber =
+                                updated.hasAccount &&
                                 account != null &&
                                 account.accountNumber != null &&
                                 account.accountNumber!.isNotEmpty;
@@ -1276,74 +1263,79 @@ class _HomeDashboardState extends ConsumerState<HomeDashboard>
                   crossAxisSpacing: 16,
                   children: [
                     ServiceCard(
-                      onTap: () => _guardVerified(context, () {
-                        Navigator.pushNamed(context, '/buydata');
-                      }),
+                      onTap:
+                          () => _guardVerified(context, () {
+                            Navigator.pushNamed(context, '/buydata');
+                          }),
                       icon: Icons.wifi_tethering_error_rounded_outlined,
                       label: 'Data',
                     ),
                     ServiceCard(
                       icon: Icons.phone_iphone_outlined,
                       label: 'Airtime',
-                      onTap: () => _guardVerified(context, () {
-                        Navigator.pushNamed(context, '/airtime');
-                      }),
+                      onTap:
+                          () => _guardVerified(context, () {
+                            Navigator.pushNamed(context, '/airtime');
+                          }),
                     ),
                     ServiceCard(
                       icon: Icons.confirmation_number_outlined,
                       label: 'Foreign currency',
-                      onTap: () => _guardVerified(context, () {
-                        Navigator.pushNamed(context, '/foreignCurrency');
-                      }),
+                      onTap:
+                          () => _guardVerified(context, () {
+                            Navigator.pushNamed(context, '/foreignCurrency');
+                          }),
                     ),
                     ServiceCard(
                       icon: Icons.atm_rounded,
                       label: 'ATM Card',
-                      onTap: () => _guardVerified(context, () {
-                        Navigator.pushNamed(context, '/atmCardScreen');
-                      }),
+                      onTap:
+                          () => _guardVerified(context, () {
+                            Navigator.pushNamed(context, '/atmCardScreen');
+                          }),
                     ),
                     ServiceCard(
                       icon: Icons.point_of_sale_outlined,
                       label: 'Order ATM Card',
-                      onTap: () => _guardVerified(context, () {
-                        Navigator.pushNamed(context, '/atmrequest');
-                      }),
+                      onTap:
+                          () => _guardVerified(context, () {
+                            Navigator.pushNamed(context, '/atmrequest');
+                          }),
                     ),
                     ServiceCard(
                       icon: Icons.atm_rounded,
                       label: 'Recharge Card',
-                      onTap: () => _guardVerified(context, () {
-                        Navigator.pushNamed(context, '/rechargeCard');
-                      }),
+                      onTap:
+                          () => _guardVerified(context, () {
+                            Navigator.pushNamed(context, '/rechargeCard');
+                          }),
                     ),
                     ServiceCard(
                       icon: Icons.tv_rounded,
                       label: 'Cable Subscription ',
-                      onTap: () => _guardVerified(context, () {
-                        Navigator.pushNamed(context, '/cablesub');
-                      }),
+                      onTap:
+                          () => _guardVerified(context, () {
+                            Navigator.pushNamed(context, '/cablesub');
+                          }),
                     ),
-
 
                     ServiceCard(
                       icon: Icons.receipt_outlined,
                       label: 'Bill Payment',
-                      onTap: () => _guardVerified(context, () {
-                        Navigator.pushNamed(context, '/billpayment');
-                      }),
+                      onTap:
+                          () => _guardVerified(context, () {
+                            Navigator.pushNamed(context, '/billpayment');
+                          }),
                     ),
 
-
-
-                       ServiceCard(
+                    ServiceCard(
                       icon: Icons.point_of_sale_outlined,
                       label: 'POS',
-                      onTap: () => _guardVerified(context, () {
-                        Navigator.pushNamed(context, '/posrequest');
-                      }),
+                      onTap:
+                          () => _guardVerified(context, () {
+                            Navigator.pushNamed(context, '/posrequest');
+                          }),
                     ),
-                 
                   ],
                 ),
               ),
@@ -1382,32 +1374,40 @@ class _SendOption extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: Colors.grey[200]!),
         ),
-        child: Row(children: [
-          Container(
-            width: 48, height: 48,
-            decoration: BoxDecoration(
-              color: const Color(0xFF34544A).withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
+        child: Row(
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: const Color(0xFF34544A).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: const Color(0xFF34544A), size: 24),
             ),
-            child: Icon(icon, color: const Color(0xFF34544A), size: 24),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title,
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
                     style: const TextStyle(
-                        fontWeight: FontWeight.bold, fontSize: 15)),
-                const SizedBox(height: 2),
-                Text(subtitle,
-                    style: TextStyle(
-                        fontSize: 13, color: Colors.grey[600])),
-              ],
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+                  ),
+                ],
+              ),
             ),
-          ),
-          Icon(Icons.chevron_right, color: Colors.grey[400]),
-        ]),
+            Icon(Icons.chevron_right, color: Colors.grey[400]),
+          ],
+        ),
       ),
     );
   }

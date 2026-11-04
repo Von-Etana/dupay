@@ -9,6 +9,21 @@ import '../../providers/data_provider.dart';
 import '../../widgets/pin_entry_screen.dart';
 import '../transaction/transaction_receipt_screen.dart';
 
+String? _dataLogoAsset(String? name) {
+  switch (name?.trim().toLowerCase()) {
+    case 'mtn':
+      return 'assets/images/mtnlogo.jpg';
+    case 'airtel':
+      return 'assets/images/airtellogo.png';
+    case 'glo':
+      return 'assets/images/glologo.png';
+    case '9mobile':
+      return 'assets/images/9mobilelogo.png';
+    default:
+      return null;
+  }
+}
+
 class BuyDataScreen extends ConsumerStatefulWidget {
   const BuyDataScreen({super.key});
 
@@ -36,9 +51,9 @@ class _BuyDataScreenState extends ConsumerState<BuyDataScreen> {
     // DON'T hit the network. Only fetch when the cache is missing or older
     // than 7 days. Use the refresh button to force a fresh pull on demand.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(dataNotifierProvider.notifier).getDataNetworksWithCache(
-            cacheValidity: const Duration(days: 7),
-          );
+      ref
+          .read(dataNotifierProvider.notifier)
+          .getDataNetworksWithCache(cacheValidity: const Duration(days: 7));
     });
   }
 
@@ -74,14 +89,15 @@ class _BuyDataScreenState extends ConsumerState<BuyDataScreen> {
       context,
       amount: amountStr,
       transactionDetails: [
-        PinTransactionDetail('Service',  'Data Bundle',
-            icon: Icons.wifi),
-        PinTransactionDetail('Network',  networkName,
-            icon: Icons.sim_card_outlined),
-        PinTransactionDetail('Plan',     planLabel),
-        PinTransactionDetail('Phone',    phoneNumber,
-            icon: Icons.phone_outlined),
-        PinTransactionDetail('Total',    amountStr, emphasized: true),
+        PinTransactionDetail('Service', 'Data Bundle', icon: Icons.wifi),
+        PinTransactionDetail(
+          'Network',
+          networkName,
+          icon: Icons.sim_card_outlined,
+        ),
+        PinTransactionDetail('Plan', planLabel),
+        PinTransactionDetail('Phone', phoneNumber, icon: Icons.phone_outlined),
+        PinTransactionDetail('Total', amountStr, emphasized: true),
       ],
     );
   }
@@ -151,314 +167,347 @@ class _BuyDataScreenState extends ConsumerState<BuyDataScreen> {
       ),
       builder: (context) {
         return StatefulBuilder(
-          builder: (context, setModalState) => Padding(
-          padding: EdgeInsets.only(
-            left: 24,
-            right: 24,
-            top: 24,
-            bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  GestureDetector(
-                    onTap: () => Navigator.of(context).pop(),
-                    child: Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: const BoxDecoration(
-                        color: Colors.red,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.close,
-                        color: Colors.white,
-                        size: 16,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'DIRECT GIFTING',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black,
-                  fontSize: 16.sp,
+          builder:
+              (context, setModalState) => Padding(
+                padding: EdgeInsets.only(
+                  left: 24,
+                  right: 24,
+                  top: 24,
+                  bottom: MediaQuery.of(context).viewInsets.bottom + 24,
                 ),
-              ),
-              const SizedBox(height: 16),
-              CircleAvatar(
-                backgroundImage:
-                    network.image != null ? NetworkImage(network.image!) : null,
-                radius: 40,
-                backgroundColor: Colors.white,
-                child:
-                    network.image == null
-                        ? Text(
-                          network.name?.substring(0, 1).toUpperCase() ?? 'N',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.grey[600],
-                          ),
-                        )
-                        : null,
-              ),
-              const SizedBox(height: 12),
-              Text(
-                '${network.name} | DIRECT GIFTING',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: const Color(0xFF34544A),
-                  fontSize: 16.sp,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                plan.size ?? 'Unknown Size',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: const Color(0xFF34544A),
-                  fontSize: 24.sp,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                formatCurrency(plan.price ?? 0),
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: const Color(0xFF34544A),
-                  fontSize: 18.sp,
-                ),
-              ),
-              const SizedBox(height: 24),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  'Phone Number',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black,
-                    fontSize: 15.sp,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: phoneController,
-                keyboardType: TextInputType.phone,
-                maxLength: 11,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                onChanged: (_) {
-                  // Clear the error as soon as the user starts fixing it.
-                  if (phoneError != null) {
-                    setModalState(() => phoneError = null);
-                  }
-                },
-                decoration: InputDecoration(
-                  counterText: '',
-                  errorText: phoneError,
-                  prefixIcon: const Icon(Icons.phone, color: Colors.grey),
-                  hintText: 'Enter phone number',
-                  border: const UnderlineInputBorder(),
-                  enabledBorder: const UnderlineInputBorder(),
-                  focusedBorder: const UnderlineInputBorder(
-                    borderSide: BorderSide(
-                      color: Color(0xFF34544A),
-                      width: 2,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                height: 48,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF34544A),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  onPressed: () async {
-                    if (_isPurchasing) return;
-
-                    final error =
-                        validateNigerianPhone(phoneController.text);
-                    if (error != null) {
-                      setModalState(() => phoneError = error);
-                      return;
-                    }
-
-                    // Tidy up to the 11-digit local form so the PIN preview,
-                    // the receipt and the provider all see 0XXXXXXXXXX.
-                    phoneController.text =
-                        normalizeNigerianPhone(phoneController.text);
-
-                    // Capture a stable reference to the outer screen so we
-                    // can show snackbars + close dialogs without depending on
-                    // the (about-to-be-disposed) modal's context.
-                    final rootMessenger = ScaffoldMessenger.of(this.context);
-                    final rootNavigator = Navigator.of(this.context);
-
-                    // Close the phone-number bottom sheet.
-                    Navigator.of(context).pop();
-
-                    // Ask the user for their transaction PIN — the PIN
-                    // screen also shows a preview of the purchase so they
-                    // can verify the network / plan / phone / amount
-                    // before committing.
-                    final pin = await _promptTransactionPin(
-                      networkName: network.name ?? 'Network',
-                      planName:    plan.name ?? 'Data Plan',
-                      planSize:    plan.size,
-                      phoneNumber: phoneController.text,
-                      price:       plan.price ?? 0,
-                    );
-                    if (pin == null || pin.isEmpty) {
-                      // User cancelled — nothing else to do.
-                      return;
-                    }
-
-                    if (!mounted) return;
-                    if (_isPurchasing) return;
-                    setState(() => _isPurchasing = true);
-
-                    // Show loading dialog using the root navigator + capture
-                    // a dedicated context so we can dismiss it safely later.
-                    BuildContext? loadingDialogCtx;
-                    showDialog(
-                      context: this.context,
-                      barrierDismissible: false,
-                      builder: (ctx) {
-                        loadingDialogCtx = ctx;
-                        return const Center(
-                          child: CircularProgressIndicator(
-                            color: Color.fromARGB(255, 90, 99, 96),
-                          ),
-                        );
-                      },
-                    );
-
-                    void closeLoading() {
-                      if (loadingDialogCtx != null &&
-                          Navigator.of(loadingDialogCtx!).canPop()) {
-                        Navigator.of(loadingDialogCtx!).pop();
-                        loadingDialogCtx = null;
-                      }
-                    }
-
-                    try {
-                      // Diagnostic — paste this in chat if the error returns.
-                      print('🩺 BuyData diagnostic:');
-                      print('   network.id        = ${network.id}');
-                      print('   network.name      = ${network.name}');
-                      print('   dataType.id       = ${dataType.id}');
-                      print('   plan.id           = ${plan.id}');
-                      print('   plan.code         = ${plan.code}');
-                      print('   plan.variationCode= ${plan.variationCode}');
-                      print('   plan.name         = ${plan.name}');
-                      print('   plan.size         = ${plan.size}');
-                      print('   plan.price        = ${plan.price}');
-                      print('   phone             = ${phoneController.text}');
-
-                      final response = await ref
-                          .read(dataNotifierProvider.notifier)
-                          .buyData(
-                            phoneNumber: phoneController.text,
-                            networkId: network.id.toString(),
-                            // Backend expects the local DB plan id (and the
-                            // owning data_type id) — not the variation_code.
-                            planId: plan.id.toString(),
-                            dataTypeId: dataType.id.toString(),
-                            transactionPin: pin,
-                          );
-
-                      closeLoading();
-                      if (!mounted) return;
-                      setState(() => _isPurchasing = false);
-
-                      if (response.success) {
-                        final data = response.data ?? {};
-                        String planLabel = plan.name ?? 'Data Plan';
-                        if (plan.size != null &&
-                            plan.size!.isNotEmpty &&
-                            !planLabel.toLowerCase().contains(
-                              plan.size!.toLowerCase(),
-                            )) {
-                          planLabel = '${plan.size} · $planLabel';
-                        }
-
-                        rootNavigator.pushReplacement(
-                          MaterialPageRoute(
-                            builder: (context) => TransactionReceiptScreen(
-                              data: TransactionReceiptData(
-                                service: 'Data Bundle',
-                                type: '${network.name} | $planLabel',
-                                description:
-                                    'Data purchase for ${phoneController.text}',
-                                amount: formatCurrency(plan.price ?? 0),
-                                status: 'success',
-                                reference:
-                                    data['reference']?.toString() ?? '',
-                                initialBalance:
-                                    data['initial_balance']?.toString() ??
-                                    '',
-                                finalBalance:
-                                    data['final_balance']?.toString() ?? '',
-                                date: DateTime.now(),
-                                phoneNumber: phoneController.text,
-                              ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        GestureDetector(
+                          onTap: () => Navigator.of(context).pop(),
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: const BoxDecoration(
+                              color: Colors.red,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.close,
+                              color: Colors.white,
+                              size: 16,
                             ),
                           ),
-                        );
-                      } else {
-                        // Failed purchase: the phone-number modal and PIN
-                        // screen are already closed at this point, so the
-                        // user is already back on the buy-data form. Just
-                        // show why it failed — no Retry button, no separate
-                        // error screen.
-                        if (!showLimitNoticeIfNeeded(
-                            this.context, response.message)) {
-                          rootMessenger.showSnackBar(
-                            SnackBar(
-                              content: Text(response.message),
-                              backgroundColor: Colors.red,
-                            ),
-                          );
-                        }
-                      }
-                    } catch (e) {
-                      closeLoading();
-                      if (!mounted) return;
-                      setState(() => _isPurchasing = false);
-                      rootMessenger.showSnackBar(
-                        SnackBar(
-                          content: Text('Error: $e'),
-                          backgroundColor: Colors.red,
                         ),
-                      );
-                    }
-                  },
-                  child: const Text(
-                    'Continue',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18,
-                      color: Colors.white,
+                      ],
                     ),
-                  ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'DIRECT GIFTING',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black,
+                        fontSize: 16.sp,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    CircleAvatar(
+                      backgroundImage: null,
+                      radius: 40,
+                      backgroundColor: Colors.white,
+                      child:
+                          _dataLogoAsset(network.name) != null
+                              ? Image.asset(
+                                _dataLogoAsset(network.name)!,
+                                fit: BoxFit.cover,
+                              )
+                              : Text(
+                                network.name?.substring(0, 1).toUpperCase() ??
+                                    'N',
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      '${network.name} | DIRECT GIFTING',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: const Color(0xFF34544A),
+                        fontSize: 16.sp,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      plan.size ?? 'Unknown Size',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: const Color(0xFF34544A),
+                        fontSize: 24.sp,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      formatCurrency(plan.price ?? 0),
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: const Color(0xFF34544A),
+                        fontSize: 18.sp,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        'Phone Number',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black,
+                          fontSize: 15.sp,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: phoneController,
+                      keyboardType: TextInputType.phone,
+                      maxLength: 11,
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                      onChanged: (_) {
+                        // Clear the error as soon as the user starts fixing it.
+                        if (phoneError != null) {
+                          setModalState(() => phoneError = null);
+                        }
+                      },
+                      decoration: InputDecoration(
+                        counterText: '',
+                        errorText: phoneError,
+                        prefixIcon: const Icon(Icons.phone, color: Colors.grey),
+                        hintText: 'Enter phone number',
+                        border: const UnderlineInputBorder(),
+                        enabledBorder: const UnderlineInputBorder(),
+                        focusedBorder: const UnderlineInputBorder(
+                          borderSide: BorderSide(
+                            color: Color(0xFF34544A),
+                            width: 2,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 48,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF34544A),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        onPressed: () async {
+                          if (_isPurchasing) return;
+
+                          final error = validateNigerianPhone(
+                            phoneController.text,
+                          );
+                          if (error != null) {
+                            setModalState(() => phoneError = error);
+                            return;
+                          }
+
+                          // Tidy up to the 11-digit local form so the PIN preview,
+                          // the receipt and the provider all see 0XXXXXXXXXX.
+                          phoneController.text = normalizeNigerianPhone(
+                            phoneController.text,
+                          );
+
+                          // Capture a stable reference to the outer screen so we
+                          // can show snackbars + close dialogs without depending on
+                          // the (about-to-be-disposed) modal's context.
+                          final rootMessenger = ScaffoldMessenger.of(
+                            this.context,
+                          );
+                          final rootNavigator = Navigator.of(this.context);
+
+                          // Close the phone-number bottom sheet.
+                          Navigator.of(context).pop();
+
+                          // Ask the user for their transaction PIN — the PIN
+                          // screen also shows a preview of the purchase so they
+                          // can verify the network / plan / phone / amount
+                          // before committing.
+                          final pin = await _promptTransactionPin(
+                            networkName: network.name ?? 'Network',
+                            planName: plan.name ?? 'Data Plan',
+                            planSize: plan.size,
+                            phoneNumber: phoneController.text,
+                            price: plan.price ?? 0,
+                          );
+                          if (pin == null || pin.isEmpty) {
+                            // User cancelled — nothing else to do.
+                            return;
+                          }
+
+                          if (!mounted) return;
+                          if (_isPurchasing) return;
+                          setState(() => _isPurchasing = true);
+
+                          // Show loading dialog using the root navigator + capture
+                          // a dedicated context so we can dismiss it safely later.
+                          BuildContext? loadingDialogCtx;
+                          showDialog(
+                            context: this.context,
+                            barrierDismissible: false,
+                            builder: (ctx) {
+                              loadingDialogCtx = ctx;
+                              return const Center(
+                                child: CircularProgressIndicator(
+                                  color: Color.fromARGB(255, 90, 99, 96),
+                                ),
+                              );
+                            },
+                          );
+
+                          void closeLoading() {
+                            if (loadingDialogCtx != null &&
+                                Navigator.of(loadingDialogCtx!).canPop()) {
+                              Navigator.of(loadingDialogCtx!).pop();
+                              loadingDialogCtx = null;
+                            }
+                          }
+
+                          try {
+                            // Diagnostic — paste this in chat if the error returns.
+                            print('🩺 BuyData diagnostic:');
+                            print('   network.id        = ${network.id}');
+                            print('   network.name      = ${network.name}');
+                            print('   dataType.id       = ${dataType.id}');
+                            print('   plan.id           = ${plan.id}');
+                            print('   plan.code         = ${plan.code}');
+                            print(
+                              '   plan.variationCode= ${plan.variationCode}',
+                            );
+                            print('   plan.name         = ${plan.name}');
+                            print('   plan.size         = ${plan.size}');
+                            print('   plan.price        = ${plan.price}');
+                            print(
+                              '   phone             = ${phoneController.text}',
+                            );
+
+                            final response = await ref
+                                .read(dataNotifierProvider.notifier)
+                                .buyData(
+                                  phoneNumber: phoneController.text,
+                                  networkId: network.id.toString(),
+                                  // Backend expects the local DB plan id (and the
+                                  // owning data_type id) — not the variation_code.
+                                  planId: plan.id.toString(),
+                                  dataTypeId: dataType.id.toString(),
+                                  transactionPin: pin,
+                                );
+
+                            closeLoading();
+                            if (!mounted) return;
+                            setState(() => _isPurchasing = false);
+
+                            String planLabel = plan.name ?? 'Data Plan';
+                            if (plan.size != null &&
+                                plan.size!.isNotEmpty &&
+                                !planLabel.toLowerCase().contains(plan.size!.toLowerCase())) {
+                              planLabel = '${plan.size} · $planLabel';
+                            }
+                            if (response.success) {
+                              final data = response.data ?? {};
+
+                              rootNavigator.pushReplacement(
+                                MaterialPageRoute(
+                                  builder:
+                                      (context) => TransactionReceiptScreen(
+                                        data: TransactionReceiptData(
+                                          service: 'Data Bundle',
+                                          type: '${network.name} | $planLabel',
+                                          description:
+                                              'Data purchase for ${phoneController.text}',
+                                          amount: formatCurrency(
+                                            plan.price ?? 0,
+                                          ),
+                                          status: 'success',
+                                          reference:
+                                              data['reference']?.toString() ??
+                                              '',
+                                          initialBalance:
+                                              data['initial_balance']
+                                                  ?.toString() ??
+                                              '',
+                                          finalBalance:
+                                              data['final_balance']
+                                                  ?.toString() ??
+                                              '',
+                                          date: DateTime.now(),
+                                          phoneNumber: phoneController.text,
+                                        ),
+                                      ),
+                                ),
+                              );
+                            } else {
+                              rootNavigator.pushReplacement(
+                                MaterialPageRoute(
+                                  builder:
+                                      (_) => TransactionReceiptScreen(
+                                        data: TransactionReceiptData(
+                                          service: 'Data Bundle',
+                                          type: '${network.name} | $planLabel',
+                                          description:
+                                              'Data purchase for ${phoneController.text}',
+                                          amount: formatCurrency(
+                                            plan.price ?? 0,
+                                          ),
+                                          status:
+                                              response.data?['status'] ==
+                                                      'pending'
+                                                  ? 'pending'
+                                                  : 'failed',
+                                          statusMessage: response.message,
+                                          reference:
+                                              response.data?['reference']
+                                                  ?.toString() ??
+                                              '',
+                                          initialBalance: '',
+                                          finalBalance: '',
+                                          date: DateTime.now(),
+                                          phoneNumber: phoneController.text,
+                                        ),
+                                      ),
+                                ),
+                              );
+                            }
+                          } catch (e) {
+                            closeLoading();
+                            if (!mounted) return;
+                            setState(() => _isPurchasing = false);
+                            rootMessenger.showSnackBar(
+                              SnackBar(
+                                content: Text('Error: $e'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
+                        },
+                        child: const Text(
+                          'Continue',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                  ],
                 ),
               ),
-              const SizedBox(height: 24),
-            ],
-          ),
-          ),
         );
       },
     );
@@ -466,13 +515,13 @@ class _BuyDataScreenState extends ConsumerState<BuyDataScreen> {
 
   // Simple grey placeholder block used to build the loading skeleton.
   Widget _skel(double w, double h, {double r = 6}) => Container(
-        width: w,
-        height: h,
-        decoration: BoxDecoration(
-          color: Colors.grey[200],
-          borderRadius: BorderRadius.circular(r),
-        ),
-      );
+    width: w,
+    height: h,
+    decoration: BoxDecoration(
+      color: Colors.grey[200],
+      borderRadius: BorderRadius.circular(r),
+    ),
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -513,7 +562,6 @@ class _BuyDataScreenState extends ConsumerState<BuyDataScreen> {
                         ),
                       ),
                     ),
-                    
                   ],
                 ),
               ),
@@ -612,7 +660,9 @@ class _BuyDataScreenState extends ConsumerState<BuyDataScreen> {
                   ),
                 ),
                 onPressed: () {
-                  ref.read(dataNotifierProvider.notifier).getDataNetworks(forceRefresh: true);
+                  ref
+                      .read(dataNotifierProvider.notifier)
+                      .getDataNetworks(forceRefresh: true);
                 },
                 child: const Text(
                   'Retry',
@@ -669,7 +719,7 @@ class _BuyDataScreenState extends ConsumerState<BuyDataScreen> {
                       style: TextStyle(
                         fontSize: 20.sp,
                         fontWeight: FontWeight.bold,
-                         color: const Color.fromARGB(255, 255, 255, 255),
+                        color: const Color.fromARGB(255, 255, 255, 255),
                       ),
                     ),
                   ),
@@ -736,15 +786,19 @@ class _BuyDataScreenState extends ConsumerState<BuyDataScreen> {
                                           CircleAvatar(
                                             radius: 30,
                                             backgroundColor: Colors.grey[300],
-                                            backgroundImage:
-                                                currentNetwork.image != null
-                                                    ? NetworkImage(
-                                                      currentNetwork.image!,
-                                                    )
-                                                    : null,
+                                            backgroundImage: null,
                                             child:
-                                                currentNetwork.image == null
-                                                    ? Text(
+                                                _dataLogoAsset(
+                                                          currentNetwork.name,
+                                                        ) !=
+                                                        null
+                                                    ? Image.asset(
+                                                      _dataLogoAsset(
+                                                        currentNetwork.name,
+                                                      )!,
+                                                      fit: BoxFit.cover,
+                                                    )
+                                                    : Text(
                                                       currentNetwork.name
                                                               ?.substring(0, 1)
                                                               .toUpperCase() ??
@@ -755,8 +809,7 @@ class _BuyDataScreenState extends ConsumerState<BuyDataScreen> {
                                                             FontWeight.bold,
                                                         color: Colors.grey[600],
                                                       ),
-                                                    )
-                                                    : null,
+                                                    ),
                                           ),
                                           if (isSelected)
                                             Positioned(
@@ -941,15 +994,19 @@ class _BuyDataScreenState extends ConsumerState<BuyDataScreen> {
                                                 radius: 20,
                                                 backgroundColor:
                                                     Colors.grey[300],
-                                                backgroundImage:
-                                                    network.image != null
-                                                        ? NetworkImage(
-                                                          network.image!,
-                                                        )
-                                                        : null,
+                                                backgroundImage: null,
                                                 child:
-                                                    network.image == null
-                                                        ? Text(
+                                                    _dataLogoAsset(
+                                                              network.name,
+                                                            ) !=
+                                                            null
+                                                        ? Image.asset(
+                                                          _dataLogoAsset(
+                                                            network.name,
+                                                          )!,
+                                                          fit: BoxFit.cover,
+                                                        )
+                                                        : Text(
                                                           network.name
                                                                   ?.substring(
                                                                     0,
@@ -965,8 +1022,7 @@ class _BuyDataScreenState extends ConsumerState<BuyDataScreen> {
                                                                 Colors
                                                                     .grey[600],
                                                           ),
-                                                        )
-                                                        : null,
+                                                        ),
                                               ),
                                               const SizedBox(width: 16),
                                               Expanded(

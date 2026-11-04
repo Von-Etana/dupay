@@ -105,7 +105,7 @@ class RechargeCardNotifier extends StateNotifier<RechargeCardState> {
   /// POST /buy-epin
   /// Returns the parsed [RechargeCardPurchase] on success, null otherwise.
   /// The raw ApiResponse is also exposed so callers can read .message.
-  Future<({bool success, String message, RechargeCardPurchase? purchase})>
+  Future<({bool success, String message, String status, RechargeCardPurchase? purchase})>
       buyEpin({
     required int    networkId,
     required int    value,
@@ -130,7 +130,7 @@ class RechargeCardNotifier extends StateNotifier<RechargeCardState> {
       // Don't await — let it happen in the background.
       fetchEpins();
       _refreshBalances();
-      return (success: true, message: response.message, purchase: purchase);
+      return (success: true, message: response.message, status: 'success', purchase: purchase);
     }
 
     state = state.copyWith(
@@ -139,7 +139,7 @@ class RechargeCardNotifier extends StateNotifier<RechargeCardState> {
           ? 'Purchase failed'
           : response.message,
     );
-    return (success: false, message: response.message, purchase: null);
+    return (success: false, message: response.message, status: response.data?['status']?.toString() ?? 'failed', purchase: null);
   }
 
   void clearError() => state = state.copyWith(clearError: true);

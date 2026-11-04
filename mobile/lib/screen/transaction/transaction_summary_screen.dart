@@ -9,8 +9,6 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter/services.dart';
 import 'transaction_receipt_screen.dart';
 import '../../core/utils/formatters.dart';
-import '../../widgets/app_alert.dart';
-import '../../widgets/limit_notice.dart';
 
 /// Data class carrying all details needed for the summary + receipt screens.
 class TransactionSummaryData {
@@ -202,10 +200,7 @@ class _TransactionSummaryScreenState
           ),
         );
       } else {
-        final isTransfer = widget.data.service.toLowerCase().contains(
-          'transfer',
-        );
-        if (result['show_result_screen'] == true || isTransfer) {
+        {
           final status = _normalizedTransferStatus(
             result['status'],
             succeeded: false,
@@ -235,16 +230,6 @@ class _TransactionSummaryScreenState
           );
           return;
         }
-        _clearPin();
-        setState(() => _isProcessing = false);
-        _openKeyboard();
-        final msg = result['message']?.toString();
-        if (!showLimitNoticeIfNeeded(context, msg)) {
-          AppAlert.showError(
-            context,
-            msg ?? 'Transaction failed. Please try again.',
-          );
-        }
       }
     } catch (e) {
       if (!mounted) return;
@@ -254,7 +239,7 @@ class _TransactionSummaryScreenState
       }
       _clearPin();
       setState(() => _isProcessing = false);
-      if (widget.data.service.toLowerCase().contains('transfer')) {
+      {
         final pendingData = TransactionReceiptData(
           service: widget.data.service,
           type: widget.data.service,
@@ -276,8 +261,6 @@ class _TransactionSummaryScreenState
         );
         return;
       }
-      _openKeyboard();
-      AppAlert.showError(context, e);
     }
   }
 

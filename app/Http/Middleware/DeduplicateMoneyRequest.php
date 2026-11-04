@@ -40,12 +40,41 @@ class DeduplicateMoneyRequest
         ]);
 
         if ($inserted !== 1) {
+            if ($request->header('Idempotency-Key') === null) {
+                return response()->json(['success' => false, 'message' => 'Duplicate request'], 409);
+            }
+            $existing = DB::table('money_request_keys')
+                ->where('user_id', $user->getAuthIdentifier())
+                ->where('endpoint_hash', $endpointHash)
+                ->where('key_hash', $keyHash)
+                ->first();
+            if ($existing && $existing->payload_hash !== $payloadHash) {
+                return response()->json(['success' => false, 'message' => 'Request ID already used for different details.'], 409);
+            }
+            if ($existing && $existing->response_body !== null) {
+                return response($existing->response_body, $existing->http_status ?: 200)
+                    ->header('Content-Type', 'application/json');
+            }
             return response()->json([
                 'success' => false,
-                'message' => 'Request already submitted. Check transaction history before retrying.',
-            ], 409);
+                'code' => 'transaction_processing',
+                'message' => 'Transaction is being confirmed. Check its status before retrying.',
+            ], 202);
         }
 
-        return $next($request);
+        $response = $next($request);
+        if ($key !== null && $response->getStatusCode() < 500) {
+            DB::table('money_request_keys')
+                ->where('user_id', $user->getAuthIdentifier())
+                ->where('endpoint_hash', $endpointHash)
+                ->where('key_hash', $keyHash)
+                ->update([
+                    'status' => 'completed',
+                    'http_status' => $response->getStatusCode(),
+                    'response_body' => $response->getContent(),
+                    'completed_at' => now(),
+                ]);
+        }
+        return $response;
     }
 }

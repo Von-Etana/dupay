@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\V1\GeneralController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\LoginChallengeController;
+use App\Http\Controllers\Api\V1\TransactionRequestStatusController;
 use App\Http\Controllers\Api\V1\KYCVerificationController;
 use App\Http\Controllers\Api\V1\Telecom\AirtimeController;
 use App\Http\Controllers\Api\V1\Telecom\BillController;
@@ -73,6 +74,8 @@ Route::get('documentation/{type}', [GeneralController::class, 'getData'])->name(
     //optional login routes
 Route::group(['middleware'=>'verifyTelecomAPiUsers'], function(){
 
+    Route::get('transactions/request-status/{requestId}', [TransactionRequestStatusController::class, 'show'])->middleware('auth:api');
+
     Route::get('pos-request', [UserController::class, 'posRequestDetails'])->name("POSRequest");
     Route::post('post-request', [UserController::class, 'submitPOSRequest'])->name("submitPOSRequest");
 
@@ -88,18 +91,18 @@ Route::group(['middleware'=>'verifyTelecomAPiUsers'], function(){
     Route::get('item/{type}', [GeneralController::class, 'getItem'])->name("getItem");
 
     Route::get('data/networks', [DataController::class, 'getDataNetwork'])->name("getDataNetwork");
-    Route::post('buy/data', [DataController::class, 'buyData'])->name("buyData")->middleware(['notBlocked', 'checkUserTransactionLimit', 'throttle:money']);
+    Route::post('buy/data', [DataController::class, 'buyData'])->name("buyData")->middleware(['deduplicateMoney', 'notBlocked', 'checkUserTransactionLimit', 'throttle:money']);
 
 
     Route::get('data-card/networks', [DataCardController::class, 'getNetwork'])->name("getDataCardNetwork");
-    Route::post('buy/data-card', [DataCardController::class, 'buyDataCard'])->name("buyDataCard")->middleware(['notBlocked', 'checkUserTransactionLimit', 'throttle:money']);
+    Route::post('buy/data-card', [DataCardController::class, 'buyDataCard'])->name("buyDataCard")->middleware(['deduplicateMoney', 'notBlocked', 'checkUserTransactionLimit', 'throttle:money']);
 
 
     Route::get('airtime/networks', [AirtimeController::class, 'getAirtimeNetwork'])->name("getAirtimeNetwork");
-    Route::post('buy/airtime', [AirtimeController::class, 'buyAirtime'])->name("buyAirtime")->middleware(['notBlocked', 'checkUserTransactionLimit', 'throttle:money']);
+    Route::post('buy/airtime', [AirtimeController::class, 'buyAirtime'])->name("buyAirtime")->middleware(['deduplicateMoney', 'notBlocked', 'checkUserTransactionLimit', 'throttle:money']);
 
     Route::get('cable-list', [CableController::class, 'getCableList'])->name("getCableList");
-    Route::post('buy/cable', [CableController::class, 'buyCableSub'])->name("buyCable")->middleware(['notBlocked', 'checkUserTransactionLimit', 'throttle:money']);
+    Route::post('buy/cable', [CableController::class, 'buyCableSub'])->name("buyCable")->middleware(['deduplicateMoney', 'notBlocked', 'checkUserTransactionLimit', 'throttle:money']);
     Route::post('verify-cable-number', [CableController::class, 'verifyCableNumber'])->name("verifyCable");
 
     Route::get('airtime-to-cash/networks', [AirtimeController::class, 'getAirtimeToCashNetwork'])->name("getAirtimeToCashNetwork");
@@ -107,13 +110,13 @@ Route::group(['middleware'=>'verifyTelecomAPiUsers'], function(){
 
 
     Route::get('bill-list', [BillController::class, 'getBillList'])->name("getBillList");
-    Route::post('pay-bill', [BillController::class, 'buyBill'])->name("buyBill")->middleware(['notBlocked', 'checkUserTransactionLimit']);
+    Route::post('pay-bill', [BillController::class, 'buyBill'])->name("buyBill")->middleware(['deduplicateMoney', 'notBlocked', 'checkUserTransactionLimit']);
     Route::post('verify-bill', [BillController::class, 'verifyBillNumber'])->name("verifyBill");
 
     Route::post('send-bulk-SMS', [BulkSmsController::class, 'sendBulkSms'])->name("sendBulkSms")->middleware(['notBlocked', 'checkUserTransactionLimit']);
 
     Route::get('exam/amount', [ExamController::class, 'calAmount'])->name("getExamAmount");
-    Route::post('buy/exam-pin', [ExamController::class, 'buyExam'])->name("buyExamPin")->middleware(['notBlocked', 'checkUserTransactionLimit', 'throttle:money']);
+    Route::post('buy/exam-pin', [ExamController::class, 'buyExam'])->name("buyExamPin")->middleware(['deduplicateMoney', 'notBlocked', 'checkUserTransactionLimit', 'throttle:money']);
 
 
      //bank transfer
@@ -182,10 +185,10 @@ Route::group(['middleware'=>'verifyTelecomAPiUsers'], function(){
     Route::get('all-users/search/{search}', [UserController::class, 'searchUsers'])->name("UserSearchUser");
     Route::get('find-user/{search?}', [UserController::class, 'findUser'])->name("UserFindUser");
     Route::get('get-user/{search}', [UserController::class, 'getUser'])->name("UserGetUser");
-    Route::post('fund/transfer', [TransferController::class, 'transferFund'])->name("transferFund")->middleware(['notBlocked', 'checkUserTransactionLimit', 'throttle:money', 'deduplicateMoney']);
+    Route::post('fund/transfer', [TransferController::class, 'transferFund'])->name("transferFund")->middleware(['deduplicateMoney', 'notBlocked', 'checkUserTransactionLimit', 'throttle:money']);
     Route::post('fund/request', [TransferController::class, 'requestFund'])->name("requestFund")->middleware(['notBlocked', 'checkUserTransactionLimit']);
-    Route::post('fund/withdraw', [TransferController::class, 'transferBank'])->name("withdrawFund")->middleware(['notBlocked', 'checkUserTransactionLimit', 'throttle:money', 'deduplicateMoney']);
-    Route::post('fund/withdraw/two', [TransferController::class, 'transferBankTwo'])->middleware(['notBlocked', 'checkUserTransactionLimit', 'throttle:money', 'deduplicateMoney']);
+    Route::post('fund/withdraw', [TransferController::class, 'transferBank'])->name("withdrawFund")->middleware(['deduplicateMoney', 'notBlocked', 'checkUserTransactionLimit', 'throttle:money']);
+    Route::post('fund/withdraw/two', [TransferController::class, 'transferBankTwo'])->middleware(['deduplicateMoney', 'notBlocked', 'checkUserTransactionLimit', 'throttle:money']);
     Route::get('bank-transfer/banklist', [TransferController::class, 'getBankList'])->name("getBankList");
     Route::post('bank-transfer/name-enquiry', [TransferController::class, 'nameEnquiry'])->name('nameEnquiry');
     Route::post('fund/manual-funding', [UserController::class, 'manualFunding'])->name("manualFunding");
@@ -223,7 +226,7 @@ Route::group(['middleware'=>'verifyTelecomAPiUsers'], function(){
     
     
     
-    Route::post('/buy-epin', [RechargePinController::class, 'buyEpin'])->name('buy.epin')->middleware(['notBlocked', 'checkUserTransactionLimit']);
+    Route::post('/buy-epin', [RechargePinController::class, 'buyEpin'])->name('buy.epin')->middleware(['deduplicateMoney', 'notBlocked', 'checkUserTransactionLimit']);
 
     Route::get('/user/fetch-epins', [RechargePinController::class, 'fetchEpins']);
     
