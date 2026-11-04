@@ -12,6 +12,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:dupay/providers/auth_provider.dart';
 import 'package:dupay/widgets/app_alert.dart';
+import 'package:dupay/services/notifications/fcm_token_sync.dart';
 
 class LoginOtpScreen extends ConsumerStatefulWidget {
   const LoginOtpScreen({super.key});
@@ -120,6 +121,7 @@ class _LoginOtpScreenState extends ConsumerState<LoginOtpScreen> {
       if (!mounted) return;
 
       if (response.success) {
+        unawaited(FcmTokenSync.syncCurrentToken());
         _showTopMessage('Verification successful!', isError: false);
         await Future.delayed(const Duration(milliseconds: 300));
         if (!mounted) return;

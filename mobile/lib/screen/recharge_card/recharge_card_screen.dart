@@ -60,7 +60,7 @@ class _RechargeCardScreenState extends ConsumerState<RechargeCardScreen> {
     Widget fallback() {
       // Try a bundled asset first; if that's missing, show the network's
       // initial(s) on the brand colour so the circle is never blank.
-      final asset = _logoAssets[(n.name ?? '').toLowerCase()];
+      final asset = _logoAssetFor(n.name, n.otherName);
       if (asset != null) {
         return Image.asset(
           asset,
@@ -163,6 +163,17 @@ class _RechargeCardScreenState extends ConsumerState<RechargeCardScreen> {
       default:
         return Colors.black;
     }
+  }
+
+  static String? _logoAssetFor(String? name, [String? otherName]) {
+    final normalized = '${name ?? ''} ${otherName ?? ''}'.toLowerCase();
+    if (normalized.contains('airtel')) return _logoAssets['airtel'];
+    if (normalized.contains('9mobile') || normalized.contains('etisalat')) {
+      return _logoAssets['9mobile'];
+    }
+    if (normalized.contains('mtn')) return _logoAssets['mtn'];
+    if (normalized.contains('glo')) return _logoAssets['glo'];
+    return null;
   }
 
   void _showRechargeCardDetails(AirtimeNetworkModel network) {
@@ -458,18 +469,7 @@ class _RechargeCardScreenState extends ConsumerState<RechargeCardScreen> {
   }
 
   String _getNetworkLogo(String networkName) {
-    switch (networkName.toLowerCase()) {
-      case 'mtn':
-        return 'assets/images/mtnlogo.jpg';
-      case '9mobile':
-        return 'assets/images/9mobilelogo.png';
-      case 'airtel':
-        return 'assets/images/airtellogo.png';
-      case 'glo':
-        return 'assets/images/glologo.png';
-      default:
-        return 'assets/images/glologo.png';
-    }
+    return _logoAssetFor(networkName) ?? 'assets/images/glologo.png';
   }
 
   String _formatPin(String pin) {
@@ -825,12 +825,9 @@ class _RechargeCardScreenState extends ConsumerState<RechargeCardScreen> {
                       ),
                       child: Center(
                         child:
-                            _logoAssets[networkName.trim().toLowerCase()] !=
-                                    null
+                            _logoAssetFor(networkName) != null
                                 ? Image.asset(
-                                  _logoAssets[networkName
-                                      .trim()
-                                      .toLowerCase()]!,
+                                  _logoAssetFor(networkName)!,
                                   width: 26,
                                   height: 26,
                                   fit: BoxFit.contain,

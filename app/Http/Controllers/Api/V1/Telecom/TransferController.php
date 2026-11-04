@@ -21,6 +21,7 @@ class TransferController extends Controller
 {
     private function notifyWithdrawalOutcome($user, $transaction, string $status, $amount, string $reference): void
     {
+        app()->terminating(function () use ($user, $transaction, $status, $amount, $reference) {
         try {
             $message = $status === 'success'
                 ? 'Your bank transfer of ₦' . number_format((float) $amount, 2) . ' was successful.'
@@ -37,15 +38,11 @@ class TransferController extends Controller
                     'date' => now()->toIso8601String(),
                 ],
             ]);
-            if (!empty($user->fcmToken)) {
-                sendFcmNotification($user->fcmToken, 'Bank transfer ' . $status, $message, [
-                    'type' => 'transaction', 'status' => $status,
-                    'reference_id' => $reference, 'route' => '/notification',
-                ]);
-            }
+            // The Transaction model sends the push after the HTTP response.
         } catch (\Throwable $e) {
             \Log::warning('Withdrawal notification failed', ['transaction_id' => $transaction->id]);
         }
+        });
     }
     use MailTrait;
 
@@ -601,6 +598,8 @@ class TransferController extends Controller
         |--------------------------------------------------------------------------
         */
         if ($finalStatus === 'success') {
+            app()->terminating(function () use ($request, $requestAmount, $sessionId, $user, $balanceAction, $transaction) {
+            try {
             
             
 
@@ -685,11 +684,21 @@ class TransferController extends Controller
             } catch (\Throwable $e) {
                 \Illuminate\Support\Facades\Log::error('referralCommission failed (transfer already succeeded): ' . $e->getMessage());
             }
+            } catch (\Throwable $e) {
+                \Log::warning('Bank transfer completed but email or SMS alert failed', ['transaction_id' => $transaction->id]);
+            }
+            });
         }
-    
+
         $this->notifyWithdrawalOutcome($user, $transaction, $finalStatus, $requestAmount, $trx);
-        (new FirebaseUserUpdate)->updateUser($user);
-    
+        app()->terminating(function () use ($user, $transaction) {
+            try {
+                (new FirebaseUserUpdate)->updateUser($user);
+            } catch (\Throwable $e) {
+                \Log::warning('Bank transfer completed but Firebase balance sync failed', ['transaction_id' => $transaction->id]);
+            }
+        });
+
         return response()->json([
             'success' => $finalStatus === 'success',
             'status' => $finalStatus,
@@ -985,8 +994,8 @@ class TransferController extends Controller
         |--------------------------------------------------------------------------
         */
         if ($finalStatus === 'success') {
-            
-            
+            app()->terminating(function () use ($request, $requestAmount, $sessionId, $user, $balanceAction, $transaction) {
+            try {
 
             $maskedAccount = substr($request->account_number ?? '1234567890', 0, 1) . "XX..XX" . substr($request->account_number ?? '1234567890', -2);
             $formattedDate = Carbon::now()->format('d-M-Y h:i A');
@@ -1069,8 +1078,12 @@ class TransferController extends Controller
             } catch (\Throwable $e) {
                 \Illuminate\Support\Facades\Log::error('referralCommission failed (transfer already succeeded): ' . $e->getMessage());
             }
+            } catch (\Throwable $e) {
+                \Log::warning('Bank transfer completed but email or SMS alert failed', ['transaction_id' => $transaction->id]);
+            }
+            });
         }
-    
+
         $this->notifyWithdrawalOutcome($user, $transaction, $finalStatus, $requestAmount, $trx);
         (new FirebaseUserUpdate)->updateUser($user);
     
@@ -1659,6 +1672,8 @@ class TransferController extends Controller
                 $receiver_tansaction->update(['status' => "success"]);
 
 
+                app()->terminating(function () use ($user, $reciever, $request, $trx, $trxR, $final_balance, $Rfinal_balance) {
+                try {
                 if (getSiteSettings("email_notify") == "Yes") {
                     $p2pDate = Carbon::now()->format('d-M-Y h:i A');
 
@@ -1731,16 +1746,23 @@ class TransferController extends Controller
                     }
                 }
 
-                //update firebase
-                try {
-                    (new FirebaseUserUpdate)->updateUser($user);
                 } catch (\Throwable $e) {
-                    \Log::warning('P2P transfer completed but Firebase user sync failed', [
-                        'user_id' => $user->id,
-                        'reference' => $trx,
-                        'error' => $e->getMessage(),
-                    ]);
+                    \Log::warning('P2P transfer completed but alert delivery failed', ['reference' => $trx]);
                 }
+                });
+
+                //update firebase
+                app()->terminating(function () use ($user, $trx) {
+                    try {
+                        (new FirebaseUserUpdate)->updateUser($user);
+                    } catch (\Throwable $e) {
+                        \Log::warning('P2P transfer completed but Firebase user sync failed', [
+                            'user_id' => $user->id,
+                            'reference' => $trx,
+                            'error' => $e->getMessage(),
+                        ]);
+                    }
+                });
                 return response()->json([
                     'success' => true,
                     'code' => 200,

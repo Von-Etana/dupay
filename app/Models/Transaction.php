@@ -21,7 +21,7 @@ class Transaction extends Model
         static::created(function ($transaction) {
             try {
                 if (in_array(strtolower($transaction->status), ['success', 'failed', 'unsuccessful'], true)) {
-                    $transaction->sendTransactionPush();
+                    static::notifyAfterResponse($transaction);
                 }
             } catch (\Throwable $e) {
                 \Log::error('Transaction push failed on create (txn already saved): ' . $e->getMessage());
@@ -36,10 +36,21 @@ class Transaction extends Model
                     $transaction->wasChanged('status') &&
                     in_array(strtolower($transaction->status), ['success', 'failed', 'unsuccessful'], true)
                 ) {
-                    $transaction->sendTransactionPush();
+                    static::notifyAfterResponse($transaction);
                 }
             } catch (\Throwable $e) {
                 \Log::error('Transaction push failed on update (txn already saved): ' . $e->getMessage());
+            }
+        });
+    }
+
+    private static function notifyAfterResponse(self $transaction): void
+    {
+        $transactionId = $transaction->getKey();
+        app()->terminating(function () use ($transactionId) {
+            $saved = static::find($transactionId);
+            if ($saved && in_array(strtolower((string) $saved->status), ['success', 'failed', 'unsuccessful'], true)) {
+                $saved->sendTransactionPush();
             }
         });
     }
@@ -60,8 +71,8 @@ class Transaction extends Model
     public function sendTransactionPush()
     {
         $user = $this->user;
-        if (!$user || empty($user->fcmToken)) {
-            return; // no user or no device token — skip silently
+        if (!$user) {
+            return;
         }
 
         // Read RAW stored attributes, bypassing this model's accessors.
@@ -134,7 +145,12 @@ class Transaction extends Model
 
         // Same proven per-user FCM sender used by the admin "Send Notification"
         // feature. It logs its own errors and returns a status array (never throws).
-        sendFcmNotification($user->fcmToken, $title, $body, $data);
+        if (!empty($user->fcmToken)) {
+            $result = sendFcmNotification($user->fcmToken, $title, $body, $data);
+            if (empty($result['status'])) {
+                \Log::warning('Transaction push was not delivered', ['transaction_id' => $this->id, 'user_id' => $user->id]);
+            }
+        }
     }
 
    // protected $appends = ['status'];

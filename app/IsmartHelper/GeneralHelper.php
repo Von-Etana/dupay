@@ -221,7 +221,13 @@ function getFirebaseAccessToken()
     
     try{
     $client = new \Google\Client();
-    $client->setAuthConfig(storage_path('app/firebase/globesul-firebase-adminsdk-yavkc-293015857e.json'));
+    $credentials = config('firebase.projects.app.credentials.file');
+    if (!$credentials) {
+        throw new \RuntimeException('Firebase credentials are not configured');
+    }
+    $credentialsPath = str_starts_with($credentials, '/') || preg_match('/^[A-Za-z]:[\\\\\/]/', $credentials)
+        ? $credentials : base_path($credentials);
+    $client->setAuthConfig($credentialsPath);
     $client->addScope('https://www.googleapis.com/auth/firebase.messaging');
 
     if ($client->isAccessTokenExpired()) {

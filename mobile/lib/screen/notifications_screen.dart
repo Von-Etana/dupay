@@ -15,6 +15,7 @@ import 'package:dupay/providers/transaction_provider.dart';
 import 'package:dupay/models/transaction/transaction_model.dart';
 import 'package:dupay/core/utils/formatters.dart';
 import 'package:dupay/widgets/app_alert.dart';
+import 'package:dupay/services/notifications/notification_service.dart';
 
 enum NotificationFilter { all, transactions, security, general }
 
@@ -68,7 +69,18 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
   @override
   void initState() {
     super.initState();
-    _loadInitialNotifications();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) ref.read(transactionNotifierProvider.notifier).getTransactions(page: 1, limit: 30);
+    });
+    NotificationService().onForegroundMessage = (_) {
+      if (mounted) ref.read(transactionNotifierProvider.notifier).getTransactions(page: 1, limit: 30);
+    };
+  }
+
+  @override
+  void dispose() {
+    NotificationService().onForegroundMessage = null;
+    super.dispose();
   }
 
   @override
@@ -107,59 +119,6 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
     }
   }
 
-  void _loadInitialNotifications() {
-    // Provide clean, structured default operational notifications
-    _notifications.addAll([
-      AppNotificationModel(
-        id: 'notif_sec_1',
-        title: 'Two-Factor Authentication Active',
-        body:
-            'Login OTP verification is enabled to protect your wallet and account.',
-        type: 'security',
-        status: 'active',
-        service: 'Security System',
-        timestamp: DateTime.now().subtract(const Duration(minutes: 25)),
-        isRead: false,
-      ),
-      AppNotificationModel(
-        id: 'notif_tx_1',
-        title: 'Wallet Funding Confirmed',
-        body:
-            'Your deposit was successful. Funds have been credited to your Dupay wallet.',
-        type: 'credit',
-        amount: '₦5,000.00',
-        reference: 'DUPAY-DEP-849201',
-        sessionId: '99912084920199',
-        status: 'success',
-        service: 'Wallet Deposit',
-        timestamp: DateTime.now().subtract(const Duration(hours: 3)),
-        isRead: false,
-      ),
-      AppNotificationModel(
-        id: 'notif_tx_2',
-        title: 'Airtime Recharge Successful',
-        body: 'Airtime recharge was successfully completed.',
-        type: 'bill',
-        amount: '₦1,000.00',
-        reference: 'DUPAY-AIR-203912',
-        status: 'success',
-        service: 'Airtime',
-        timestamp: DateTime.now().subtract(const Duration(hours: 8)),
-        isRead: true,
-      ),
-      AppNotificationModel(
-        id: 'notif_info_1',
-        title: 'Instant Virtual Cards & Receipts',
-        body:
-            'You can now share high-definition receipts and generate instant virtual cards.',
-        type: 'info',
-        service: 'Product Update',
-        timestamp: DateTime.now().subtract(const Duration(days: 1)),
-        isRead: true,
-      ),
-    ]);
-  }
-
   List<AppNotificationModel> _getFilteredNotifications(
     List<TransactionModel>? transactions,
   ) {
@@ -167,32 +126,31 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
     final combined = List<AppNotificationModel>.from(_notifications);
 
     if (transactions != null) {
-      for (final tx in transactions.take(6)) {
+      for (final tx in transactions) {
         final isCredit = tx.type == '1' || tx.type.toLowerCase() == 'credit';
         final normalizedStatus = tx.status.trim().toLowerCase();
+        final isSuccess = const {'success', 'successful', 'completed', '1'}
+            .contains(normalizedStatus);
+        final isPending = const {'pending', 'processing', 'queued'}
+            .contains(normalizedStatus);
         final title =
-            isCredit
-                ? 'Transfer received (${formatCurrency(tx.amount)})'
-                : (normalizedStatus == 'success' ||
-                        normalizedStatus == 'successful' ||
-                        normalizedStatus == '1'
-                    ? 'Payment completed (${formatCurrency(tx.amount)})'
-                    : (normalizedStatus == 'pending'
-                        ? 'Payment pending (${formatCurrency(tx.amount)})'
-                        : 'Payment failed (${formatCurrency(tx.amount)})'));
+            isPending
+                ? 'Payment pending (${formatCurrency(tx.amount)})'
+                : isSuccess
+                    ? '${isCredit ? 'Transfer received' : 'Payment completed'} (${formatCurrency(tx.amount)})'
+                    : 'Payment failed (${formatCurrency(tx.amount)})';
 
-        if (!combined.any((n) => n.reference == tx.reference)) {
+        if (!combined.any((n) => n.id == 'tx_${tx.id}' ||
+            (tx.reference != null && n.reference == tx.reference))) {
           combined.add(
             AppNotificationModel(
               id: 'tx_${tx.id}',
               title: title,
               body:
                   tx.description ??
-                  (normalizedStatus == 'pending'
+                  (isPending
                       ? 'This transaction is still being processed.'
-                      : (normalizedStatus == 'success' ||
-                              normalizedStatus == 'successful' ||
-                              normalizedStatus == '1'
+                      : (isSuccess
                           ? 'Transaction processed successfully.'
                           : 'This transaction was not completed.')),
               type: isCredit ? 'credit' : 'debit',

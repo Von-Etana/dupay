@@ -980,14 +980,21 @@ class _HomeDashboardState extends ConsumerState<HomeDashboard>
 
     // Get user display name
     String getUserDisplayName() {
-      if (user?.profile?.firstName != null && user?.profile?.lastName != null) {
-        return '${user!.profile!.firstName}';
-      } else if (user?.profile?.username != null) {
-        return user!.profile!.username!;
-      } else if (user?.email != null) {
-        return user!.email!.split('@')[0];
+      final firstName = user?.profile?.firstName?.trim();
+      if (firstName != null && firstName.isNotEmpty) {
+        return firstName;
       }
-      return 'User';
+      final username = user?.profile?.username?.trim();
+      if (username != null && username.isNotEmpty) {
+        return username;
+      }
+      final email = user?.email?.trim();
+      if (email != null && email.isNotEmpty) {
+        return email.split('@').first;
+      }
+      // Avoid flashing a false name while the authenticated profile is still
+      // being restored or fetched after login.
+      return isLoading ? '...' : 'there';
     }
 
     return RefreshIndicator(
@@ -1071,7 +1078,7 @@ class _HomeDashboardState extends ConsumerState<HomeDashboard>
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Hello ${getUserDisplayName()}',
+                              'Hello, ${getUserDisplayName()}',
                               style: TextStyle(
                                 color: Colors.white,
                                 fontWeight: FontWeight.bold,

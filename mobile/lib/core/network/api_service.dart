@@ -476,7 +476,11 @@ class ApiService {
         // crashes the parse — treat any non-object as null.
         data:
             responseData['data'] is Map<String, dynamic>
-                ? responseData['data'] as Map<String, dynamic>
+                ? {
+                    ...responseData['data'] as Map<String, dynamic>,
+                    if (responseData['status'] != null)
+                      'status': responseData['status'],
+                  }
                 : (allowFailureResponse ? responseData : null),
         statusCode: response.statusCode,
       );

@@ -483,7 +483,7 @@ class _TransactionReceiptScreenState extends State<TransactionReceiptScreen> {
                                 mainAxisAlignment:
                                     MainAxisAlignment.spaceBetween,
                                 children: [
-                                  Row(
+                                  Expanded(child: Row(
                                     children: [
                                       Container(
                                         padding: EdgeInsets.all(6.w),
@@ -507,7 +507,7 @@ class _TransactionReceiptScreenState extends State<TransactionReceiptScreen> {
                                         ),
                                       ),
                                       SizedBox(width: 8.w),
-                                      Column(
+                                      Flexible(child: Column(
                                         crossAxisAlignment:
                                             CrossAxisAlignment.start,
                                         children: [
@@ -528,9 +528,9 @@ class _TransactionReceiptScreenState extends State<TransactionReceiptScreen> {
                                             ),
                                           ),
                                         ],
-                                      ),
+                                      )),
                                     ],
-                                  ),
+                                  )),
                                   // Status Badge
                                   Container(
                                     padding: EdgeInsets.symmetric(
@@ -915,14 +915,14 @@ class _TransactionReceiptScreenState extends State<TransactionReceiptScreen> {
                                     color: Colors.grey[600],
                                   ),
                                   SizedBox(width: 6.w),
-                                  Text(
+                                  Flexible(child: Text(
                                     'Need help with this transaction? Contact Support',
                                     style: TextStyle(
                                       fontSize: 12.5.sp,
                                       color: Colors.grey[600],
                                       fontWeight: FontWeight.w500,
                                     ),
-                                  ),
+                                  )),
                                 ],
                               ),
                             ),
