@@ -234,9 +234,7 @@ class _P2PScreenState extends ConsumerState<P2PScreen> {
                             'internal server error',
                           ))) {
                     try {
-                      final history = await TransactionRepository(
-                        ApiService.instance,
-                      ).searchTransactions(page: 1, limit: 20);
+                      final history = await TransactionRepository().searchTransactions(page: 1, limit: 20);
                       final confirmed =
                           history.data?.where((transaction) {
                             final sameAmount =
