@@ -74,7 +74,9 @@ class _RechargeCardScreenState extends ConsumerState<RechargeCardScreen> {
     }
 
     Widget content;
-    if (url != null && url.startsWith('http')) {
+    if ('${n.name ?? ''} ${n.otherName ?? ''}'.toLowerCase().contains('airtel')) {
+      content = fallback();
+    } else if (url != null && url.startsWith('http')) {
       content = Image.network(
         url,
         width: size,
@@ -139,7 +141,7 @@ class _RechargeCardScreenState extends ConsumerState<RechargeCardScreen> {
       case 'mtn':
         return const Color(0xFFFFCC00); // MTN yellow
       case 'airtel':
-        return const Color(0xFFED1C24); // Airtel red
+        return Colors.white; // Keep the red Airtel artwork visible
       case 'glo':
         return const Color(0xFF50B848); // Glo green
       case '9mobile':
@@ -155,7 +157,7 @@ class _RechargeCardScreenState extends ConsumerState<RechargeCardScreen> {
       case 'mtn':
         return Colors.black; // black on yellow
       case 'airtel':
-        return Colors.white; // white on red
+        return const Color(0xFFED1C24); // red on white
       case 'glo':
         return Colors.white; // white on green
       case '9mobile':
