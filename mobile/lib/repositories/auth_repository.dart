@@ -1,3 +1,4 @@
+import 'package:shared_preferences/shared_preferences.dart';
 // lib/repositories/auth_repository.dart
 import 'package:dupay/models/auth/check_user_request.dart';
 import 'package:dupay/models/auth/check_user_response.dart';
@@ -200,6 +201,9 @@ class AuthRepository {
       // Local sign-out must still work when the API cannot be reached.
     } finally {
       await SecureStorageService.clearSession();
+      await SecureStorageService.clearRememberedEmail();
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('remember_me', false);
     }
   }
 

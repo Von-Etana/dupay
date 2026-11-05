@@ -122,8 +122,6 @@ class _LoginOtpScreenState extends ConsumerState<LoginOtpScreen> {
 
       if (response.success) {
         unawaited(FcmTokenSync.syncCurrentToken());
-        _showTopMessage('Verification successful!', isError: false);
-        await Future.delayed(const Duration(milliseconds: 300));
         if (!mounted) return;
 
         final user = ref.read(currentUserProvider);

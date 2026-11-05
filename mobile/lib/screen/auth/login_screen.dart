@@ -37,9 +37,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
   }
 
+  @override
   void initState() {
     super.initState();
     _loadSavedCredentials();
+    _emailController.addListener(_onEmailChanged);
+  }
+
+  void _onEmailChanged() {
+    if (_rememberMe) {
+      final email = _emailController.text.trim();
+      if (email.isNotEmpty) {
+        SecureStorageService.saveRememberedEmail(email);
+      }
+    }
   }
 
   Future<void> _loadSavedCredentials() async {
@@ -51,19 +62,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     await prefs.remove('saved_email');
 
     final remembered = prefs.getBool('remember_me') ?? false;
-    if (remembered) {
-      final email = await SecureStorageService.getRememberedEmail() ?? '';
-      if (email.isNotEmpty && mounted) {
-        setState(() {
+    final email = await SecureStorageService.getRememberedEmail() ?? '';
+    if ((remembered || email.isNotEmpty) && mounted) {
+      setState(() {
+        if (email.isNotEmpty) {
           _emailController.text = email;
-          _rememberMe = true;
-        });
-      }
+        }
+        _rememberMe = true;
+      });
     }
   }
 
   @override
   void dispose() {
+    _emailController.removeListener(_onEmailChanged);
     _passwordController.dispose();
     _emailController.dispose();
     super.dispose();
@@ -124,11 +136,28 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
   }
 
+  Future<void> _toggleRememberMe(bool isChecked) async {
+    setState(() => _rememberMe = isChecked);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('remember_me', isChecked);
+    if (isChecked) {
+      final email = _emailController.text.trim();
+      if (email.isNotEmpty) {
+        await SecureStorageService.saveRememberedEmail(email);
+      }
+    } else {
+      await SecureStorageService.clearRememberedEmail();
+    }
+  }
+
   Future<void> _saveRememberedEmail() async {
     final prefs = await SharedPreferences.getInstance();
     if (_rememberMe) {
-      await SecureStorageService.saveRememberedEmail(_emailController.text.trim());
-      await prefs.setBool('remember_me', true);
+      final email = _emailController.text.trim();
+      if (email.isNotEmpty) {
+        await SecureStorageService.saveRememberedEmail(email);
+        await prefs.setBool('remember_me', true);
+      }
     } else {
       await SecureStorageService.clearRememberedEmail();
       await prefs.setBool('remember_me', false);
@@ -463,29 +492,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                               4,
                                             ),
                                           ),
-                                          onChanged: (val) async {
-                                            setState(
-                                              () => _rememberMe = val ?? false,
-                                            );
-                                            if (!(val ?? false)) {
-                                              final prefs =
-                                                  await SharedPreferences.getInstance();
-                                              await prefs.setBool(
-                                                'remember_me',
-                                                false,
-                                              );
-                                              await SecureStorageService.clearRememberedEmail();
-                                            }
-                                          },
+                                          onChanged: (val) => _toggleRememberMe(val ?? false),
                                         ),
                                       ),
-                                      const SizedBox(width: 10),
-                                      Text(
-                                        'Remember me',
-                                        style: TextStyle(
-                                          fontSize: 14.sp,
-                                          color: Colors.grey[700],
-                                          fontWeight: FontWeight.w500,
+                                      const SizedBox(width: 8),
+                                      GestureDetector(
+                                        onTap: () => _toggleRememberMe(!_rememberMe),
+                                        child: Text(
+                                          'Remember me',
+                                          style: TextStyle(
+                                            fontSize: 14.sp,
+                                            color: Colors.grey[700],
+                                            fontWeight: FontWeight.w500,
+                                          ),
                                         ),
                                       ),
                                     ],
