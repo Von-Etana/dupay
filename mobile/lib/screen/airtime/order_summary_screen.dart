@@ -4,6 +4,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../providers/airtime_provider.dart';
 import '../../models/airtime/airtime_network_model.dart';
+import '../../services/transactions/transaction_result_resolver.dart';
 import '../home/home_nav.dart';
 import '../../core/utils/formatters.dart';
 import '../../widgets/limit_notice.dart';
@@ -82,6 +83,7 @@ class _OrderSummaryScreenState extends ConsumerState<OrderSummaryScreen> {
       return;
     }
 
+    final submittedAt = DateTime.now();
     // Buy airtime
     final response = await ref
         .read(airtimeNotifierProvider.notifier)
@@ -93,56 +95,40 @@ class _OrderSummaryScreenState extends ConsumerState<OrderSummaryScreen> {
           transactionPin: pin,
         );
 
-    final rawStatus = response.data?['status']?.toString().toLowerCase();
-    final confirmedSuccess =
-        response.success &&
-        !const {'pending', 'processing', 'queued'}.contains(rawStatus);
+    final resolved = await TransactionResultResolver.resolve(
+      responseSuccess: response.success,
+      responseMessage: response.message,
+      responseData: response.data,
+      statusCode: response.statusCode,
+      amount: widget.amount,
+      submittedAt: submittedAt,
+      descriptionHints: [widget.phoneNumber, widget.network, 'airtime'],
+      fallbackSuccessMessage: 'Airtime recharge successful.',
+    );
 
-    if (confirmedSuccess) {
-      // Navigate to success screen
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(
-          builder:
-              (context) => TransactionReceiptScreen(
-                data: TransactionReceiptData(
-                  service: 'Airtime',
-                  type: widget.network,
-                  description: 'Airtime recharge for ${widget.phoneNumber}',
-                  amount: '\u20A6${widget.amount}',
-                  status: 'success',
-                  reference: response.data?['reference']?.toString() ?? '',
-                  initialBalance:
-                      response.data?['initial_balance']?.toString() ?? '',
-                  finalBalance:
-                      response.data?['final_balance']?.toString() ?? '',
-                  date: DateTime.now(),
-                  phoneNumber: widget.phoneNumber,
-                ),
+    if (!mounted) return;
+
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(
+        builder:
+            (context) => TransactionReceiptScreen(
+              data: TransactionReceiptData(
+                service: 'Airtime',
+                type: widget.network,
+                description: 'Airtime recharge for ${widget.phoneNumber}',
+                amount: '\u20A6${widget.amount}',
+                status: resolved.success ? 'success' : 'failed',
+                statusMessage: resolved.message,
+                reference: resolved.reference,
+                sessionId: resolved.sessionId,
+                initialBalance: resolved.initialBalance,
+                finalBalance: resolved.finalBalance,
+                date: DateTime.now(),
+                phoneNumber: widget.phoneNumber,
               ),
-        ),
-      );
-    } else {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(
-          builder:
-              (_) => TransactionReceiptScreen(
-                data: TransactionReceiptData(
-                  service: 'Airtime',
-                  type: widget.network,
-                  description: 'Airtime recharge for ${widget.phoneNumber}',
-                  amount: '\u20A6${widget.amount}',
-                  status: 'failed',
-                  statusMessage: response.message,
-                  reference: response.data?['reference']?.toString() ?? '',
-                  initialBalance: '',
-                  finalBalance: '',
-                  date: DateTime.now(),
-                  phoneNumber: widget.phoneNumber,
-                ),
-              ),
-        ),
-      );
-    }
+            ),
+      ),
+    );
   }
 
   @override

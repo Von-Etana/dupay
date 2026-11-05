@@ -1,6 +1,7 @@
 // lib/screen/send_money/p2p_screen.dart
 // Replace the existing file with this version.
 
+import '../../services/transactions/transaction_result_resolver.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
@@ -227,70 +228,26 @@ class _P2PScreenState extends ConsumerState<P2PScreen> {
                         comment: message.isEmpty ? null : message,
                         transactionPin: pin,
                       );
-                  if (!response.success &&
-                      (response.statusCode == null ||
-                          response.statusCode! >= 500 ||
-                          response.message.toLowerCase().contains(
-                            'internal server error',
-                          ))) {
-                    try {
-                      final history = await TransactionRepository().searchTransactions(page: 1, limit: 20);
-                      final confirmed =
-                          history.data?.where((transaction) {
-                            final sameAmount =
-                                transaction.amountValue ==
-                                (double.tryParse(cleanAmount) ?? -1);
-                            final recent = transaction.createdAt.isAfter(
-                              submittedAt.subtract(const Duration(seconds: 10)),
-                            );
-                            final recipient =
-                                transaction.description?.toLowerCase().contains(
-                                  name.toString().toLowerCase(),
-                                ) ??
-                                false;
-                            final debit =
-                                transaction.type == '0' ||
-                                transaction.type.toLowerCase() == 'debit';
-                            return sameAmount &&
-                                recent &&
-                                recipient &&
-                                debit &&
-                                transaction.isSuccessful;
-                          }).firstOrNull;
-                      if (confirmed != null) {
-                        return {
-                          'success': true,
-                          'status': 'success',
-                          'message': 'Transfer completed successfully.',
-                          'reference': confirmed.reference ?? '',
-                          'description':
-                              confirmed.description ?? 'Transfer to $name',
-                          'show_result_screen': true,
-                        };
-                      }
-                    } catch (_) {
-                      // Keep the status unconfirmed if history is unavailable.
-                    }
-                  }
+                  final resolved = await TransactionResultResolver.resolve(
+                    responseSuccess: response.success,
+                    responseMessage: response.message,
+                    responseData: response.data,
+                    statusCode: response.statusCode,
+                    amount: cleanAmount,
+                    submittedAt: submittedAt,
+                    descriptionHints: [name.toString(), 'p2p', 'transfer'],
+                    fallbackSuccessMessage: 'Transfer completed successfully.',
+                  );
                   return {
-                    'success': response.success,
-                    'message': response.message,
-                    'status':
-                        response.data?['status']?.toString() ??
-                        (response.success
-                            ? 'success'
-                            : (response.statusCode == null ||
-                                    response.statusCode! >= 500 ||
-                                    response.message.toLowerCase().contains(
-                                      'internal server error',
-                                    )
-                                ? 'pending'
-                                : 'failed')),
+                    'success': resolved.success,
+                    'message': resolved.message,
+                    'status': resolved.status,
                     'show_result_screen': true,
-                    'reference': response.data?['reference'] ?? '',
+                    'reference': resolved.reference,
+                    'session_id': resolved.sessionId,
                     'description': 'Transfer to $name',
-                    'initial_balance': response.data?['initial_balance'] ?? '',
-                    'final_balance': response.data?['final_balance'] ?? '',
+                    'initial_balance': resolved.initialBalance,
+                    'final_balance': resolved.finalBalance,
                   };
                 },
               ),

@@ -1,5 +1,6 @@
 
 
+import '../../services/transactions/transaction_result_resolver.dart';
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -111,6 +112,7 @@ class _BillPaymentScreenState extends ConsumerState<BillPaymentScreen> {
             description:
                 '${selectedBill!.name ?? selectedBill!.disco} • ${_meterType.toUpperCase()}',
             onConfirm: (pin) async {
+              final submittedAt = DateTime.now();
               final response =
                   await ref.read(billNotifierProvider.notifier).payBill(
                         phoneNumber: _phoneCtrl.text,
@@ -120,6 +122,24 @@ class _BillPaymentScreenState extends ConsumerState<BillPaymentScreen> {
                         amount: _amountCtrl.text,
                         transactionPin: pin,
                       );
+              final resolved = await TransactionResultResolver.resolve(
+                responseSuccess: response.success,
+                responseMessage: response.message,
+                responseData: response.data,
+                statusCode: response.statusCode,
+                amount: _amountCtrl.text,
+                submittedAt: submittedAt,
+                descriptionHints: [
+                  selectedBill!.name ?? selectedBill!.disco ?? '',
+                  _meterCtrl.text,
+                  _phoneCtrl.text,
+                  _meterType,
+                  'electricity',
+                  'bill',
+                ],
+                fallbackSuccessMessage: 'Bill payment successful.',
+              );
+
               // Build the service-specific receipt rows from what we know
               // (provider, customer, meter) plus anything the API returns
               // (prepaid token/units, VAT). Empty values are skipped.
@@ -148,17 +168,15 @@ class _BillPaymentScreenState extends ConsumerState<BillPaymentScreen> {
               ];
 
               return {
-                'success': response.success,
-                'message': response.message,
-                'reference': response.data?['reference']?.toString() ??
-                    response.data?['session_id']?.toString() ??
-                    '',
+                'success': resolved.success,
+                'status': resolved.status,
+                'message': resolved.message,
+                'reference': resolved.reference,
+                'session_id': resolved.sessionId,
                 'description': '',
                 'extra_fields': extraFields,
-                'initial_balance':
-                    response.data?['initial_balance']?.toString() ?? '',
-                'final_balance':
-                    response.data?['final_balance']?.toString() ?? '',
+                'initial_balance': resolved.initialBalance,
+                'final_balance': resolved.finalBalance,
               };
             },
           ),

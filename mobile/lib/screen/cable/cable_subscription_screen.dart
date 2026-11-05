@@ -1,5 +1,6 @@
 // lib/screen/cable/cable_subscription_screen.dart
 
+import '../../services/transactions/transaction_result_resolver.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -156,6 +157,7 @@ class _CableSubscriptionScreenState
                           amount: '₦$amount',
                           description: '${plan['name']} • $phone',
                           onConfirm: (pin) async {
+                            final submittedAt = DateTime.now();
                             final response = await ref
                                 .read(cableNotifierProvider.notifier)
                                 .buyCable(
@@ -165,23 +167,32 @@ class _CableSubscriptionScreenState
                                   decoderNumber: decoder,
                                   transactionPin: pin,
                                 );
+                            final resolved = await TransactionResultResolver.resolve(
+                              responseSuccess: response.success,
+                              responseMessage: response.message,
+                              responseData: response.data,
+                              statusCode: response.statusCode,
+                              amount: amount.toString(),
+                              submittedAt: submittedAt,
+                              descriptionHints: [
+                                providerName,
+                                decoder,
+                                phone,
+                                plan['name']?.toString() ?? '',
+                                'cable',
+                              ],
+                              fallbackSuccessMessage: 'Cable subscription successful.',
+                            );
                             return {
-                              'success': response.success,
-                              'status':
-                                  response.data?['status']?.toString() ??
-                                  (response.success ? 'success' : 'failed'),
-                              'message': response.message,
-                              'reference':
-                                  response.data?['reference']?.toString() ?? '',
+                              'success': resolved.success,
+                              'status': resolved.status,
+                              'message': resolved.message,
+                              'reference': resolved.reference,
+                              'session_id': resolved.sessionId,
                               'description':
                                   '$providerName ${plan['name']} for $decoder',
-                              'initial_balance':
-                                  response.data?['initial_balance']
-                                      ?.toString() ??
-                                  '',
-                              'final_balance':
-                                  response.data?['final_balance']?.toString() ??
-                                  '',
+                              'initial_balance': resolved.initialBalance,
+                              'final_balance': resolved.finalBalance,
                             };
                           },
                         ),

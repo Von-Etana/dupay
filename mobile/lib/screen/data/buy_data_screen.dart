@@ -1,3 +1,4 @@
+import '../../services/transactions/transaction_result_resolver.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -395,17 +396,34 @@ class _BuyDataScreenState extends ConsumerState<BuyDataScreen> {
                               '   phone             = ${phoneController.text}',
                             );
 
+                            final submittedAt = DateTime.now();
                             final response = await ref
                                 .read(dataNotifierProvider.notifier)
                                 .buyData(
                                   phoneNumber: phoneController.text,
                                   networkId: network.id.toString(),
                                   // Backend expects the local DB plan id (and the
-                                  // owning data_type id) — not the variation_code.
+                                  // owning data_type id) - not the variation_code.
                                   planId: plan.id.toString(),
                                   dataTypeId: dataType.id.toString(),
                                   transactionPin: pin,
                                 );
+
+                            final resolved = await TransactionResultResolver.resolve(
+                              responseSuccess: response.success,
+                              responseMessage: response.message,
+                              responseData: response.data,
+                              statusCode: response.statusCode,
+                              amount: (plan.price ?? 0).toString(),
+                              submittedAt: submittedAt,
+                              descriptionHints: [
+                                phoneController.text,
+                                network.name ?? '',
+                                plan.name ?? '',
+                                'data',
+                              ],
+                              fallbackSuccessMessage: 'Data purchase successful.',
+                            );
 
                             closeLoading();
                             if (!mounted) return;
@@ -419,78 +437,32 @@ class _BuyDataScreenState extends ConsumerState<BuyDataScreen> {
                                 )) {
                               planLabel = '${plan.size} · $planLabel';
                             }
-                            final rawStatus =
-                                response.data?['status']
-                                    ?.toString()
-                                    .toLowerCase();
-                            final confirmedSuccess =
-                                response.success &&
-                                !const {
-                                  'pending',
-                                  'processing',
-                                  'queued',
-                                }.contains(rawStatus);
-                            if (confirmedSuccess) {
-                              final data = response.data ?? {};
 
-                              rootNavigator.pushReplacement(
-                                MaterialPageRoute(
-                                  builder:
-                                      (context) => TransactionReceiptScreen(
-                                        data: TransactionReceiptData(
-                                          service: 'Data Bundle',
-                                          type: '${network.name} | $planLabel',
-                                          description:
-                                              'Data purchase for ${phoneController.text}',
-                                          amount: formatCurrency(
-                                            plan.price ?? 0,
-                                          ),
-                                          status: 'success',
-                                          reference:
-                                              data['reference']?.toString() ??
-                                              '',
-                                          initialBalance:
-                                              data['initial_balance']
-                                                  ?.toString() ??
-                                              '',
-                                          finalBalance:
-                                              data['final_balance']
-                                                  ?.toString() ??
-                                              '',
-                                          date: DateTime.now(),
-                                          phoneNumber: phoneController.text,
+                            rootNavigator.pushReplacement(
+                              MaterialPageRoute(
+                                builder:
+                                    (context) => TransactionReceiptScreen(
+                                      data: TransactionReceiptData(
+                                        service: 'Data Bundle',
+                                        type: '${network.name} | $planLabel',
+                                        description:
+                                            'Data purchase for ${phoneController.text}',
+                                        amount: formatCurrency(
+                                          plan.price ?? 0,
                                         ),
+                                        status: resolved.success ? 'success' : 'failed',
+                                        statusMessage: resolved.message,
+                                        reference: resolved.reference,
+                                        sessionId: resolved.sessionId,
+                                        initialBalance: resolved.initialBalance,
+                                        finalBalance: resolved.finalBalance,
+                                        date: DateTime.now(),
+                                        phoneNumber: phoneController.text,
                                       ),
-                                ),
-                              );
-                            } else {
-                              rootNavigator.pushReplacement(
-                                MaterialPageRoute(
-                                  builder:
-                                      (_) => TransactionReceiptScreen(
-                                        data: TransactionReceiptData(
-                                          service: 'Data Bundle',
-                                          type: '${network.name} | $planLabel',
-                                          description:
-                                              'Data purchase for ${phoneController.text}',
-                                          amount: formatCurrency(
-                                            plan.price ?? 0,
-                                          ),
-                                          status: 'failed',
-                                          statusMessage: response.message,
-                                          reference:
-                                              response.data?['reference']
-                                                  ?.toString() ??
-                                              '',
-                                          initialBalance: '',
-                                          finalBalance: '',
-                                          date: DateTime.now(),
-                                          phoneNumber: phoneController.text,
-                                        ),
-                                      ),
-                                ),
-                              );
-                            }
+                                    ),
+                              ),
+                            );
+
                           } catch (e) {
                             closeLoading();
                             if (!mounted) return;

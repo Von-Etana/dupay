@@ -1,6 +1,7 @@
 // // lib/screen/send_money/bank_transfer_screen.dart
 
-// import 'dart:async';
+// import '../../services/transactions/transaction_result_resolver.dart';
+import 'dart:async';
 // import 'package:flutter/material.dart';
 // import 'package:flutter/services.dart';
 // import 'package:intl/intl.dart';
@@ -10,6 +11,7 @@
 // import '../../providers/auth_provider.dart';
 // import '../../services/cache/cache_service.dart';
 // import '../transaction/transaction_summary_screen.dart';
+import '../../services/transactions/transaction_result_resolver.dart';
 
 // class BankTransferScreen extends ConsumerStatefulWidget {
 //   const BankTransferScreen({super.key});
@@ -1105,112 +1107,26 @@ class _BankTransferScreenState extends ConsumerState<BankTransferScreen> {
                     },
                   );
                   final isSuccessful = response.success;
-                  final rawStatus =
-                      response.data?['status']?.toString().toLowerCase();
-                  final isUnconfirmed =
-                      response.statusCode == 202 ||
-                      response.data?['request_id'] != null ||
-                      const {
-                        'pending',
-                        'processing',
-                        'queued',
-                      }.contains(rawStatus);
-
-                  var confirmedSuccess = isSuccessful && !isUnconfirmed;
-                  var confirmedFailure = !isSuccessful && !isUnconfirmed;
-                  var confirmedReference =
-                      response.data?['reference']?.toString() ?? '';
-                  var confirmedInitialBalance =
-                      response.data?['initial_balance']?.toString() ?? '';
-                  var confirmedFinalBalance =
-                      response.data?['final_balance']?.toString() ?? '';
-
-                  if (isUnconfirmed) {
-                    for (var attempt = 0; attempt < 8; attempt++) {
-                      if (attempt > 0) {
-                        await Future.delayed(const Duration(seconds: 2));
-                      }
-                      try {
-                        final history = await TransactionRepository()
-                            .searchTransactions(page: 1, limit: 25);
-                        final expectedAmount =
-                            double.tryParse(amount.replaceAll(',', '')) ?? -1;
-                        final candidates = history.data ?? const [];
-                        for (final transaction in candidates) {
-                          final sameReference =
-                              confirmedReference.isNotEmpty &&
-                              transaction.reference == confirmedReference;
-                          final sameTransfer =
-                              transaction.amountValue == expectedAmount &&
-                              transaction.createdAt.isAfter(
-                                submittedAt.subtract(
-                                  const Duration(seconds: 15),
-                                ),
-                              ) &&
-                              (transaction.description?.toLowerCase().contains(
-                                    accName.toLowerCase(),
-                                  ) ??
-                                  false);
-                          if (!sameReference && !sameTransfer) continue;
-
-                          final historyStatus =
-                              transaction.status.trim().toLowerCase();
-                          if (const {
-                            'success',
-                            'successful',
-                            'completed',
-                            'approved',
-                          }.contains(historyStatus)) {
-                            confirmedSuccess = true;
-                            confirmedFailure = false;
-                            confirmedReference = transaction.reference ?? '';
-                            confirmedInitialBalance =
-                                transaction.metadata?['initial_balance']
-                                    ?.toString() ??
-                                '';
-                            confirmedFinalBalance =
-                                transaction.metadata?['final_balance']
-                                    ?.toString() ??
-                                '';
-                          } else if (const {
-                            'failed',
-                            'unsuccessful',
-                            'declined',
-                            'rejected',
-                            'refund',
-                          }.contains(historyStatus)) {
-                            confirmedFailure = true;
-                            confirmedSuccess = false;
-                            confirmedReference = transaction.reference ?? '';
-                          }
-                          break;
-                        }
-                      } catch (_) {
-                        // Continue polling; never repeat the money request.
-                      }
-                      if (confirmedSuccess || confirmedFailure) break;
-                    }
-                  }
+                  final resolved = await TransactionResultResolver.resolve(
+                    responseSuccess: isSuccessful,
+                    responseMessage: response.message,
+                    responseData: response.data,
+                    statusCode: response.statusCode,
+                    amount: amount,
+                    submittedAt: submittedAt,
+                    descriptionHints: [accName, accNum, bankName, 'transfer'],
+                    fallbackSuccessMessage: 'Transfer completed successfully.',
+                  );
                   return {
-                    'success': confirmedSuccess,
-                    'message':
-                        confirmedSuccess
-                            ? 'Transfer completed successfully.'
-                            : (confirmedFailure
-                                ? response.message
-                                : 'We could not confirm the transfer result. Check transaction history before trying again.'),
+                    'success': resolved.success,
+                    'message': resolved.message,
                     'show_result_screen': true,
-                    'status': confirmedSuccess ? 'success' : 'failed',
-                    'reference': confirmedReference,
-                    // Prefer session_id echoed back by the backend; fall back to
-                    // the one we obtained from the SafeHaven name enquiry so the
-                    // receipt shown immediately after sending matches the value
-                    // later returned by transaction history.
-                    'session_id':
-                        response.data?['session_id']?.toString() ?? sessionId,
+                    'status': resolved.status,
+                    'reference': resolved.reference,
+                    'session_id': resolved.sessionId ?? sessionId,
                     'description': 'Transfer to $accName',
-                    'initial_balance': confirmedInitialBalance,
-                    'final_balance': confirmedFinalBalance,
+                    'initial_balance': resolved.initialBalance,
+                    'final_balance': resolved.finalBalance,
                   };
                 },
               ),

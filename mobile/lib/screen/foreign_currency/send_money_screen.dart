@@ -1,6 +1,7 @@
 // lib/screen/foreign_currency/send_money_screen.dart
 // Replace the existing file with this version.
 
+import '../../services/transactions/transaction_result_resolver.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -60,6 +61,7 @@ class _ForeignSendMoneyScreenState
                     '${widget.currency} ${double.tryParse(_amountCtrl.text)?.toStringAsFixed(2) ?? _amountCtrl.text}',
                 showPendingWhenUnconfirmed: false,
                 onConfirm: (pin) async {
+                  final submittedAt = DateTime.now();
                   final response = await ref
                       .read(foreignCurrencyNotifierProvider.notifier)
                       .sendForeignMoney(
@@ -70,30 +72,32 @@ class _ForeignSendMoneyScreenState
                         amount: double.tryParse(_amountCtrl.text) ?? 0,
                         transactionPin: pin,
                       );
-                  final rawStatus =
-                      response.data?['status']?.toString().toLowerCase();
-                  final confirmedSuccess =
-                      response.success &&
-                      !const {
-                        'pending',
-                        'processing',
-                        'queued',
-                      }.contains(rawStatus);
+                  final resolved = await TransactionResultResolver.resolve(
+                    responseSuccess: response.success,
+                    responseMessage: response.message,
+                    responseData: response.data,
+                    statusCode: response.statusCode,
+                    amount: _amountCtrl.text,
+                    submittedAt: submittedAt,
+                    descriptionHints: [
+                      _recipientNameCtrl.text,
+                      _recipientAccountCtrl.text,
+                      widget.currency,
+                      'foreign',
+                      'transfer',
+                    ],
+                    fallbackSuccessMessage: 'Transfer completed successfully.',
+                  );
                   return {
-                    'success': confirmedSuccess,
-                    'status': confirmedSuccess ? 'success' : 'failed',
-                    'message':
-                        confirmedSuccess
-                            ? response.message
-                            : (rawStatus == 'pending' ||
-                                    rawStatus == 'processing'
-                                ? 'Transfer confirmation failed. Check transaction history before trying again.'
-                                : response.message),
-                    'reference': response.data?['reference'] ?? '',
+                    'success': resolved.success,
+                    'status': resolved.status,
+                    'message': resolved.message,
+                    'reference': resolved.reference,
+                    'session_id': resolved.sessionId,
                     'description':
                         'Sent ${widget.currency} ${_amountCtrl.text} to ${_recipientNameCtrl.text}',
-                    'initial_balance': response.data?['initial_balance'] ?? '',
-                    'final_balance': response.data?['final_balance'] ?? '',
+                    'initial_balance': resolved.initialBalance,
+                    'final_balance': resolved.finalBalance,
                   };
                 },
               ),
