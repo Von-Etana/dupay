@@ -554,11 +554,12 @@ class TransferController extends Controller
     
             $resDesc = $response['message'];
             
-            $sessionId = $trx;
-		
-		if ($response['success'] && isset($response['data']['sessionId'])) {
-			$sessionId = $response['data']['sessionId'];
-		}
+            $sessionId = null;
+            if (!empty($response['data']['sessionId'])) {
+                $sessionId = $response['data']['sessionId'];
+            } elseif (!empty($response['data']['session_id'])) {
+                $sessionId = $response['data']['session_id'];
+            }
         
             if ($response['success']) {
                 $status = 1;
@@ -959,10 +960,11 @@ class TransferController extends Controller
     
             $resDesc = $response['message'];
             
-            $sessionId = $trx;
-		
-    		if ($response['success'] && isset($response['data']['sessionId'])) {
+            $sessionId = null;
+            if (!empty($response['data']['sessionId'])) {
                 $sessionId = $response['data']['sessionId'];
+            } elseif (!empty($response['data']['session_id'])) {
+                $sessionId = $response['data']['session_id'];
             }
         
             if ($response['success']) {

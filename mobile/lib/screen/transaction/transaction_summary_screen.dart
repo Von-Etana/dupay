@@ -222,7 +222,7 @@ class _TransactionSummaryScreenState
           MaterialPageRoute(
             builder:
                 (_) => TransactionReceiptScreen(
-                  isNewTransaction: false,
+                  isNewTransaction: true,
                   data: receiptData,
                 ),
           ),
@@ -258,7 +258,7 @@ class _TransactionSummaryScreenState
             MaterialPageRoute(
               builder:
                   (_) => TransactionReceiptScreen(
-                    isNewTransaction: false,
+                    isNewTransaction: true,
                     data: resultData,
                   ),
             ),
@@ -295,7 +295,7 @@ class _TransactionSummaryScreenState
           MaterialPageRoute(
             builder:
                 (_) => TransactionReceiptScreen(
-                  isNewTransaction: false,
+                  isNewTransaction: true,
                   data: pendingData,
                 ),
           ),

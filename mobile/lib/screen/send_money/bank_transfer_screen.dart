@@ -1117,13 +1117,18 @@ class _BankTransferScreenState extends ConsumerState<BankTransferScreen> {
                     descriptionHints: [accName, accNum, bankName, 'transfer'],
                     fallbackSuccessMessage: 'Transfer completed successfully.',
                   );
+                  final transferSessionId =
+                      (resolved.sessionId != null && resolved.sessionId!.isNotEmpty)
+                          ? resolved.sessionId
+                          : (response.data?['session_id']?.toString() ??
+                              response.data?['sessionId']?.toString());
                   return {
                     'success': resolved.success,
                     'message': resolved.message,
                     'show_result_screen': true,
                     'status': resolved.status,
                     'reference': resolved.reference,
-                    'session_id': resolved.sessionId ?? sessionId,
+                    'session_id': transferSessionId,
                     'description': 'Transfer to $accName',
                     'initial_balance': resolved.initialBalance,
                     'final_balance': resolved.finalBalance,

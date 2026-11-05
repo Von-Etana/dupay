@@ -3,13 +3,14 @@ import 'package:dupay/services/transactions/transaction_result_resolver.dart';
 
 void main() {
   group('TransactionResultResolver', () {
-    test('immediately trusts confirmed provider success', () async {
+    test('immediately trusts confirmed provider success and preserves sessionId', () async {
       final result = await TransactionResultResolver.resolve(
         responseSuccess: true,
         responseMessage: 'Order complete',
         responseData: {
           'status': 'success',
           'reference': 'REF12345',
+          'session_id': '090286260926171146344310505365',
           'initial_balance': '1000',
           'final_balance': '900',
         },
@@ -22,6 +23,7 @@ void main() {
       expect(result.success, isTrue);
       expect(result.status, equals('success'));
       expect(result.reference, equals('REF12345'));
+      expect(result.sessionId, equals('090286260926171146344310505365'));
       expect(result.initialBalance, equals('1000'));
       expect(result.finalBalance, equals('900'));
     });

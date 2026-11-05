@@ -378,6 +378,7 @@ class _ActivityScreenState extends ConsumerState<ActivityScreen> {
 
     Navigator.push(context, MaterialPageRoute(
       builder: (_) => TransactionReceiptScreen(
+        isNewTransaction: false,
         data: TransactionReceiptData(
           service:        _txTitle(tx),
           type:           tx.type == '0' ? 'Debit' : tx.type == '1' ? 'Credit' : tx.type,

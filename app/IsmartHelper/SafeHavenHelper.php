@@ -448,16 +448,18 @@ function safeHavenBankTransfer(array $payload): array
         $resCode = (string) ($json->responseCode ?? $json->data->responseCode ?? '');
         $statusCode = (int) ($json->statusCode ?? $response->getStatusCode());
         $providerStatus = strtolower(trim((string) ($json->data->status ?? $json->status ?? '')));
-        $successfulStatuses = ['success', 'successful', 'completed', 'complete', 'approved'];
+        $successfulStatuses = ['success', 'successful', 'completed', 'complete', 'approved', 'created'];
         $hasSuccessMarker = $resCode === '00'
             || in_array($providerStatus, $successfulStatuses, true)
             || isset($json->data->approvedAt);
+
+        $extractedSessionId = (string) ($json->data->sessionId ?? $json->sessionId ?? '');
 
         // Successful transfer
         if (
             $statusCode >= 200 &&
             $statusCode < 300 &&
-            isset($json->data->sessionId) &&
+            $extractedSessionId !== '' &&
             $hasSuccessMarker
         ) {
 
@@ -505,7 +507,9 @@ function safeHavenBankTransfer(array $payload): array
         return [
             'success' => false,
             'message' => $json->message ?? 'Transfer failed',
-            'data'    => [],
+            'data'    => [
+                'sessionId' => $extractedSessionId !== '' ? $extractedSessionId : null,
+            ],
         ];
 
     } catch (RequestException $e) {

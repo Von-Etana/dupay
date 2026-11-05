@@ -142,13 +142,23 @@ class TransactionResultResolver {
           if (!sameReference && !sameTransaction) continue;
 
           final historyStatus = transaction.status.trim().toLowerCase();
+          final historySessionId =
+              transaction.metadata?['session_id']?.toString() ??
+              transaction.metadata?['sessionId']?.toString();
+          final resolvedSessionId =
+              (historySessionId != null && historySessionId.isNotEmpty)
+                  ? historySessionId
+                  : ((sessionId != null && sessionId.isNotEmpty)
+                      ? sessionId
+                      : null);
+
           if (_successful.contains(historyStatus)) {
             return ResolvedTransactionResult(
               success: true,
               status: 'success',
               message: fallbackSuccessMessage,
               reference: transaction.reference ?? reference,
-              sessionId: sessionId ?? transaction.reference,
+              sessionId: resolvedSessionId,
               initialBalance:
                   transaction.metadata?['initial_balance']?.toString() ?? '',
               finalBalance:
@@ -163,7 +173,7 @@ class TransactionResultResolver {
                   ? 'Transaction failed. Please try again.'
                   : responseMessage,
               reference: transaction.reference ?? reference,
-              sessionId: sessionId,
+              sessionId: resolvedSessionId,
             );
           }
         }
@@ -179,7 +189,7 @@ class TransactionResultResolver {
       message:
           'We could not confirm the transaction result. Check transaction history before trying again.',
       reference: reference,
-      sessionId: sessionId,
+      sessionId: (sessionId != null && sessionId.isNotEmpty) ? sessionId : null,
     );
   }
 }
