@@ -80,6 +80,11 @@ class RechargePinController extends Controller
     
         $unit_price = $rate->rate;
         $amount = $unit_price * $data['quantity'];
+
+        if (!config('services.strowallet.public_key')) {
+            Log::error('Strowallet ePIN public key is not configured');
+            return response(['success' => false, 'message' => 'Recharge cards are temporarily unavailable. Please try again later.']);
+        }
     
         return DB::transaction(function () use ($user, $amount, $data, $network, $request) {
             
@@ -105,7 +110,7 @@ class RechargePinController extends Controller
                 $client = new \GuzzleHttp\Client();
                 $response = $client->request('POST', 'https://strowallet.com/api/buy_epin/', [
                     'query' => [
-                        'public_key' => env('STROWALLET_PUBLIC_KEY'),
+                        'public_key' => config('services.strowallet.public_key'),
                         'card_network' => $network->name,
                         'value' => $data['value'],
                         'quantity' => $data['quantity'],
@@ -118,7 +123,10 @@ class RechargePinController extends Controller
     
                 $body = json_decode($response->getBody(), true);
                 
-                Log::info('From Strowallet: ' . json_encode($body));
+                Log::info('Strowallet ePIN response', [
+                    'status' => $body['status'] ?? null,
+                    'reference' => $body['data']['trxid'] ?? null,
+                ]);
     
                 if (isset($body['status']) && $body['status'] === 'error') {
                     userBalanceAction($lockedUser, $amount, '1', "+");
@@ -158,65 +166,70 @@ class RechargePinController extends Controller
                         throw new \Exception("Failed to create transaction record");
                     }
     
-                    referralCommission($lockedUser, $transaction, $amount);
-    
-                    if (getSiteSettings("phone_notify") == "Yes") {
-                        $smsDescription = "Txn: Debit\n" .
-                            "Amt: NGN " . number_format($amount, 2) . "\n" .
-                            "Des: {$network->name} ePIN Purchase {$Trx}\n" .
-                            "Qty: {$data['quantity']} x ₦{$data['value']}\n" .
-                            "Date: " . now()->format('d-m-Y H:i') . "\n" .
-                            "Bal: NGN " . number_format($final_balance, 2);
-    
-                        sendTransactionSms($lockedUser, $smsDescription, '1');
-                    }
-    
-                    if (getSiteSettings("email_notify") == "Yes") {
-                        $this->sendEmailNotification($lockedUser, $network, $data, $amount, $final_balance, $Trx);
-                    }
-    
                     $cards = $body['data']['cards'] ?? [];
                     
                     if (empty($cards)) {
                         throw new \Exception("No cards received from API");
                     }
     
-                    $pdf = Pdf::loadView('pdf.epins', [
-                        'network' => strtoupper($network->name),
-                        'value' => $data['value'],
-                        'quantity' => $data['quantity'],
-                        'cards' => $cards,
-                        'reference' => $Trx,
-                        'user' => $lockedUser,
-                        'date' => now(),
-                    ]);
-    
                     $pdfPath = "epins/epin_{$Trx}.pdf";
-                    Storage::disk('public')->put($pdfPath, $pdf->output());
-                    $pdfUrl = Storage::url($pdfPath);
-    
-                    EpinPurchase::create([
+                    $purchase = EpinPurchase::create([
                         'user_id' => $lockedUser->id,
                         'network_id' => $request->network_id,
                         'value' => $data['value'],
                         'quantity' => $data['quantity'],
                         'cards' => json_encode($cards),
                         'reference' => $Trx,
-                        'pdf_path' => $pdfUrl,
+                        'pdf_path' => null,
                     ]);
-    
-                    if (!empty($lockedUser->fcmToken)) {
-                        sendFcmNotification(
-                            $lockedUser->fcmToken,
-                            'ePINs successfully purchased',
-                            'Recharge card purchase successful! Your ePINs have been generated and saved. You can download the PDF receipt.',
-                            ['user_id' => $lockedUser->id, 'type' => 'success']
-                        );
-                    }
+
+                    app()->terminating(function () use ($lockedUser, $transaction, $amount, $network, $data, $final_balance, $Trx, $cards, $pdfPath, $purchase) {
+                        try {
+                            referralCommission($lockedUser, $transaction, $amount);
+                        } catch (\Throwable $e) {
+                            Log::error('ePIN referral commission failed', ['reference' => $Trx, 'error' => $e->getMessage()]);
+                        }
+                        try {
+                            $pdf = Pdf::loadView('pdf.epins', [
+                                'network' => strtoupper($network->name),
+                                'value' => $data['value'],
+                                'quantity' => $data['quantity'],
+                                'cards' => $cards,
+                                'reference' => $Trx,
+                                'user' => $lockedUser,
+                                'date' => now(),
+                            ]);
+                            if (Storage::disk('public')->put($pdfPath, $pdf->output())) {
+                                $purchase->update(['pdf_path' => Storage::url($pdfPath)]);
+                            }
+                        } catch (\Throwable $e) {
+                            Log::error('ePIN PDF generation failed', ['reference' => $Trx, 'error' => $e->getMessage()]);
+                        }
+                        try {
+                            if (getSiteSettings('phone_notify') == 'Yes') {
+                                $smsDescription = "Txn: Debit\nAmt: NGN " . number_format($amount, 2)
+                                    . "\nDes: {$network->name} ePIN Purchase {$Trx}"
+                                    . "\nQty: {$data['quantity']} x ₦{$data['value']}"
+                                    . "\nDate: " . now()->format('d-m-Y H:i')
+                                    . "\nBal: NGN " . number_format($final_balance, 2);
+                                sendTransactionSms($lockedUser, $smsDescription, '1');
+                            }
+                            if (getSiteSettings('email_notify') == 'Yes') {
+                                $this->sendEmailNotification($lockedUser, $network, $data, $amount, $final_balance, $Trx);
+                            }
+                            if (!empty($lockedUser->fcmToken)) {
+                                sendFcmNotification($lockedUser->fcmToken, 'ePINs successfully purchased',
+                                    'Recharge card purchase successful! Your ePINs have been generated and saved.',
+                                    ['user_id' => $lockedUser->id, 'type' => 'success']);
+                            }
+                        } catch (\Throwable $e) {
+                            Log::error('ePIN notification failed', ['reference' => $Trx, 'error' => $e->getMessage()]);
+                        }
+                    });
     
                     return response([
                         'success' => true,
-                        'message' => 'Recharge card purchase successful! Your ePINs have been generated and saved. You can download the PDF receipt.',
+                        'message' => 'Recharge card purchase successful! Your ePINs have been generated and saved.',
                         'data' => $body['data'],
                     ]);
     
