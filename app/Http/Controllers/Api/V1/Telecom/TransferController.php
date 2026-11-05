@@ -556,9 +556,9 @@ class TransferController extends Controller
             
             $sessionId = $trx;
 		
-    		if ($response['success'] && isset($response['data']->data->sessionId)) {
-    			$sessionId = $response['data']->data->sessionId;
-    		}
+		if ($response['success'] && isset($response['data']['sessionId'])) {
+			$sessionId = $response['data']['sessionId'];
+		}
         
             if ($response['success']) {
                 $status = 1;
@@ -572,6 +572,10 @@ class TransferController extends Controller
                 $transaction->update(['session_id' => $sessionId]);
             }
     
+            $transaction->update(['status' => $finalStatus]);
+        } else {
+            $finalStatus = 'success';
+            $status = 1;
             $transaction->update(['status' => $finalStatus]);
         }
     
@@ -699,15 +703,20 @@ class TransferController extends Controller
             }
         });
 
+        $isSuccessful = ($finalStatus === 'success');
         return response()->json([
-            'success' => $finalStatus === 'success',
-            'status' => $finalStatus,
-            'message' => $finalStatus === 'success' ? 'Transfer successful.' : 'Transaction unsuccessful: ' . $resDesc,
+            'success' => $isSuccessful,
+            'status' => $isSuccessful ? 'successful' : $finalStatus,
+            'message' => $isSuccessful ? 'Transfer successful.' : 'Transaction unsuccessful: ' . $resDesc,
             'data' => [
                 'service' => "Fund Withdrawal",
                 'amount' => $requestAmount,
                 'charge' => $charge + $p_charge,
                 'reference' => $trx,
+                'session_id' => $sessionId ?? $trx,
+                'status' => $isSuccessful ? 'successful' : $finalStatus,
+                'initial_balance' => $balanceAction['init_balance'] ?? '',
+                'final_balance' => $balanceAction['final_balance'] ?? '',
                 'wallet_balance' => $balanceAction['final_balance'],
                 'from' => "Wallet",
                 'date' => $date,
@@ -969,6 +978,10 @@ class TransferController extends Controller
             }
     
             $transaction->update(['status' => $finalStatus]);
+        } else {
+            $finalStatus = 'success';
+            $status = 1;
+            $transaction->update(['status' => $finalStatus]);
         }
     
         /*
@@ -1087,15 +1100,20 @@ class TransferController extends Controller
         $this->notifyWithdrawalOutcome($user, $transaction, $finalStatus, $requestAmount, $trx);
         (new FirebaseUserUpdate)->updateUser($user);
     
+        $isSuccessful = ($finalStatus === 'success');
         return response()->json([
-            'success' => $finalStatus === 'success',
-            'status' => $finalStatus,
-            'message' => $finalStatus === 'success' ? 'Transfer successful.' : 'Transaction unsuccessful: ' . $resDesc,
+            'success' => $isSuccessful,
+            'status' => $isSuccessful ? 'successful' : $finalStatus,
+            'message' => $isSuccessful ? 'Transfer successful.' : 'Transaction unsuccessful: ' . $resDesc,
             'data' => [
                 'service' => "Fund Withdrawal",
                 'amount' => $requestAmount,
                 'charge' => $charge + $p_charge,
                 'reference' => $trx,
+                'session_id' => $sessionId ?? $trx,
+                'status' => $isSuccessful ? 'successful' : $finalStatus,
+                'initial_balance' => $balanceAction['init_balance'] ?? '',
+                'final_balance' => $balanceAction['final_balance'] ?? '',
                 'wallet_balance' => $balanceAction['final_balance'],
                 'from' => "Wallet",
                 'date' => $date,

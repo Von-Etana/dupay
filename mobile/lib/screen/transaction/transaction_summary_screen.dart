@@ -103,6 +103,9 @@ class _TransactionSummaryScreenState
     dynamic rawStatus, {
     required bool succeeded,
   }) {
+    if (succeeded) {
+      return 'success';
+    }
     final status = rawStatus?.toString().trim().toLowerCase() ?? '';
     if ({
       'success',

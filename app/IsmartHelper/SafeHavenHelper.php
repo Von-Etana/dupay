@@ -445,12 +445,14 @@ function safeHavenBankTransfer(array $payload): array
 
         $json = json_decode($body);
 
+        $resCode = $json->responseCode ?? $json->data->responseCode ?? null;
+        $statusCode = $json->statusCode ?? null;
+
         // Successful transfer
         if (
-            isset($json->statusCode) &&
-            $json->statusCode == 200 &&
-            isset($json->responseCode) &&
-            $json->responseCode === "00"
+            isset($statusCode) &&
+            $statusCode == 200 &&
+            ($resCode === "00" || isset($json->data->sessionId))
         ) {
 
             $data = [
@@ -468,8 +470,8 @@ function safeHavenBankTransfer(array $payload): array
                 'debit_account_name'          => $json->data->debitAccountName ?? null,
                 'debit_account_number'        => $json->data->debitAccountNumber ?? null,
 
-                'response_code'               => $json->data->responseCode ?? null,
-                'response_message'            => $json->data->responseMessage ?? null,
+                'response_code'               => $resCode,
+                'response_message'            => $json->data->responseMessage ?? $json->message ?? 'Transfer completed successfully',
 
                 'created_at'                  => $json->data->createdAt ?? null,
                 'approved_at'                 => $json->data->approvedAt ?? null,

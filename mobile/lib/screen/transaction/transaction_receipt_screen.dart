@@ -715,35 +715,42 @@ class _TransactionReceiptScreenState extends State<TransactionReceiptScreen> {
                                         fontWeight: FontWeight.w500,
                                       ),
                                     ),
-                                    InkWell(
-                                      onTap:
-                                          () => _copyToClipboard(
-                                            d.reference,
-                                            'Reference',
-                                          ),
-                                      borderRadius: BorderRadius.circular(6.r),
-                                      child: Padding(
-                                        padding: EdgeInsets.symmetric(
-                                          horizontal: 4.w,
-                                          vertical: 2.h,
-                                        ),
-                                        child: Row(
-                                          children: [
-                                            Text(
+                                    SizedBox(width: 8.w),
+                                    Flexible(
+                                      child: InkWell(
+                                        onTap:
+                                            () => _copyToClipboard(
                                               d.reference,
-                                              style: TextStyle(
-                                                fontSize: 13.sp,
-                                                fontWeight: FontWeight.w600,
-                                                color: const Color(0xFF1A1A1A),
+                                              'Reference',
+                                            ),
+                                        borderRadius: BorderRadius.circular(6.r),
+                                        child: Padding(
+                                          padding: EdgeInsets.symmetric(
+                                            horizontal: 4.w,
+                                            vertical: 2.h,
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Flexible(
+                                                child: Text(
+                                                  d.reference,
+                                                  style: TextStyle(
+                                                    fontSize: 13.sp,
+                                                    fontWeight: FontWeight.w600,
+                                                    color: const Color(0xFF1A1A1A),
+                                                  ),
+                                                  overflow: TextOverflow.ellipsis,
+                                                ),
                                               ),
-                                            ),
-                                            SizedBox(width: 6.w),
-                                            Icon(
-                                              Icons.copy_rounded,
-                                              size: 14.sp,
-                                              color: _brandColor,
-                                            ),
-                                          ],
+                                              SizedBox(width: 6.w),
+                                              Icon(
+                                                Icons.copy_rounded,
+                                                size: 14.sp,
+                                                color: _brandColor,
+                                              ),
+                                            ],
+                                          ),
                                         ),
                                       ),
                                     ),
@@ -768,35 +775,42 @@ class _TransactionReceiptScreenState extends State<TransactionReceiptScreen> {
                                         fontWeight: FontWeight.w500,
                                       ),
                                     ),
-                                    InkWell(
-                                      onTap:
-                                          () => _copyToClipboard(
-                                            d.sessionId!,
-                                            'Session ID',
-                                          ),
-                                      borderRadius: BorderRadius.circular(6.r),
-                                      child: Padding(
-                                        padding: EdgeInsets.symmetric(
-                                          horizontal: 4.w,
-                                          vertical: 2.h,
-                                        ),
-                                        child: Row(
-                                          children: [
-                                            Text(
+                                    SizedBox(width: 8.w),
+                                    Flexible(
+                                      child: InkWell(
+                                        onTap:
+                                            () => _copyToClipboard(
                                               d.sessionId!,
-                                              style: TextStyle(
-                                                fontSize: 13.sp,
-                                                fontWeight: FontWeight.w600,
-                                                color: const Color(0xFF1A1A1A),
+                                              'Session ID',
+                                            ),
+                                        borderRadius: BorderRadius.circular(6.r),
+                                        child: Padding(
+                                          padding: EdgeInsets.symmetric(
+                                            horizontal: 4.w,
+                                            vertical: 2.h,
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Flexible(
+                                                child: Text(
+                                                  d.sessionId!,
+                                                  style: TextStyle(
+                                                    fontSize: 13.sp,
+                                                    fontWeight: FontWeight.w600,
+                                                    color: const Color(0xFF1A1A1A),
+                                                  ),
+                                                  overflow: TextOverflow.ellipsis,
+                                                ),
                                               ),
-                                            ),
-                                            SizedBox(width: 6.w),
-                                            Icon(
-                                              Icons.copy_rounded,
-                                              size: 14.sp,
-                                              color: _brandColor,
-                                            ),
-                                          ],
+                                              SizedBox(width: 6.w),
+                                              Icon(
+                                                Icons.copy_rounded,
+                                                size: 14.sp,
+                                                color: _brandColor,
+                                              ),
+                                            ],
+                                          ),
                                         ),
                                       ),
                                     ),

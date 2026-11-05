@@ -1101,13 +1101,14 @@ class _BankTransferScreenState extends ConsumerState<BankTransferScreen> {
                       if (comment.isNotEmpty) 'comment': comment,
                     },
                   );
+                  final isSuccessful = response.success;
                   return {
-                    'success': response.success,
+                    'success': isSuccessful,
                     'message': response.message,
                     'show_result_screen': true,
-                    'status':
-                        response.data?['status']?.toString() ??
-                        (response.success ? 'success' : 'failed'),
+                    'status': isSuccessful
+                        ? 'success'
+                        : (response.data?['status']?.toString() ?? 'failed'),
                     'reference': response.data?['reference']?.toString() ?? '',
                     // Prefer session_id echoed back by the backend; fall back to
                     // the one we obtained from the SafeHaven name enquiry so the

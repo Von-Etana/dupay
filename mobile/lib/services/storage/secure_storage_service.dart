@@ -146,7 +146,20 @@ class SecureStorageService {
     }
   }
 
-  // Clear all data (logout)
+  // Sign out without discarding the email the user explicitly chose to remember.
+  static Future<void> clearSession() async {
+    for (final key in [
+      _accessTokenKey,
+      _refreshTokenKey,
+      _userIdKey,
+      _deviceIdKey,
+      _biometricEnabledKey,
+    ]) {
+      await _storage.delete(key: key);
+    }
+  }
+
+  // Clear all data (for credential reset and full local cleanup)
   static Future<void> clearAll() async {
     try {
       await _storage.deleteAll();

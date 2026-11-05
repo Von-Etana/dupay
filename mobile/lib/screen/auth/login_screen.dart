@@ -53,7 +53,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final remembered = prefs.getBool('remember_me') ?? false;
     if (remembered) {
       final email = await SecureStorageService.getRememberedEmail() ?? '';
-      if (email.isNotEmpty) {
+      if (email.isNotEmpty && mounted) {
         setState(() {
           _emailController.text = email;
           _rememberMe = true;
@@ -93,13 +93,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       unawaited(FcmTokenSync.syncCurrentToken());
 
       // Remember ONLY the email (never the password), in encrypted storage.
-      if (_rememberMe) {
-        final prefs = await SharedPreferences.getInstance();
-        await SecureStorageService.saveRememberedEmail(
-          _emailController.text.trim(),
-        );
-        await prefs.setBool('remember_me', true);
-      }
+      await _saveRememberedEmail();
       await _offerBiometricLogin();
       if (!mounted) return;
       final user = ref.read(currentUserProvider);
@@ -113,6 +107,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     } else if (mounted) {
       final challengeId = authProvider.pendingChallengeId;
       if (challengeId != null) {
+        await _saveRememberedEmail();
         Navigator.of(context).pushNamed('/loginOtp', arguments: challengeId);
         return;
       }
@@ -126,6 +121,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
     } finally {
       if (mounted) setState(() => _loginSubmitting = false);
+    }
+  }
+
+  Future<void> _saveRememberedEmail() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (_rememberMe) {
+      await SecureStorageService.saveRememberedEmail(_emailController.text.trim());
+      await prefs.setBool('remember_me', true);
+    } else {
+      await SecureStorageService.clearRememberedEmail();
+      await prefs.setBool('remember_me', false);
     }
   }
 

@@ -199,7 +199,7 @@ class AuthRepository {
     } catch (_) {
       // Local sign-out must still work when the API cannot be reached.
     } finally {
-      await SecureStorageService.clearAll();
+      await SecureStorageService.clearSession();
     }
   }
 
