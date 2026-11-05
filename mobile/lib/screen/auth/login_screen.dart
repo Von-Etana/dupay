@@ -21,6 +21,7 @@ class LoginScreen extends ConsumerStatefulWidget {
 }
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
+  static const _rememberedEmailDisplayKey = 'remembered_email_display';
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   bool _isPasswordObscured = true;
@@ -49,6 +50,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       final email = _emailController.text.trim();
       if (email.isNotEmpty) {
         SecureStorageService.saveRememberedEmail(email);
+        SharedPreferences.getInstance().then(
+          (prefs) => prefs.setString(_rememberedEmailDisplayKey, email),
+        );
       }
     }
   }
@@ -62,14 +66,23 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     await prefs.remove('saved_email');
 
     final remembered = prefs.getBool('remember_me') ?? false;
-    final email = await SecureStorageService.getRememberedEmail() ?? '';
-    if ((remembered || email.isNotEmpty) && mounted) {
+    final cachedEmail = prefs.getString(_rememberedEmailDisplayKey) ?? '';
+    if (remembered && cachedEmail.isNotEmpty && mounted) {
       setState(() {
-        if (email.isNotEmpty) {
-          _emailController.text = email;
-        }
+        _emailController.text = cachedEmail;
         _rememberMe = true;
       });
+    }
+
+    // Encrypted storage remains authoritative; refresh the fast display cache
+    // in the background without delaying the first visible email value.
+    final secureEmail = await SecureStorageService.getRememberedEmail() ?? '';
+    if (secureEmail.isNotEmpty && mounted) {
+      if (_emailController.text != secureEmail) {
+        setState(() => _emailController.text = secureEmail);
+      }
+      await prefs.setString(_rememberedEmailDisplayKey, secureEmail);
+      if (mounted && !_rememberMe) setState(() => _rememberMe = true);
     }
   }
 
@@ -85,52 +98,56 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     if (_loginSubmitting) return;
     setState(() => _loginSubmitting = true);
     try {
-    if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
-      _showTopMessage('Please fill in all fields');
-      return;
-    }
-
-    final authProvider = ref.read(authNotifierProvider.notifier);
-    final success = await authProvider.login(
-      email: _emailController.text.trim(),
-      password: _passwordController.text,
-      fcmToken: NotificationService.fcmToken,
-    );
-
-    if (success && mounted) {
-      // On iOS the FCM token usually isn't ready yet when the login request is
-      // built above (it waits on APNs), so `fcmToken` was null and the server
-      // stored nothing. Push it now that we're authenticated. Fire-and-forget —
-      // it must never delay or block entering the app.
-      unawaited(FcmTokenSync.syncCurrentToken());
-
-      // Remember ONLY the email (never the password), in encrypted storage.
-      await _saveRememberedEmail();
-      await _offerBiometricLogin();
-      if (!mounted) return;
-      final user = ref.read(currentUserProvider);
-      final route =
-          user?.isEmailVerified == false
-              ? '/emailVerification'
-              : (user?.hasTransactionPin == true
-                  ? '/homeNav'
-                  : '/transactionPinSetup');
-      Navigator.of(context).pushReplacementNamed(route);
-    } else if (mounted) {
-      final challengeId = authProvider.pendingChallengeId;
-      if (challengeId != null) {
-        await _saveRememberedEmail();
-        Navigator.of(context).pushNamed('/loginOtp', arguments: challengeId);
+      if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
+        _showTopMessage('Please fill in all fields');
         return;
       }
-      final error = ref.read(authErrorProvider);
-      final rawError = (error != null && error.trim().isNotEmpty) ? error : 'Invalid email or password. Please try again.';
-      if (rawError.toLowerCase().contains('locked') || rawError.toLowerCase().contains('blocked')) {
-        AppAlert.showAccountLockedDialog(context, message: rawError);
-      } else {
-        _showTopMessage(rawError);
+
+      final authProvider = ref.read(authNotifierProvider.notifier);
+      final success = await authProvider.login(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+        fcmToken: NotificationService.fcmToken,
+      );
+
+      if (success && mounted) {
+        // On iOS the FCM token usually isn't ready yet when the login request is
+        // built above (it waits on APNs), so `fcmToken` was null and the server
+        // stored nothing. Push it now that we're authenticated. Fire-and-forget —
+        // it must never delay or block entering the app.
+        unawaited(FcmTokenSync.syncCurrentToken());
+
+        // Remember ONLY the email (never the password), in encrypted storage.
+        await _saveRememberedEmail();
+        await _offerBiometricLogin();
+        if (!mounted) return;
+        final user = ref.read(currentUserProvider);
+        final route =
+            user?.isEmailVerified == false
+                ? '/emailVerification'
+                : (user?.hasTransactionPin == true
+                    ? '/homeNav'
+                    : '/transactionPinSetup');
+        Navigator.of(context).pushReplacementNamed(route);
+      } else if (mounted) {
+        final challengeId = authProvider.pendingChallengeId;
+        if (challengeId != null) {
+          await _saveRememberedEmail();
+          Navigator.of(context).pushNamed('/loginOtp', arguments: challengeId);
+          return;
+        }
+        final error = ref.read(authErrorProvider);
+        final rawError =
+            (error != null && error.trim().isNotEmpty)
+                ? error
+                : 'Invalid email or password. Please try again.';
+        if (rawError.toLowerCase().contains('locked') ||
+            rawError.toLowerCase().contains('blocked')) {
+          AppAlert.showAccountLockedDialog(context, message: rawError);
+        } else {
+          _showTopMessage(rawError);
+        }
       }
-    }
     } finally {
       if (mounted) setState(() => _loginSubmitting = false);
     }
@@ -144,9 +161,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       final email = _emailController.text.trim();
       if (email.isNotEmpty) {
         await SecureStorageService.saveRememberedEmail(email);
+        await prefs.setString(_rememberedEmailDisplayKey, email);
       }
     } else {
       await SecureStorageService.clearRememberedEmail();
+      await prefs.remove(_rememberedEmailDisplayKey);
     }
   }
 
@@ -157,10 +176,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       if (email.isNotEmpty) {
         await SecureStorageService.saveRememberedEmail(email);
         await prefs.setBool('remember_me', true);
+        await prefs.setString(_rememberedEmailDisplayKey, email);
       }
     } else {
       await SecureStorageService.clearRememberedEmail();
       await prefs.setBool('remember_me', false);
+      await prefs.remove(_rememberedEmailDisplayKey);
     }
   }
 
@@ -492,12 +513,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                               4,
                                             ),
                                           ),
-                                          onChanged: (val) => _toggleRememberMe(val ?? false),
+                                          onChanged:
+                                              (val) => _toggleRememberMe(
+                                                val ?? false,
+                                              ),
                                         ),
                                       ),
                                       const SizedBox(width: 8),
                                       GestureDetector(
-                                        onTap: () => _toggleRememberMe(!_rememberMe),
+                                        onTap:
+                                            () =>
+                                                _toggleRememberMe(!_rememberMe),
                                         child: Text(
                                           'Remember me',
                                           style: TextStyle(
@@ -534,7 +560,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                           vertical: 16.h,
                                         ),
                                       ),
-                                      onPressed: _loginSubmitting ? null : _handleLogin,
+                                      onPressed:
+                                          _loginSubmitting
+                                              ? null
+                                              : _handleLogin,
                                       child: Consumer(
                                         builder: (context, ref, child) {
                                           final isLoading = ref.watch(
@@ -611,10 +640,26 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                   children: [
                                     const SizedBox(height: 4),
                                     IconButton(
-                                      onPressed: _biometricLoading ? null : _handleBiometricLogin,
-                                      icon: _biometricLoading
-                                          ? const SizedBox(width: 42, height: 42, child: CircularProgressIndicator(strokeWidth: 3, color: Color(0xFF34544A)))
-                                          : const Icon(Icons.fingerprint_rounded, size: 52, color: Color(0xFF34544A)),
+                                      onPressed:
+                                          _biometricLoading
+                                              ? null
+                                              : _handleBiometricLogin,
+                                      icon:
+                                          _biometricLoading
+                                              ? const SizedBox(
+                                                width: 42,
+                                                height: 42,
+                                                child:
+                                                    CircularProgressIndicator(
+                                                      strokeWidth: 3,
+                                                      color: Color(0xFF34544A),
+                                                    ),
+                                              )
+                                              : const Icon(
+                                                Icons.fingerprint_rounded,
+                                                size: 52,
+                                                color: Color(0xFF34544A),
+                                              ),
                                     ),
                                   ],
                                 ),
