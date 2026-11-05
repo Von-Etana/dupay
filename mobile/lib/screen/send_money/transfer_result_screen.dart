@@ -23,6 +23,7 @@ class TransferResultScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final status = pending ? 'pending' : (success ? 'success' : 'failed');
     return TransactionReceiptScreen(
+      isNewTransaction: false,
       data: TransactionReceiptData(
         service: 'Transfer',
         type: 'Transfer',

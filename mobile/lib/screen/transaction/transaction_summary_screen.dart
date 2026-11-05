@@ -199,7 +199,11 @@ class _TransactionSummaryScreenState
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (_) => TransactionReceiptScreen(data: receiptData),
+            builder:
+                (_) => TransactionReceiptScreen(
+                  isNewTransaction: false,
+                  data: receiptData,
+                ),
           ),
         );
       } else {
@@ -228,7 +232,11 @@ class _TransactionSummaryScreenState
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
-              builder: (_) => TransactionReceiptScreen(data: resultData),
+              builder:
+                  (_) => TransactionReceiptScreen(
+                    isNewTransaction: false,
+                    data: resultData,
+                  ),
             ),
           );
           return;
@@ -259,7 +267,11 @@ class _TransactionSummaryScreenState
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (_) => TransactionReceiptScreen(data: pendingData),
+            builder:
+                (_) => TransactionReceiptScreen(
+                  isNewTransaction: false,
+                  data: pendingData,
+                ),
           ),
         );
         return;
