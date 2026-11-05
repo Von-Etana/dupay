@@ -1095,6 +1095,24 @@ class _HomeDashboardState extends ConsumerState<HomeDashboard>
                           ],
                         ),
                         const Spacer(),
+                        InkWell(
+                          onTap: () {
+                            Navigator.of(context).pushNamed('/notification');
+                          },
+                          borderRadius: BorderRadius.circular(22),
+                          child: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.15),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.notifications_none_rounded,
+                              color: Colors.white,
+                              size: 22,
+                            ),
+                          ),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 16),

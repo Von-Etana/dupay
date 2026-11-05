@@ -17,10 +17,10 @@ class Transaction extends Model
     protected static function booted()
     {
         // Notify immediately when a transaction is created with a terminal
-        // outcome. This covers both successful and failed transfers.
+        // outcome. Covers both 'success' and 'successful', plus terminal failures.
         static::created(function ($transaction) {
             try {
-                if (in_array(strtolower($transaction->status), ['success', 'failed', 'unsuccessful'], true)) {
+                if (static::isTerminalStatus($transaction->status)) {
                     static::notifyAfterResponse($transaction);
                 }
             } catch (\Throwable $e) {
@@ -28,13 +28,13 @@ class Transaction extends Model
             }
         });
 
-        // Also fire when a pending transaction is later UPDATED to success
-        // (e.g. some payment-gateway flows that begin as pending).
+        // Also fire when a pending transaction is later UPDATED to terminal status
+        // (e.g. bank webhook callbacks that resolve a pending deposit or payout).
         static::updated(function ($transaction) {
             try {
                 if (
                     $transaction->wasChanged('status') &&
-                    in_array(strtolower($transaction->status), ['success', 'failed', 'unsuccessful'], true)
+                    static::isTerminalStatus($transaction->status)
                 ) {
                     static::notifyAfterResponse($transaction);
                 }
@@ -44,12 +44,18 @@ class Transaction extends Model
         });
     }
 
+    public static function isTerminalStatus($status): bool
+    {
+        $s = strtolower(trim((string) $status));
+        return in_array($s, ['success', 'successful', 'completed', 'failed', 'unsuccessful', 'failure', 'fail'], true);
+    }
+
     private static function notifyAfterResponse(self $transaction): void
     {
         $transactionId = $transaction->getKey();
         app()->terminating(function () use ($transactionId) {
             $saved = static::find($transactionId);
-            if ($saved && in_array(strtolower((string) $saved->status), ['success', 'failed', 'unsuccessful'], true)) {
+            if ($saved && static::isTerminalStatus($saved->status)) {
                 $saved->sendTransactionPush();
             }
         });
@@ -112,9 +118,15 @@ class Transaction extends Model
             : '*****';
 
         // ---- Build the bank-style body ----
-        $status  = strtolower((string) ($attrs['status'] ?? ''));
-        $isSuccess = $status === 'success';
-        $title   = $isSuccess ? 'Transfer successful' : 'Transfer failed';
+        $status  = strtolower(trim((string) ($attrs['status'] ?? '')));
+        $isSuccess = in_array($status, ['success', 'successful', 'completed'], true);
+        if ($isSuccess) {
+            $title = $isCredit
+                ? "Credit Alert: {$currency} {$amount}"
+                : "Debit Alert: {$currency} {$amount}";
+        } else {
+            $title = "Transaction Failed: {$currency} {$amount}";
+        }
         $lines   = [];
         $lines[] = 'Acct: ' . $maskedAcct;
         $lines[] = 'Amt: ' . $currency . ' ' . $amount . ' ' . $drcr;
@@ -125,12 +137,14 @@ class Transaction extends Model
             $lines[] = 'Desc: ' . $desc;
         }
         if ($balance !== null) {
-            $lines[] = 'Avail Balance: ' . $currency . ' ' . $balance;
+            $lines[] = 'Avail Bal: ' . $currency . ' ' . $balance;
         }
         $body = implode("\n", $lines);
 
         // ---- Data payload (for Flutter routing / in-app rendering) ----
         $data = [
+            'title'         => $title,
+            'body'          => $body,
             'type'          => $isCredit ? 'credit' : 'debit',
             'dr_cr'         => $drcr,
             'account'       => $maskedAcct,
@@ -141,6 +155,7 @@ class Transaction extends Model
             'reference'     => (string) ($attrs['reference'] ?? ($this->reference ?? '')),
             'transaction'   => (string) $this->id,
             'status'        => $isSuccess ? 'success' : 'failed',
+            'route'         => '/notification',
         ];
 
         // Same proven per-user FCM sender used by the admin "Send Notification"

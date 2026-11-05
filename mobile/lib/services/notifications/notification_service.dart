@@ -284,6 +284,7 @@ class NotificationService {
           topPadding: topPadding,
           title: title,
           body: body,
+          details: details,
           onTap: () {
             _bannerDismissTimer?.cancel();
             entry.remove();
@@ -536,6 +537,7 @@ class _InAppTopBannerWidget extends StatefulWidget {
   final double topPadding;
   final String title;
   final String body;
+  final Map<String, dynamic>? details;
   final VoidCallback onTap;
   final VoidCallback onDismiss;
 
@@ -543,6 +545,7 @@ class _InAppTopBannerWidget extends StatefulWidget {
     required this.topPadding,
     required this.title,
     required this.body,
+    this.details,
     required this.onTap,
     required this.onDismiss,
   });
@@ -595,6 +598,22 @@ class _InAppTopBannerWidgetState extends State<_InAppTopBannerWidget>
 
   @override
   Widget build(BuildContext context) {
+    final type = widget.details?['type']?.toString().toLowerCase() ?? '';
+    final titleLower = widget.title.toLowerCase();
+    final bodyLower = widget.body.toLowerCase();
+    final isCredit = type == 'credit' ||
+        titleLower.contains('credit') ||
+        titleLower.contains('received') ||
+        bodyLower.contains(' cr') ||
+        bodyLower.contains('credited');
+    final isDebit = type == 'debit' ||
+        titleLower.contains('debit') ||
+        titleLower.contains('withdrawal') ||
+        titleLower.contains('withdraw') ||
+        titleLower.contains('transfer') ||
+        bodyLower.contains(' dr') ||
+        bodyLower.contains('debited');
+
     return Positioned(
       top: widget.topPadding + 8,
       left: 14,
@@ -629,22 +648,46 @@ class _InAppTopBannerWidgetState extends State<_InAppTopBannerWidget>
                       offset: Offset(0, 6),
                     ),
                   ],
-                  border: Border.all(color: Color(0x597CA183), width: 1),
+                  border: Border.all(
+                    color: isCredit
+                        ? const Color(0xFF2ED573).withOpacity(0.6)
+                        : (isDebit
+                            ? const Color(0xFFFFA502).withOpacity(0.6)
+                            : const Color(0x597CA183)),
+                    width: (isCredit || isDebit) ? 1.4 : 1.0,
+                  ),
                 ),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Container(
-                      width: 40,
-                      height: 40,
+                      width: 42,
+                      height: 42,
                       decoration: BoxDecoration(
-                        color: const Color(0xFF34544A),
-                        borderRadius: BorderRadius.circular(10),
+                        color: isCredit
+                            ? const Color(0xFF133827)
+                            : (isDebit ? const Color(0xFF3D2714) : const Color(0xFF34544A)),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: (isCredit
+                                  ? const Color(0xFF2ED573)
+                                  : (isDebit
+                                      ? const Color(0xFFFFA502)
+                                      : const Color(0xFFE2F1E8)))
+                              .withOpacity(0.35),
+                          width: 1,
+                        ),
                       ),
-                      child: const Icon(
-                        Icons.notifications_active_rounded,
-                        color: Color(0xFFE2F1E8),
-                        size: 22,
+                      child: Icon(
+                        isCredit
+                            ? Icons.arrow_downward_rounded
+                            : (isDebit
+                                ? Icons.arrow_upward_rounded
+                                : Icons.notifications_active_rounded),
+                        color: isCredit
+                            ? const Color(0xFF2ED573)
+                            : (isDebit ? const Color(0xFFFFA502) : const Color(0xFFE2F1E8)),
+                        size: 24,
                       ),
                     ),
                     const SizedBox(width: 12),
