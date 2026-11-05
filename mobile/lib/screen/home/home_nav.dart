@@ -974,7 +974,6 @@ class _HomeDashboardState extends ConsumerState<HomeDashboard>
   Widget build(BuildContext context) {
     final authState = ref.watch(authNotifierProvider);
     final user = authState.user;
-    final isLoading = authState.isLoading;
 
     String formatBalance(String? balance) => formatCurrency(balance);
 
@@ -988,13 +987,9 @@ class _HomeDashboardState extends ConsumerState<HomeDashboard>
       if (username != null && username.isNotEmpty) {
         return username;
       }
-      final email = user?.email?.trim();
-      if (email != null && email.isNotEmpty) {
-        return email.split('@').first;
-      }
-      // Avoid flashing a false name while the authenticated profile is still
-      // being restored or fetched after login.
-      return isLoading ? '...' : 'there';
+      // The login response can arrive before the profile. Never show an email
+      // prefix as a temporary name while the profile request completes.
+      return '';
     }
 
     return RefreshIndicator(
@@ -1078,7 +1073,9 @@ class _HomeDashboardState extends ConsumerState<HomeDashboard>
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Hello, ${getUserDisplayName()}',
+                              getUserDisplayName().isEmpty
+                                  ? 'Hello'
+                                  : 'Hello, ${getUserDisplayName()}',
                               style: TextStyle(
                                 color: Colors.white,
                                 fontWeight: FontWeight.bold,
