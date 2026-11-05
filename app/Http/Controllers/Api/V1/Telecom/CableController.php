@@ -622,9 +622,9 @@ class CableController extends Controller
             // refund blind on a txn that may still be going through.
             if($isPending || $plan->cableType->apiConnection->auto_refund != "1" || $json == null){
                 return response()->json([
-                    'success' => true,
-                    'status' => 'Pending',
-                    'message' => 'Transaction Processing',
+                    'success' => false,
+                    'status' => 'unsuccessful',
+                    'message' => 'Transaction confirmation failed. Check transaction history before trying again.',
                     'data' => [
                         'reference' => $Trx,
                         'date' => $date

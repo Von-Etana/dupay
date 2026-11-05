@@ -289,7 +289,7 @@ class ApiService {
       success: false,
       message:
           'We could not confirm this transaction. Check transaction history before trying again.',
-      data: {'status': 'pending', 'request_id': requestId},
+      data: {'status': 'failed', 'request_id': requestId},
       statusCode: 202,
     );
   }

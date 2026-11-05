@@ -22,7 +22,8 @@ class ForeignSendMoneyScreen extends ConsumerStatefulWidget {
       _ForeignSendMoneyScreenState();
 }
 
-class _ForeignSendMoneyScreenState extends ConsumerState<ForeignSendMoneyScreen> {
+class _ForeignSendMoneyScreenState
+    extends ConsumerState<ForeignSendMoneyScreen> {
   final _recipientNameCtrl = TextEditingController();
   final _recipientAccountCtrl = TextEditingController();
   final _amountCtrl = TextEditingController();
@@ -48,47 +49,68 @@ class _ForeignSendMoneyScreenState extends ConsumerState<ForeignSendMoneyScreen>
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => TransactionSummaryScreen(
-          data: TransactionSummaryData(
-            service: '${widget.currency} Transfer',
-            from: '${widget.currency} Wallet',
-            accountName: _recipientNameCtrl.text,
-            accountNumber: _recipientAccountCtrl.text,
-            amount:
-                '${widget.currency} ${double.tryParse(_amountCtrl.text)?.toStringAsFixed(2) ?? _amountCtrl.text}',
-            onConfirm: (pin) async {
-              final response = await ref
-                  .read(foreignCurrencyNotifierProvider.notifier)
-                  .sendForeignMoney(
-                    foreignAccountId: widget.foreignAccountId,
-                    recipientName: _recipientNameCtrl.text,
-                    recipientAccount: _recipientAccountCtrl.text,
-                    currency: widget.currency,
-                    amount: double.tryParse(_amountCtrl.text) ?? 0,
-                    transactionPin: pin,
-                  );
-              return {
-                'success': response.success,
-                'message': response.message,
-                'reference': response.data?['reference'] ?? '',
-                'description':
-                    'Sent ${widget.currency} ${_amountCtrl.text} to ${_recipientNameCtrl.text}',
-                'initial_balance': response.data?['initial_balance'] ?? '',
-                'final_balance': response.data?['final_balance'] ?? '',
-              };
-            },
-          ),
-        ),
+        builder:
+            (_) => TransactionSummaryScreen(
+              data: TransactionSummaryData(
+                service: '${widget.currency} Transfer',
+                from: '${widget.currency} Wallet',
+                accountName: _recipientNameCtrl.text,
+                accountNumber: _recipientAccountCtrl.text,
+                amount:
+                    '${widget.currency} ${double.tryParse(_amountCtrl.text)?.toStringAsFixed(2) ?? _amountCtrl.text}',
+                showPendingWhenUnconfirmed: false,
+                onConfirm: (pin) async {
+                  final response = await ref
+                      .read(foreignCurrencyNotifierProvider.notifier)
+                      .sendForeignMoney(
+                        foreignAccountId: widget.foreignAccountId,
+                        recipientName: _recipientNameCtrl.text,
+                        recipientAccount: _recipientAccountCtrl.text,
+                        currency: widget.currency,
+                        amount: double.tryParse(_amountCtrl.text) ?? 0,
+                        transactionPin: pin,
+                      );
+                  final rawStatus =
+                      response.data?['status']?.toString().toLowerCase();
+                  final confirmedSuccess =
+                      response.success &&
+                      !const {
+                        'pending',
+                        'processing',
+                        'queued',
+                      }.contains(rawStatus);
+                  return {
+                    'success': confirmedSuccess,
+                    'status': confirmedSuccess ? 'success' : 'failed',
+                    'message':
+                        confirmedSuccess
+                            ? response.message
+                            : (rawStatus == 'pending' ||
+                                    rawStatus == 'processing'
+                                ? 'Transfer confirmation failed. Check transaction history before trying again.'
+                                : response.message),
+                    'reference': response.data?['reference'] ?? '',
+                    'description':
+                        'Sent ${widget.currency} ${_amountCtrl.text} to ${_recipientNameCtrl.text}',
+                    'initial_balance': response.data?['initial_balance'] ?? '',
+                    'final_balance': response.data?['final_balance'] ?? '',
+                  };
+                },
+              ),
+            ),
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final filtered = _beneficiaries
-        .where((b) =>
-            b['name']!.toLowerCase().contains(_searchQuery.toLowerCase()))
-        .toList();
+    final filtered =
+        _beneficiaries
+            .where(
+              (b) =>
+                  b['name']!.toLowerCase().contains(_searchQuery.toLowerCase()),
+            )
+            .toList();
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -107,8 +129,10 @@ class _ForeignSendMoneyScreenState extends ConsumerState<ForeignSendMoneyScreen>
                   child: Text(
                     'Send ${widget.currency}',
                     textAlign: TextAlign.center,
-                    style:
-                        TextStyle(fontSize: 20.sp, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      fontSize: 20.sp,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 48),
@@ -126,8 +150,10 @@ class _ForeignSendMoneyScreenState extends ConsumerState<ForeignSendMoneyScreen>
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide.none,
                   ),
-                  contentPadding:
-                      const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
+                  contentPadding: const EdgeInsets.symmetric(
+                    vertical: 0,
+                    horizontal: 16,
+                  ),
                 ),
                 onChanged: (v) => setState(() => _searchQuery = v),
               ),
@@ -136,8 +162,10 @@ class _ForeignSendMoneyScreenState extends ConsumerState<ForeignSendMoneyScreen>
               const SizedBox(height: 8),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: const Text('Saved beneficiaries',
-                    style: TextStyle(fontWeight: FontWeight.bold)),
+                child: const Text(
+                  'Saved beneficiaries',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
               ),
               ListView.builder(
                 shrinkWrap: true,
@@ -146,8 +174,10 @@ class _ForeignSendMoneyScreenState extends ConsumerState<ForeignSendMoneyScreen>
                 itemBuilder: (ctx, i) {
                   final b = filtered[i];
                   return ListTile(
-                    title: Text(b['name']!,
-                        style: const TextStyle(fontWeight: FontWeight.bold)),
+                    title: Text(
+                      b['name']!,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
                     subtitle: Text('${b['currency']} • ${b['account']}'),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () {
@@ -162,19 +192,27 @@ class _ForeignSendMoneyScreenState extends ConsumerState<ForeignSendMoneyScreen>
             const Divider(),
             Expanded(
               child: SingleChildScrollView(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 20.0, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20.0,
+                  vertical: 8,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Send to new recipient',
-                        style: TextStyle(
-                            fontWeight: FontWeight.bold, fontSize: 16.sp)),
+                    Text(
+                      'Send to new recipient',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16.sp,
+                      ),
+                    ),
                     const SizedBox(height: 12),
                     // Currency badge
                     Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 6),
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
                       decoration: BoxDecoration(
                         color: const Color(0xFFE3F0FF),
                         borderRadius: BorderRadius.circular(8),
@@ -182,36 +220,46 @@ class _ForeignSendMoneyScreenState extends ConsumerState<ForeignSendMoneyScreen>
                       child: Text(
                         widget.currency,
                         style: const TextStyle(
-                            fontWeight: FontWeight.bold, fontSize: 16),
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 12),
                     _buildTextField('Recipient Name', _recipientNameCtrl),
                     const SizedBox(height: 10),
                     _buildTextField(
-                        'Account Number / IBAN', _recipientAccountCtrl),
+                      'Account Number / IBAN',
+                      _recipientAccountCtrl,
+                    ),
                     const SizedBox(height: 10),
-                    _buildTextField('Amount', _amountCtrl,
-                        type: TextInputType.number),
+                    _buildTextField(
+                      'Amount',
+                      _amountCtrl,
+                      type: TextInputType.number,
+                    ),
                     const SizedBox(height: 20),
                     SizedBox(
                       width: double.infinity,
                       height: 48,
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: _canSend
-                              ? const Color(0xFF34544A)
-                              : Colors.grey[300],
+                          backgroundColor:
+                              _canSend
+                                  ? const Color(0xFF34544A)
+                                  : Colors.grey[300],
                           shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12)),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                         ),
                         onPressed: _canSend ? _onSend : null,
                         child: const Text(
                           'Send',
                           style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 18,
-                              color: Colors.white),
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18,
+                            color: Colors.white,
+                          ),
                         ),
                       ),
                     ),

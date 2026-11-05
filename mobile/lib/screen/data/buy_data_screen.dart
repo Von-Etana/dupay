@@ -414,10 +414,23 @@ class _BuyDataScreenState extends ConsumerState<BuyDataScreen> {
                             String planLabel = plan.name ?? 'Data Plan';
                             if (plan.size != null &&
                                 plan.size!.isNotEmpty &&
-                                !planLabel.toLowerCase().contains(plan.size!.toLowerCase())) {
+                                !planLabel.toLowerCase().contains(
+                                  plan.size!.toLowerCase(),
+                                )) {
                               planLabel = '${plan.size} · $planLabel';
                             }
-                            if (response.success) {
+                            final rawStatus =
+                                response.data?['status']
+                                    ?.toString()
+                                    .toLowerCase();
+                            final confirmedSuccess =
+                                response.success &&
+                                !const {
+                                  'pending',
+                                  'processing',
+                                  'queued',
+                                }.contains(rawStatus);
+                            if (confirmedSuccess) {
                               final data = response.data ?? {};
 
                               rootNavigator.pushReplacement(
@@ -463,11 +476,7 @@ class _BuyDataScreenState extends ConsumerState<BuyDataScreen> {
                                           amount: formatCurrency(
                                             plan.price ?? 0,
                                           ),
-                                          status:
-                                              response.data?['status'] ==
-                                                      'pending'
-                                                  ? 'pending'
-                                                  : 'failed',
+                                          status: 'failed',
                                           statusMessage: response.message,
                                           reference:
                                               response.data?['reference']

@@ -93,7 +93,12 @@ class _OrderSummaryScreenState extends ConsumerState<OrderSummaryScreen> {
           transactionPin: pin,
         );
 
-    if (response.success) {
+    final rawStatus = response.data?['status']?.toString().toLowerCase();
+    final confirmedSuccess =
+        response.success &&
+        !const {'pending', 'processing', 'queued'}.contains(rawStatus);
+
+    if (confirmedSuccess) {
       // Navigate to success screen
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
@@ -126,10 +131,7 @@ class _OrderSummaryScreenState extends ConsumerState<OrderSummaryScreen> {
                   type: widget.network,
                   description: 'Airtime recharge for ${widget.phoneNumber}',
                   amount: '\u20A6${widget.amount}',
-                  status:
-                      response.data?['status'] == 'pending'
-                          ? 'pending'
-                          : 'failed',
+                  status: 'failed',
                   statusMessage: response.message,
                   reference: response.data?['reference']?.toString() ?? '',
                   initialBalance: '',

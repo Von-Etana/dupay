@@ -440,9 +440,9 @@ class AirtimeController extends Controller
 
             if($item->airtimeType->apiConnection->auto_refund != "1" || $json == null){
                 return response()->json([
-                    'success' => true,
-                    'status' => 'Pending',
-                    'message' => 'Transaction Processing',
+                    'success' => false,
+                    'status' => 'unsuccessful',
+                    'message' => 'Transaction confirmation failed. Check transaction history before trying again.',
                     'data' => [
                         'reference' => $Trx,
                         'date' => $date

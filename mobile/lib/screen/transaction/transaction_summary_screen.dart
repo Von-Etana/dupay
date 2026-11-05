@@ -31,7 +31,7 @@ class TransactionSummaryData {
     this.accountNumber,
     required this.amount,
     this.description,
-    this.showPendingWhenUnconfirmed = true,
+    this.showPendingWhenUnconfirmed = false,
     required this.onConfirm,
   });
 }
@@ -105,9 +105,6 @@ class _TransactionSummaryScreenState
     dynamic rawStatus, {
     required bool succeeded,
   }) {
-    if (succeeded) {
-      return 'success';
-    }
     final status = rawStatus?.toString().trim().toLowerCase() ?? '';
     if ({
       'success',
@@ -127,7 +124,10 @@ class _TransactionSummaryScreenState
       'in_progress',
       'in progress',
     }.contains(status)) {
-      return 'pending';
+      return widget.data.showPendingWhenUnconfirmed ? 'pending' : 'failed';
+    }
+    if (succeeded) {
+      return 'success';
     }
     if ({
       'failed',
@@ -142,6 +142,17 @@ class _TransactionSummaryScreenState
       return 'failed';
     }
     return succeeded ? 'success' : 'failed';
+  }
+
+  bool _isUnconfirmedStatus(dynamic rawStatus) {
+    final status = rawStatus?.toString().trim().toLowerCase() ?? '';
+    return const {
+      'pending',
+      'processing',
+      'queued',
+      'in_progress',
+      'in progress',
+    }.contains(status);
   }
 
   Future<void> _confirmTransaction() async {
@@ -184,13 +195,21 @@ class _TransactionSummaryScreenState
                 ? (result['extra_fields'] as List<ReceiptField>)
                 : null;
 
+        final normalizedStatus = _normalizedTransferStatus(
+          result['status'],
+          succeeded: true,
+        );
         final receiptData = TransactionReceiptData(
           service: widget.data.service,
           type: result['type'] ?? widget.data.service,
           description: result['description'] ?? widget.data.description ?? '',
           amount: widget.data.amount,
-          status: _normalizedTransferStatus(result['status'], succeeded: true),
-          statusMessage: result['message']?.toString(),
+          status: normalizedStatus,
+          statusMessage:
+              _isUnconfirmedStatus(result['status']) &&
+                      normalizedStatus == 'failed'
+                  ? 'Transaction confirmation failed. Check transaction history before trying again.'
+                  : result['message']?.toString(),
           reference: result['reference'] ?? sessionIdRaw ?? '',
           sessionId: sessionId,
           initialBalance: result['initial_balance']?.toString() ?? '',
@@ -224,7 +243,10 @@ class _TransactionSummaryScreenState
                 '',
             amount: widget.data.amount,
             status: status,
-            statusMessage: result['message']?.toString(),
+            statusMessage:
+                _isUnconfirmedStatus(result['status']) && status == 'failed'
+                    ? 'Transaction confirmation failed. Check transaction history before trying again.'
+                    : result['message']?.toString(),
             reference: result['reference']?.toString() ?? sessionIdRaw ?? '',
             sessionId: sessionIdRaw,
             initialBalance: result['initial_balance']?.toString() ?? '',
