@@ -118,8 +118,8 @@ class TransactionResultResolver {
         .where((hint) => hint.isNotEmpty)
         .toList();
 
-    for (var attempt = 0; attempt < 8; attempt++) {
-      if (attempt > 0) await Future.delayed(const Duration(seconds: 2));
+    for (var attempt = 0; attempt < 6; attempt++) {
+      if (attempt > 0) await Future.delayed(const Duration(seconds: 1));
       try {
         final history = await TransactionRepository()
             .searchTransactions(page: 1, limit: 30);

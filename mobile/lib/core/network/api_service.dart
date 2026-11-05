@@ -260,8 +260,8 @@ class ApiService {
     // request returns 202. Keep checking the idempotent request record long
     // enough to receive the completed success response before showing a
     // pending receipt to the user.
-    for (var attempt = 0; attempt < 10; attempt++) {
-      if (attempt > 0) await Future.delayed(const Duration(seconds: 2));
+    for (var attempt = 0; attempt < 5; attempt++) {
+      if (attempt > 0) await Future.delayed(const Duration(seconds: 1));
       try {
         final response = await _dio.get(
           '/transactions/request-status/$requestId',
