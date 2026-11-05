@@ -19,6 +19,7 @@ class TransactionSummaryData {
   final String? accountNumber;
   final String amount;
   final String? description;
+  final bool showPendingWhenUnconfirmed;
   // Callback that performs the actual API call; returns success + message.
   final Future<Map<String, dynamic>> Function(String pin) onConfirm;
 
@@ -30,6 +31,7 @@ class TransactionSummaryData {
     this.accountNumber,
     required this.amount,
     this.description,
+    this.showPendingWhenUnconfirmed = true,
     required this.onConfirm,
   });
 }
@@ -256,9 +258,11 @@ class _TransactionSummaryScreenState
           type: widget.data.service,
           description: widget.data.description ?? '',
           amount: widget.data.amount,
-          status: 'pending',
+          status: widget.data.showPendingWhenUnconfirmed ? 'pending' : 'failed',
           statusMessage:
-              'We could not confirm whether this transfer completed. Check your transaction history before trying again.',
+              widget.data.showPendingWhenUnconfirmed
+                  ? 'We could not confirm whether this transfer completed. Check your transaction history before trying again.'
+                  : 'Transfer confirmation failed. Check your transaction history before trying again.',
           reference: '',
           initialBalance: '',
           finalBalance: '',

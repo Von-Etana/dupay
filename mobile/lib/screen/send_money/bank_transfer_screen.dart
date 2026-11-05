@@ -1085,6 +1085,7 @@ class _BankTransferScreenState extends ConsumerState<BankTransferScreen> {
                 accountNumber: accNum,
                 amount: '₦$amountDisplay',
                 description: '$bankName • $comment',
+                showPendingWhenUnconfirmed: false,
                 onConfirm: (pin) async {
                   // POST /fund/withdraw
                   final response = await ApiService.instance.postSimple(
@@ -1102,13 +1103,21 @@ class _BankTransferScreenState extends ConsumerState<BankTransferScreen> {
                     },
                   );
                   final isSuccessful = response.success;
+                  final rawStatus =
+                      response.data?['status']?.toString().toLowerCase();
+                  final isUnconfirmed = const {
+                    'pending',
+                    'processing',
+                    'queued',
+                  }.contains(rawStatus);
                   return {
                     'success': isSuccessful,
-                    'message': response.message,
+                    'message':
+                        isUnconfirmed
+                            ? 'Transfer confirmation failed. Check your transaction history before trying again.'
+                            : response.message,
                     'show_result_screen': true,
-                    'status': isSuccessful
-                        ? 'success'
-                        : (response.data?['status']?.toString() ?? 'failed'),
+                    'status': isSuccessful ? 'success' : 'failed',
                     'reference': response.data?['reference']?.toString() ?? '',
                     // Prefer session_id echoed back by the backend; fall back to
                     // the one we obtained from the SafeHaven name enquiry so the
