@@ -256,7 +256,11 @@ class ApiService {
     String endpoint,
     String requestId,
   ) async {
-    for (var attempt = 0; attempt < 3; attempt++) {
+    // Bank transfers can be committed by the provider just after the initial
+    // request returns 202. Keep checking the idempotent request record long
+    // enough to receive the completed success response before showing a
+    // pending receipt to the user.
+    for (var attempt = 0; attempt < 10; attempt++) {
       if (attempt > 0) await Future.delayed(const Duration(seconds: 2));
       try {
         final response = await _dio.get(
@@ -477,10 +481,10 @@ class ApiService {
         data:
             responseData['data'] is Map<String, dynamic>
                 ? {
-                    ...responseData['data'] as Map<String, dynamic>,
-                    if (responseData['status'] != null)
-                      'status': responseData['status'],
-                  }
+                  ...responseData['data'] as Map<String, dynamic>,
+                  if (responseData['status'] != null)
+                    'status': responseData['status'],
+                }
                 : (allowFailureResponse ? responseData : null),
         statusCode: response.statusCode,
       );
