@@ -579,8 +579,9 @@ class ApiService {
           message: 'Authentication failed. Please login again.',
         );
       case 403:
-        return const AuthorizationException(
+        return AuthorizationException(
           message:
+              _extractErrorMessage(responseData) ??
               'Access denied. You don\'t have permission to perform this action.',
         );
       case 404:
