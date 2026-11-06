@@ -55,7 +55,7 @@ workflows:
             --type IOS_APP_STORE \
             --create
           keychain add-certificates
-          xcode-project use-profiles
+          cd ios && xcode-project use-profiles
 
       - name: Build iOS Release IPA
         script: |
