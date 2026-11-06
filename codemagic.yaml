@@ -4,22 +4,10 @@ workflows:
     instance_type: mac_mini_m2
     max_build_duration: 120
     working_directory: mobile
-
-    # Connect your App Store Connect API key integration here (configured in Codemagic > Teams > Integrations)
-    integrations:
-      app_store_connect: codemagic-key # If your key has a different name in Codemagic, match it here
-
     environment:
-      # Automatic code signing by Codemagic using App Store Connect
-      ios_signing:
-        distribution_type: app_store
-        bundle_identifier: com.my.dupay.app.new
-      vars:
-        APP_STORE_APPLE_ID: 6479637481
       flutter: stable
       xcode: latest
       cocoapods: default
-
     triggering:
       events:
         - push
@@ -30,10 +18,6 @@ workflows:
         - pattern: otp-flow-schema-reconciled
           include: true
           source: true
-        - pattern: '*'
-          include: false
-          source: false
-
     scripts:
       - name: Set up Firebase config
         script: |
@@ -45,43 +29,50 @@ workflows:
             echo "PD94bWwgdmVyc2lvbj0gMS4wIGVuY29kaW5nPVVURi04Pz4KPCFET0NUWVBFIHBsaXN0IFBVQkxJQyAtLy9BcHBsZS8vRFREIFBMSVNUIDEuMC8vRU4gaHR0cDovL3d3dy5hcHBsZS5jb20vRFREcy9Qcm9wZXJ0eUxpc3QtMS4wLmR0ZD4KPHBsaXN0IHZlcnNpb249MS4wPgo8ZGljdD4KCTxrZXk+QVBJX0tFWTwva2V5PgoJPHN0cmluZz5BSXphU3lEdW1teUtleUZvckJ1aWxkT25seTEyMzQ1Njc4OTwvc3RyaW5nPgoJPGtleT5HQ01fU0VOREVSX0lEPC9rZXk+Cgk8c3RyaW5nPjEyMzQ1Njc4OTAxMjwvc3RyaW5nPgoJPGtleT5QTElTVF9WRVJTSU9OPC9rZXk+Cgk8c3RyaW5nPjE8L3N0cmluZz4KCTxrZXk+QlVORExFX0lEPC9rZXk+Cgk8c3RyaW5nPmNvbS5teS5kdXBheS5hcHAubmV3PC9zdHJpbmc+Cgk8a2V5PlBST0pFQ1RfSUQ8L2tleT4KCTxzdHJpbmc+ZHVwYXktYXBwPC9zdHJpbmc+Cgk8a2V5PlNUT1JBR0VfQlVDS0VUPC9rZXk+Cgk8c3RyaW5nPmR1cGF5LWFwcC5hcHBzcG90LmNvbTwvc3RyaW5nPgoJPGtleT5JU19BRFNfRU5BQkxFRDwva2V5PgoJPGZhbHNlLz4KCTxrZXk+SVNfQU5BTFlUSUNTX0VOQUJMRUQ8L2tleT4KCTxmYWxzZS8+Cgk8a2V5PklTX0FQUElOVklURV9FTkFCTEVEPC9rZXk+Cgk8dHJ1ZS8+Cgk8a2V5PklTX0dDTV9FTkFCTEVEPC9rZXk+Cgk8dHJ1ZS8+Cgk8a2V5PklTX1NJR05JTl9FTkFCTEVEPC9rZXk+Cgk8dHJ1ZS8+Cgk8a2V5PkdPT0dMRV9BUFBfSUQ8L2tleT4KCTxzdHJpbmc+MToxMjM0NTY3ODkwMTI6aW9zOmFiY2RlZjEyMzQ1Njc4OTA8L3N0cmluZz4KPC9kaWN0Pgo8L3BsaXN0Pg==" | base64 --decode > ios/Runner/GoogleService-Info.plist
             echo "Fallback GoogleService-Info.plist generated successfully."
           fi
-
       - name: Get Flutter packages
         script: |
           flutter packages pub get
-
       - name: Install CocoaPods
         script: |
           flutter build ios --config-only --release
           cd ios && pod install --repo-update
-
       - name: Set up code signing settings on Xcode project
         script: |
-          xcode-project use-profiles
-
+          if [ -n "$APP_STORE_CONNECT_KEY_IDENTIFIER" ] || [ -n "$CM_CERTIFICATE" ]; then
+            keychain initialize
+            app-store-connect fetch-signing-files "com.my.dupay.app.new" --type IOS_APP_STORE --create
+            keychain add-certificates
+            xcode-project use-profiles
+          else
+            echo "Skipping profile setup: credentials not yet provided in Codemagic."
+          fi
       - name: Build iOS Release IPA
         script: |
           if [ -f "/Users/builder/export_options.plist" ]; then
             flutter build ipa --release \
               --export-options-plist=/Users/builder/export_options.plist
-          else
-            echo "Building standard release IPA..."
+          elif [ -n "$APP_STORE_CONNECT_KEY_IDENTIFIER" ] || [ -n "$CM_CERTIFICATE" ]; then
             flutter build ipa --release
+          else
+            echo "Building unsigned iOS app (no-codesign)..."
+            flutter build ipa --release --no-codesign
           fi
-
+      - name: Publish to App Store Connect / TestFlight
+        script: |
+          if [ -n "$APP_STORE_CONNECT_PRIVATE_KEY" ]; then
+            echo "Uploading IPA to App Store Connect..."
+            app-store-connect publish \
+              --apple-id 6479637481 \
+              --ipa "build/ios/ipa/*.ipa"
+          else
+            echo "Skipping App Store upload: credentials not configured yet."
+          fi
     artifacts:
       - build/ios/ipa/*.ipa
       - mobile/build/ios/ipa/*.ipa
       - build/ios/archive/*.xcarchive
       - mobile/build/ios/archive/*.xcarchive
       - /tmp/xcodebuild_logs/*.log
-
-    publishing:
-      # Automatically uploads the built IPA to App Store Connect / TestFlight
-      app_store_connect:
-        auth: integration
-        submit_to_testflight: true
-        expire_in_days: 90
 
   android-workflow:
     name: Android Workflow
