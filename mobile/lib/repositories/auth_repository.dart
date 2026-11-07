@@ -115,9 +115,14 @@ class AuthRepository {
     required String email,
     required String code,
   }) async {
+    final deviceId = await SecureStorageService.getDeviceId();
     return await _apiService.post<UserModel>(
       ApiConstants.verifyEmailOtp,
-      data: {'email': email, 'code': code},
+      data: {
+        'email': email,
+        'code': code,
+        if (deviceId != null && deviceId.isNotEmpty) 'device_id': deviceId,
+      },
       fromJson: (json) => UserModel.fromJson(json['user'] as Map<String, dynamic>),
     );
   }

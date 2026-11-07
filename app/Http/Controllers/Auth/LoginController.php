@@ -49,7 +49,10 @@ class LoginController extends Controller
     public function showLoginForm()
     {
         $data['page_title'] = 'Log In';
-        return view(enableMobile().'auth.login',$data);
+        if (view()->exists(enableMobile().'auth.login')) {
+            return view(enableMobile().'auth.login', );
+        }
+        return view('auth.login', );
     }
 
     public function login(Request $request)
