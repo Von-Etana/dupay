@@ -17,6 +17,10 @@
           "development": {
             "command": "cd mobile && flutter build ios --simulator --debug",
             "artifact": "mobile/build/ios/iphonesimulator/Runner.app"
+          },
+          "production": {
+            "command": "cd mobile && flutter build ipa --release",
+            "artifact": "mobile/build/ios/ipa/*.ipa"
           }
         }
       }
