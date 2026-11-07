@@ -5,17 +5,19 @@
       "build": {
         "profiles": {
           "development": {
-            "command": "flutter build apk --debug",
+            "command": "flutter build apk --debug --dart-define=ENV=prod",
             "artifact": "build/app/outputs/flutter-apk/app-debug.apk"
           }
         }
-      }
+      },
+      "appId": "dupay-2ntbs6y1",
+      "deviceCategory": "phone"
     },
     "ios": {
       "build": {
         "profiles": {
           "development": {
-            "command": "flutter build ios --simulator --debug",
+            "command": "flutter build ios --simulator --debug --dart-define=ENV=prod",
             "artifact": "build/ios/iphonesimulator/Runner.app"
           },
           "production": {
@@ -25,5 +27,6 @@
         }
       }
     }
-  }
+  },
+  "metroPort": 8081
 }
