@@ -66,27 +66,7 @@ workflows:
             sed -i '' "s/PROVISIONING_PROFILE_SPECIFIER = \"\"/PROVISIONING_PROFILE_SPECIFIER = \"$PROV_NAME\"/g" ios/Runner.xcodeproj/project.pbxproj
 
             # Create ExportOptions.plist for manual distribution
-            cat <<EOF > /Users/builder/export_options.plist
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-    <key>method</key>
-    <string>app-store</string>
-    <key>teamID</key>
-    <string>VDFCU7TD4W</string>
-    <key>signingStyle</key>
-    <string>manual</string>
-    <key>signingCertificate</key>
-    <string>Apple Distribution</string>
-    <key>provisioningProfiles</key>
-    <dict>
-        <key>com.my.dupay.app.new</key>
-        <string>$PROV_NAME</string>
-    </dict>
-</dict>
-</plist>
-EOF
+            printf '<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n<plist version="1.0">\n<dict>\n  <key>method</key>\n  <string>app-store</string>\n  <key>teamID</key>\n  <string>VDFCU7TD4W</string>\n  <key>signingStyle</key>\n  <string>manual</string>\n  <key>signingCertificate</key>\n  <string>Apple Distribution</string>\n  <key>provisioningProfiles</key>\n  <dict>\n    <key>com.my.dupay.app.new</key>\n    <string>%s</string>\n  </dict>\n</dict>\n</plist>\n' "$PROV_NAME" > /Users/builder/export_options.plist
 
             # If the profile contains Push Notifications capability, adapt Runner.entitlements
             if security cms -D -i "$PROV_FILE" 2>/dev/null | grep -q "aps-environment"; then
