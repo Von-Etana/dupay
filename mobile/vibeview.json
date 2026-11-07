@@ -19,7 +19,7 @@
             "artifact": "build/ios/iphonesimulator/Runner.app"
           },
           "production": {
-            "command": "flutter build ipa --release",
+            "command": "flutter build ipa --release --export-options-plist=ios/ExportOptions.plist",
             "artifact": "build/ios/ipa/*.ipa"
           }
         }
