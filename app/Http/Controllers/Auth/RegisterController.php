@@ -50,6 +50,39 @@ class RegisterController extends Controller
     public function __construct()
     {
         $this->middleware('guest');
+        $this->middleware('throttle:auth');
+    }
+
+    public function register(Request $request)
+    {
+        if (getSiteSettings("user_reg") != "Yes") {
+            if ($request->expectsJson()) {
+                return response()->json(['success' => false, 'message' => "Registration is currently deactivated. Please try later."], 403);
+            }
+            session()->flash('message', 'Registration Is Currently Deactivate. Please Try Letter.');
+            session()->flash('type', 'danger');
+            return redirect()->route('login');
+        }
+
+        $this->validator($request->all())->validate();
+
+        event(new \Illuminate\Auth\Events\Registered($user = $this->create($request->all())));
+
+        $this->guard()->login($user);
+
+        try {
+            app(\App\Services\UserSecurityService::class)->recordEvent('user_registered', $user, $request);
+        } catch (\Throwable $th) {
+            \Log::warning('Registration audit logging failed: ' . $th->getMessage());
+        }
+
+        if ($response = $this->registered($request, $user)) {
+            return $response;
+        }
+
+        return $request->wantsJson()
+                    ? response()->json(['success' => true, 'user' => $user], 201)
+                    : redirect($this->redirectPath());
     }
 
     //check if registration is still allow
@@ -110,7 +143,7 @@ class RegisterController extends Controller
             'phone_number' => 'required|max:11|unique:users',
             'username' => 'required|alpha_dash|unique:profiles',
             'referral' => '',
-            'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
+            'email' => ['required', 'string', 'email', 'max:255', 'unique:users', new \App\Rules\NotDisposableEmail],
             'password' => ['required', 'string', 'min:4', 'confirmed'],
         ]);
     }
@@ -190,8 +223,8 @@ class RegisterController extends Controller
         }*/
 
          try {
-               //generate virual Account
-        if(getSiteSettings("auto_create_virtual_account") == "Yes"){
+               //generate virtual Account only when email verification is not required
+        if(getSiteSettings("auto_create_virtual_account") == "Yes" && getSiteSettings("email_verify") != "Yes"){
             $batch  = Bus::batch([])->dispatch();
             $batch->add(new GeneralJob($user, "", "createVirtualAccount"));
         }

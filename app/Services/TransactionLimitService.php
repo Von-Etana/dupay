@@ -38,17 +38,12 @@ class TransactionLimitService
     public const UNLIMITED = '-';
 
     /**
-     * Master switch. When the site setting is explicitly 'No', no limit is enforced.
-     * Defaults to enabled if 'Yes', null, or not explicitly disabled.
+     * Master switch. When the site setting is off, no limit is enforced —
+     * matches the behaviour the middleware already had.
      */
     public static function isEnabled(): bool
     {
-        $setting = getSiteSettings('limit_daily_transaction');
-        if ($setting === 'No') {
-            return false;
-        }
-
-        return true;
+        return getSiteSettings('limit_daily_transaction') === 'Yes';
     }
 
     /**
@@ -86,17 +81,10 @@ class TransactionLimitService
 
         if (self::isVerified($user)) {
             $candidates[] = $user->verified_daily_transaction_limit ?? null;
-        }
-
-        // An explicitly configured per-user limit must win over the account
-        // level default, including for verified users. Otherwise a verified
-        // level set to "-" (unlimited) silently bypasses an admin-assigned
-        // user limit.
-        $candidates[] = $user->daily_transaction_limit ?? null;
-
-        if (self::isVerified($user)) {
             $candidates[] = optional($user->level)->verified_daily_transaction_limit;
         }
+
+        $candidates[] = $user->daily_transaction_limit ?? null;
         $candidates[] = optional($user->level)->daily_transaction_limit;
 
         foreach ($candidates as $candidate) {
@@ -153,22 +141,12 @@ class TransactionLimitService
             return 0.0;
         }
 
-        $query = $user->transaction()
+        return (float) $user->transaction()
             ->where('type', '0')                       // 0 = debit, 1 = credit
+            ->where('currency', $currency)
             ->whereNotIn('status', self::UNCOUNTED_STATUSES)
-            ->whereDate('created_at', Carbon::today());
-
-        if (strtoupper($currency) === 'NGN') {
-            $query->where(function ($q) {
-                $q->where('currency', 'NGN')
-                  ->orWhereNull('currency')
-                  ->orWhere('currency', '');
-            });
-        } else {
-            $query->where('currency', $currency);
-        }
-
-        return (float) $query->sum('amount');
+            ->whereDate('created_at', Carbon::today())
+            ->sum('amount');
     }
 
     /**

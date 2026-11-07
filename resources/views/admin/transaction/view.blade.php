@@ -3,7 +3,7 @@
 @section('style')
 <style>
 /* Mobile-app style receipt */
-.rcpt-wrap { position:fixed; left:0; top:0; z-index:-9999; opacity:0.01; pointer-events:none; width:440px; }  /* off-screen: capture source only, no visible preview */
+.rcpt-wrap { position:absolute; left:-99999px; top:0; width:480px; }  /* off-screen: capture source only, no visible preview */
 .rcpt-card { background:#fff; border-radius:16px; padding:22px 18px; box-shadow:0 6px 24px rgba(0,0,0,.08); border:1px solid #eee; }
 .rcpt-title { text-align:center; font-weight:700; font-size:16px; color:#1a1a1a; font-family:'Inter',Arial,sans-serif; }
 .rcpt-logo { width:70px; height:70px; border-radius:50%; background:#f1f1f1; display:flex; align-items:center; justify-content:center; margin:12px auto; overflow:hidden; }
@@ -77,11 +77,8 @@
                             <div class="text-muted">
                                 {{ $transaction->created_at->format('d M, Y h:i A') }}
                             </div>
-                            <a href="{{ route('admin.AdminDownloadReciept', $transaction->reference ?: $transaction->id) }}" class="btn btn-primary btn-sm mt-2">
-                                <i class="fa fa-file-pdf-o me-1"></i> Download PDF Receipt
-                            </a>
-                            <button type="button" id="downloadReceiptBtn" class="btn btn-outline-secondary btn-sm mt-2">
-                                <i class="fa fa-image me-1"></i> Download PNG
+                            <button type="button" id="downloadReceiptBtn" class="btn btn-primary btn-sm mt-2">
+                                <i class="fa fa-download me-1"></i> Download Receipt
                             </button>
                         </div>
                     </div>
@@ -428,28 +425,29 @@
 @section('scripts')
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script>
-document.addEventListener('DOMContentLoaded', function () {
+(function () {
   function downloadReceipt() {
     var card = document.getElementById('receiptCard');
-    if (!card) { alert('Receipt card element not found.'); return; }
-    if (typeof html2canvas === 'undefined') { alert('Receipt generator library is still loading, please retry.'); return; }
+    if (!card || typeof html2canvas === 'undefined') { alert('Receipt library not loaded.'); return; }
     html2canvas(card, {
-      scale: 2,
+      scale: 3,
       backgroundColor: '#ffffff',
       useCORS: true,
-      allowTaint: true
+      width: card.offsetWidth,
+      height: card.offsetHeight,
+      windowWidth: card.offsetWidth,
+      scrollX: 0, scrollY: 0
     }).then(function (canvas) {
       var link = document.createElement('a');
       link.download = 'receipt_{{ $transaction->reference ?: $transaction->id }}.png';
       link.href = canvas.toDataURL('image/png');
       document.body.appendChild(link); link.click(); document.body.removeChild(link);
-    }).catch(function (e) {
-      console.error('Receipt capture failed:', e);
-      alert('Could not generate the receipt image. Please use the Download PDF Receipt button.');
-    });
+    }).catch(function (e) { console.error('Receipt capture failed:', e); alert('Could not generate the receipt image.'); });
   }
-  var btn = document.getElementById('downloadReceiptBtn');
-  if (btn) btn.addEventListener('click', downloadReceipt);
-});
+  ['downloadReceiptBtn'].forEach(function (id) {
+    var b = document.getElementById(id);
+    if (b) b.addEventListener('click', downloadReceipt);
+  });
+})();
 </script>
 @endsection

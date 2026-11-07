@@ -4,7 +4,6 @@ use App\Http\Controllers\FlutterWaveWebHookController;
 use App\Http\Controllers\User\IndexController;
 use App\Http\Controllers\WebHookController;
 use App\Http\Controllers\PaystackWebHookController;
-use App\Http\Controllers\SafeHavenWebhookController;
 
 
 // Route::get('/', function () {
@@ -30,9 +29,6 @@ Route::post('paystack-webhook', [PaystackWebHookController::class, 'index'])->na
 //flutterwave webhook
 Route::post('flutterwave-virtual-account-webhook', [FlutterWaveWebHookController::class, 'index'])->name('flutterWaveWebHook');
 Route::post('/vcard/{email}', [FlutterWaveWebHookController::class, 'vcardCallBack'])->name('vcardCallBack');
-
-//safehaven webhook
-Route::post('webhooks/safehaven', [SafeHavenWebhookController::class, 'virtualAccountTransferHook'])->name('safehavenWebHook.web');
 
 
 

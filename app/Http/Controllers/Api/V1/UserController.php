@@ -46,10 +46,16 @@ class UserController extends Controller
 
     public function logoutCurrentToken(Request $request)
     {
-        $token = $request->user('api')->token();
+        $user = $request->user('api');
+        $token = $user?->token();
         if ($token === null || !$token->revoke()) {
             return response()->json(['success' => false, 'message' => 'Could not revoke token'], 503);
         }
+
+        try {
+            app(\App\Services\UserSecurityService::class)->recordEvent('token_revoked', $user, $request, null, 'User logout');
+            app(\App\Services\UserSecurityService::class)->recordEvent('session_logout', $user, $request);
+        } catch (\Throwable $e) {}
 
         return response()->json(['success' => true, 'message' => 'Logged out']);
     }

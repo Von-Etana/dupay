@@ -365,11 +365,6 @@
     </div>
     @endcan
 
-    <div class="db-card db-full-card" style="margin-top:18px;">
-        <div class="db-card-header"><div class="db-card-title">Security Overview</div><a href="{{ route('admin.security-alerts.index') }}">View logs &rarr;</a></div>
-        <div style="display:flex;gap:18px;flex-wrap:wrap;padding:18px;"><span><strong>{{ number_format($openSecurityAlerts) }}</strong> open alerts</span><span><strong>{{ number_format($todayAdminActivity) }}</strong> admin actions today</span></div>
-    </div>
-
 </div>
 @endsection
 

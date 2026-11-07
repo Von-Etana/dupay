@@ -58,14 +58,12 @@ class ForeignAccountController extends Controller
         | Transaction Pin Check
         |--------------------------------------------------------------------------
         */
-        if (!isset($_SERVER['HTTP_ISMART']) || $_SERVER['HTTP_ISMART'] != "api" || request("fingerPrint") != true) {
-            if (!$request->transaction_pin) {
-                return response(['success' => false, 'message' => "Please Enter Transaction Pin"]);
-            } elseif (!$user->transaction_pin) {
-                return response(['success' => false, 'message' => "Transaction Pin not set"]);
-            } elseif (!Hash::check($request->transaction_pin, $user->transaction_pin)) {
-                return response(['success' => false, 'message' => "Incorrect Transaction Pin"]);
-            }
+        if (!$request->transaction_pin) {
+            return response(['success' => false, 'message' => "Please Enter Transaction Pin"]);
+        } elseif (!$user->transaction_pin) {
+            return response(['success' => false, 'message' => "Transaction Pin not set"]);
+        } elseif (!Hash::check($request->transaction_pin, $user->transaction_pin)) {
+            return response(['success' => false, 'message' => "Incorrect Transaction Pin"]);
         }
         
         if (!$user->hasVerifyWallet) {
@@ -194,14 +192,12 @@ class ForeignAccountController extends Controller
         }
     
         //check transaction pin
-        if (!isset($_SERVER['HTTP_ISMART']) || $_SERVER['HTTP_ISMART'] != "api" || request("fingerPrint") != true) {
-            if (!$request->transaction_pin) {
-                return response(['success' => false, 'message' => "Please Enter Transaction Pin"]);
-            } elseif (!$user->transaction_pin) {
-                return response(['success' => false, 'message' => "Transaction Pin not set"]);
-            } elseif (!Hash::check($request->transaction_pin, $user->transaction_pin)) {
-                return response(['success' => false, 'message' => "Incorrect Transaction Pin"]);
-            }
+        if (!$request->transaction_pin) {
+            return response(['success' => false, 'message' => "Please Enter Transaction Pin"]);
+        } elseif (!$user->transaction_pin) {
+            return response(['success' => false, 'message' => "Transaction Pin not set"]);
+        } elseif (!Hash::check($request->transaction_pin, $user->transaction_pin)) {
+            return response(['success' => false, 'message' => "Incorrect Transaction Pin"]);
         }
     
         // Create foreign account
@@ -286,14 +282,12 @@ class ForeignAccountController extends Controller
         $user = Auth::user();
         
         //check transaction pin
-        if (!isset($_SERVER['HTTP_ISMART']) || $_SERVER['HTTP_ISMART'] != "api" || request("fingerPrint") != true) {
-            if (!$request->transaction_pin) {
-                return response(['success' => false, 'message' => "Please Enter Transaction Pin"]);
-            } elseif (!$user->transaction_pin) {
-                return response(['success' => false, 'message' => "Transaction Pin not set"]);
-            } elseif (!Hash::check($request->transaction_pin, $user->transaction_pin)) {
-                return response(['success' => false, 'message' => "Incorrect Transaction Pin"]);
-            }
+        if (!$request->transaction_pin) {
+            return response(['success' => false, 'message' => "Please Enter Transaction Pin"]);
+        } elseif (!$user->transaction_pin) {
+            return response(['success' => false, 'message' => "Transaction Pin not set"]);
+        } elseif (!Hash::check($request->transaction_pin, $user->transaction_pin)) {
+            return response(['success' => false, 'message' => "Incorrect Transaction Pin"]);
         }
     
         try {
@@ -349,14 +343,12 @@ class ForeignAccountController extends Controller
         
         $user = Auth::user();
         
-        if (!isset($_SERVER['HTTP_ISMART']) || $_SERVER['HTTP_ISMART'] != "api" || request("fingerPrint") != true) {
-            if (!$request->transaction_pin) {
-                return response(['success' => false, 'message' => "Please Enter Transaction Pin"]);
-            } elseif (!$user->transaction_pin) {
-                return response(['success' => false, 'message' => "Transaction Pin not set"]);
-            } elseif (!Hash::check($request->transaction_pin, $user->transaction_pin)) {
-                return response(['success' => false, 'message' => "Incorrect Transaction Pin"]);
-            }
+        if (!$request->transaction_pin) {
+            return response(['success' => false, 'message' => "Please Enter Transaction Pin"]);
+        } elseif (!$user->transaction_pin) {
+            return response(['success' => false, 'message' => "Transaction Pin not set"]);
+        } elseif (!Hash::check($request->transaction_pin, $user->transaction_pin)) {
+            return response(['success' => false, 'message' => "Incorrect Transaction Pin"]);
         }
     
         try {
@@ -409,14 +401,12 @@ class ForeignAccountController extends Controller
     {
         $user = Auth::user();
         
-        if (!isset($_SERVER['HTTP_ISMART']) || $_SERVER['HTTP_ISMART'] != "api" || request("fingerPrint") != true) {
-            if (!$request->transaction_pin) {
-                return response(['success' => false, 'message' => "Please Enter Transaction Pin"]);
-            } elseif (!$user->transaction_pin) {
-                return response(['success' => false, 'message' => "Transaction Pin not set"]);
-            } elseif (!Hash::check($request->transaction_pin, $user->transaction_pin)) {
-                return response(['success' => false, 'message' => "Incorrect Transaction Pin"]);
-            }
+        if (!$request->transaction_pin) {
+            return response(['success' => false, 'message' => "Please Enter Transaction Pin"]);
+        } elseif (!$user->transaction_pin) {
+            return response(['success' => false, 'message' => "Transaction Pin not set"]);
+        } elseif (!Hash::check($request->transaction_pin, $user->transaction_pin)) {
+            return response(['success' => false, 'message' => "Incorrect Transaction Pin"]);
         }
         
         try {
@@ -481,14 +471,12 @@ class ForeignAccountController extends Controller
 
         $user = Auth::user();
 
-        if (!isset($_SERVER['HTTP_ISMART']) || $_SERVER['HTTP_ISMART'] != "api" || request("fingerPrint") != true) {
-            if (!$request->transaction_pin) {
-                return response(['success' => false, 'message' => "Please Enter Transaction Pin"]);
-            } elseif (!$user->transaction_pin) {
-                return response(['success' => false, 'message' => "Transaction Pin not set"]);
-            } elseif (!Hash::check($request->transaction_pin, $user->transaction_pin)) {
-                return response(['success' => false, 'message' => "Incorrect Transaction Pin"]);
-            }
+        if (!$request->transaction_pin) {
+            return response(['success' => false, 'message' => "Please Enter Transaction Pin"]);
+        } elseif (!$user->transaction_pin) {
+            return response(['success' => false, 'message' => "Transaction Pin not set"]);
+        } elseif (!Hash::check($request->transaction_pin, $user->transaction_pin)) {
+            return response(['success' => false, 'message' => "Incorrect Transaction Pin"]);
         }
 
         $from   = strtoupper($validated['from_currency']);

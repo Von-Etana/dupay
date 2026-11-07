@@ -84,7 +84,7 @@ class ForgotPinController extends Controller
 
         DB::table('admin_pin_resets')->where('email',$admin->email)->delete();
 
-        return redirect()->route('adminAuth.Login')
+        return redirect()->route('admin.login')
             ->with('success','PIN reset successful');
     }
 }

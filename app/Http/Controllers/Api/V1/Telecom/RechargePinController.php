@@ -47,14 +47,12 @@ class RechargePinController extends Controller
         }
     
         // Transaction Pin Validation (if not API)
-        if (!isset($_SERVER['HTTP_ISMART']) || $_SERVER['HTTP_ISMART'] != "api" || request("fingerPrint") != true) {
-            if (!$request->transaction_pin) {
-                return response(['success' => false, 'message' => "Please Enter Transaction Pin"]);
-            } elseif (!$user->transaction_pin) {
-                return response(['success' => false, 'message' => "Transaction Pin not set"]);
-            } elseif (!Hash::check($request->transaction_pin, $user->transaction_pin)) {
-                return response(['success' => false, 'message' => "Incorrect Transaction Pin"]);
-            }
+        if (!$request->transaction_pin) {
+            return response(['success' => false, 'message' => "Please Enter Transaction Pin"]);
+        } elseif (!$user->transaction_pin) {
+            return response(['success' => false, 'message' => "Transaction Pin not set"]);
+        } elseif (!Hash::check($request->transaction_pin, $user->transaction_pin)) {
+            return response(['success' => false, 'message' => "Incorrect Transaction Pin"]);
         }
     
         if ($user->blocked_status == true) {
@@ -93,7 +91,7 @@ class RechargePinController extends Controller
             $balanceAction = userBalanceAction($lockedUser, $amount, '1', "-");
     
             if (!$balanceAction["success"]) {
-                return response(['success' => false, 'message' => $balanceAction['message'] ?? 'Insufficient balance. Please refresh and try again.']);
+                return response(['success' => false, 'message' => 'Insufficient balance. Please refresh and try again.']);
             }
     
             $init_balance = $balanceAction["init_balance"];
@@ -334,8 +332,7 @@ class RechargePinController extends Controller
     //     }
     
     //     // Transaction Pin Validation (if not API)
-    //     if (!isset($_SERVER['HTTP_ISMART']) || $_SERVER['HTTP_ISMART'] != "api" || request("fingerPrint") != true) {
-    //         if (!$request->transaction_pin) {
+    //     //         if (!$request->transaction_pin) {
     //             return response(['success' => false, 'message' => "Please Enter Transaction Pin"]);
     //         } elseif (!$user->transaction_pin) {
     //             return response(['success' => false, 'message' => "Transaction Pin not set"]);
@@ -343,7 +340,7 @@ class RechargePinController extends Controller
     //             return response(['success' => false, 'message' => "Incorrect Transaction Pin"]);
     //         }
     //     }
-        
+    
     //     if($user->blocked_status == true){
     //         return response()->json([
     //             'success' => false,
@@ -406,14 +403,14 @@ class RechargePinController extends Controller
     //     } catch (\GuzzleHttp\Exception\ClientException $e) {
     //         $response = $e->getResponse();
     //         $body = json_decode($response->getBody()->getContents(), true);
-            
+        
     //         if ($response->getStatusCode() === 400 && isset($body['message'])) {
     //             if (str_contains(strtolower($body['message']), 'insufficient balance')) {
     //                 return response(['success' => false, 'message' => 'Service provider has insufficient balance. Please try again later.']);
     //             }
     //             return response(['success' => false, 'message' => $body['message']]);
     //         }
-            
+        
     //         return response(['success' => false, 'message' => 'Service temporarily unavailable. Please try again later.']);
     //     } catch (\Exception $e) {
     //         \Log::error('ePIN Purchase Error: ' . $e->getMessage());
@@ -465,7 +462,7 @@ class RechargePinController extends Controller
     //               "Qty: {$data['quantity']} x ₦{$data['value']}\n" .
     //               "Date: " . now()->format('d-m-Y H:i') . "\n" .
     //               "Bal: NGN " . number_format($final_balance, 2);
-                
+            
     //             sendTransactionSms($user, $smsDescription, '1');
     //         }
     
@@ -476,7 +473,7 @@ class RechargePinController extends Controller
     //             $networkName = $network->name;
     //             $transactionRef = $Trx;
     //             $totalValue = $data['value'] * $data['quantity'];
-                
+            
     //             $message = "
     //                 <p>This is to inform you that a transaction has occurred on your account with <strong>Dupay</strong> with details below:</p>
     //                 <table style='width:100%; border-collapse: collapse; font-family: Arial, sans-serif; font-size: 14px;'>
@@ -529,7 +526,7 @@ class RechargePinController extends Controller
     //                 <p>Your ePINs have been generated successfully. You can download the PDF receipt from your dashboard.</p>
     //                 <p>Thank you for using Dupay.</p>
     //             ";
-                
+            
     //             try {
     //                 $this->sendMail($user->email, $user->profile->first_name, 'Dupay Debit Transaction Notification - ePIN Purchase', $message);
     //             } catch (\Throwable $th) {
@@ -599,31 +596,30 @@ class RechargePinController extends Controller
     //             // 'date' => now(),
     //             // 'amount_debited' => $amount,
     //             'data' => $body['data'], 
-                 
+             
     //         ]);
     
     //     } catch (\Exception $e) {
     //         \Log::error('Transaction Save Error: ' . $e->getMessage());
-            
+        
     //         // Refund user if transaction saving fails
     //         userBalanceAction($user, $amount, '1', "+");
-            
+        
     //         return response(['success' => false, 'message' => 'Transaction failed. Your balance has been refunded. Please try again.']);
     //     }
     // }
     
     public function fetchEpins(Request $request)
     {
-        $user = auth()->user();
+    $user = auth()->user();
 
-        $epins = EpinPurchase::where('user_id', $user->id)->get();
+    $epins = EpinPurchase::where('user_id', $user->id)->get();
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Recharge PINs fetched successfully',
-            'data' => $epins
-        ]);
-    }
+    return response()->json([
+        'success' => true,
+        'message' => 'Recharge PINs fetched successfully',
+        'data' => $epins
+    ]);
     
     public function trysms(Request $request)
     {

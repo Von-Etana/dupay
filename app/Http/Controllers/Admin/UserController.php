@@ -541,41 +541,20 @@ class UserController extends Controller
             addSiteActitvity(auth()->guard('admin')->user(), $ac);
             DB::commit();
 
-            $targetUsername = $user->profile?->username ?? $user->username ?? ("user#" . $user->id);
-            $targetFullName = trim(($user->profile?->first_name ?? '') . ' ' . ($user->profile?->last_name ?? '')) ?: ($user->name ?? $targetUsername);
-            $targetEmail = $user->email ?? null;
-            $adminUser = auth()->guard('admin')->user();
-            $adminUsername = $adminUser?->username ?? $adminUser?->name ?? ($adminUser?->id ? 'Admin #' . $adminUser->id : 'Admin');
-
             SecurityAlertService::record(
                 'admin_wallet_adjustment',
                 'high',
                 'Admin wallet adjustment',
-                "An admin {$action}ed NGN wallet for @{$targetUsername} ({$targetFullName}).",
+                "An admin {$action}ed a wallet for {$user->profile->username}.",
                 auth()->guard('admin')->id(),
                 request()->ip(),
-                [
-                    'user_id' => $user->id,
-                    'username' => $targetUsername,
-                    'user_name' => $targetFullName,
-                    'user_email' => $targetEmail,
-                    'admin_username' => $adminUsername,
-                    'wallet_id' => $request->wallet_id,
-                    'amount' => (float) $request->amount,
-                    'currency' => 'NGN',
-                    'action' => ucfirst($action),
-                    'reference' => $trx,
-                ]
+                ['user_id' => $user->id, 'wallet_id' => $request->wallet_id, 'amount' => (float) $request->amount, 'reference' => $trx]
             );
             SecurityAlertService::sendTransactionNotice([
-                'action' => ucfirst($action),
+                'action' => $action,
                 'currency' => 'NGN',
                 'amount' => $request->amount,
                 'user_id' => $user->id,
-                'username' => $targetUsername,
-                'user_name' => $targetFullName,
-                'user_email' => $targetEmail,
-                'admin_username' => $adminUsername,
                 'reference' => $trx,
                 'time' => now(),
             ]);
@@ -989,6 +968,9 @@ class UserController extends Controller
          $ac['user_type'] = "2";
          $ac["extra"] = json_encode(["id" => $item->id]);
          addSiteActitvity(auth()->guard('admin')->user(), $ac);
+        try {
+            app(\App\Services\UserSecurityService::class)->recordEvent('admin_toggle_ban', $item, request(), \Illuminate\Support\Facades\Auth::guard('admin')->id() ?? \Illuminate\Support\Facades\Auth::id(), "Admin {$msg} user {$username}");
+        } catch (\Throwable $e) {}
 
         session()->flash('message', "User $msg Successfully.");
         Session::flash('type', 'success');
@@ -1022,6 +1004,9 @@ class UserController extends Controller
          $ac['user_type'] = "2";
          $ac["extra"] = json_encode(["id" => $item->id]);
          addSiteActitvity(auth()->guard('admin')->user(), $ac);
+        try {
+            app(\App\Services\UserSecurityService::class)->recordEvent('admin_toggle_block', $item, request(), \Illuminate\Support\Facades\Auth::guard('admin')->id() ?? \Illuminate\Support\Facades\Auth::id(), "Admin {$msg} user {$username}");
+        } catch (\Throwable $e) {}
 
         session()->flash('message', "User $msg Successfully.");
         Session::flash('type', 'success');
@@ -1057,6 +1042,9 @@ class UserController extends Controller
          $ac['user_type'] = "2";
          $ac["extra"] = json_encode(["id" => $item->id]);
          addSiteActitvity(auth()->guard('admin')->user(), $ac);
+        try {
+            app(\App\Services\UserSecurityService::class)->recordEvent('admin_toggle_activation', $item, request(), \Illuminate\Support\Facades\Auth::guard('admin')->id() ?? \Illuminate\Support\Facades\Auth::id(), "Admin {$msg} user {$username}");
+        } catch (\Throwable $e) {}
 
         session()->flash('message', "User $msg Successfully.");
         Session::flash('type', 'success');
@@ -1167,42 +1155,20 @@ class UserController extends Controller
     
             DB::commit();
 
-            $targetUsername = $user->profile?->username ?? $user->username ?? ("user#" . $user->id);
-            $targetFullName = trim(($user->profile?->first_name ?? '') . ' ' . ($user->profile?->last_name ?? '')) ?: ($user->name ?? $targetUsername);
-            $targetEmail = $user->email ?? null;
-            $adminUser = auth()->guard('admin')->user();
-            $adminUsername = $adminUser?->username ?? $adminUser?->name ?? ($adminUser?->id ? 'Admin #' . $adminUser->id : 'Admin');
-            $actionVerb = $isCredit ? 'credited' : 'debited';
-            $actionTitle = $isCredit ? 'Credit' : 'Debit';
-
             SecurityAlertService::record(
                 'admin_foreign_wallet_adjustment',
                 'high',
                 "Admin {$currency} wallet adjustment",
-                "An admin {$actionVerb} {$currency} wallet for @{$targetUsername} ({$targetFullName}).",
+                "An admin " . ($isCredit ? 'credited' : 'debited') . " a {$currency} wallet.",
                 auth()->guard('admin')->id(),
                 request()->ip(),
-                [
-                    'user_id' => $user->id,
-                    'username' => $targetUsername,
-                    'user_name' => $targetFullName,
-                    'user_email' => $targetEmail,
-                    'admin_username' => $adminUsername,
-                    'currency' => $currency,
-                    'amount' => (float) $amount,
-                    'action' => $actionTitle,
-                    'reference' => $trx,
-                ]
+                ['user_id' => $user->id, 'currency' => $currency, 'amount' => (float) $amount, 'reference' => $trx]
             );
             SecurityAlertService::sendTransactionNotice([
-                'action' => $actionTitle,
+                'action' => $isCredit ? 'Credit' : 'Debit',
                 'currency' => $currency,
                 'amount' => $amount,
                 'user_id' => $user->id,
-                'username' => $targetUsername,
-                'user_name' => $targetFullName,
-                'user_email' => $targetEmail,
-                'admin_username' => $adminUsername,
                 'reference' => $trx,
                 'time' => now(),
             ]);

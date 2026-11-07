@@ -133,6 +133,29 @@
                 </a>
             </li>
 
+            @can('view_security_alerts')
+            <li style="margin: 2px 0;">
+                <a href="{{ route('admin.security-alerts.index') }}" style="{{ $menuStyle }}"
+                   onmouseover="this.style.background='rgba(255,255,255,0.08)'; this.style.borderLeftColor='#f59e0b';"
+                   onmouseout="this.style.background='transparent'; this.style.borderLeftColor='transparent';">
+                    <div style="display:flex; align-items:center; gap:12px; flex:1;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="2"><path d="M12 2l8 4v6c0 5-3.5 9-8 10-4.5-1-8-5-8-10V6l8-4z"></path><path d="M12 8v4"></path><path d="M12 16h.01"></path></svg>
+                        <span style="{{ $spanStyle }}">Security Alerts</span>
+                    </div>
+                </a>
+            </li>
+            @endcan
+
+            @can('view_user_security')
+            <li style="margin: 2px 0;">
+                <a href="{{ route('admin.user-security.index') }}" style="{{ $menuStyle }}">
+                    <div style="display:flex; align-items:center; gap:12px; flex:1;">
+                        <span style="{{ $spanStyle }}">Locked Users</span>
+                    </div>
+                </a>
+            </li>
+            @endcan
+
             @canany(['view_exchange_rate', 'view_virtual_card_fund_fee'])
             <li style="margin: 2px 0;">
                 <a href="#menu_exchange" data-bs-toggle="collapse" aria-expanded="false" style="{{ $menuStyle }} cursor: pointer;"
@@ -207,18 +230,6 @@
                 </a>
             </li>
             @endcan
-
-            {{-- Security monitoring --}}
-            <li style="margin: 2px 0;">
-                <a href="{{ route('admin.security-alerts.index') }}" style="{{ $menuStyle }}"
-                   onmouseover="this.style.background='rgba(255,255,255,0.08)'; this.style.borderLeftColor='#f59e0b';"
-                   onmouseout="this.style.background='transparent'; this.style.borderLeftColor='transparent';">
-                    <div style="display:flex; align-items:center; gap:12px; flex:1;">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="2"><path d="M12 2l8 4v6c0 5-3.5 9-8 10-4.5-1-8-5-8-10V6l8-4z"></path><path d="M12 8v4"></path><path d="M12 16h.01"></path></svg>
-                        <span style="{{ $spanStyle }}">Security Alerts</span>
-                    </div>
-                </a>
-            </li>
 
             @canany(['view_naira_deposit_charges', 'view_usd_deposit_charges', 'view_eur_deposit_charges'])
             <li style="margin: 2px 0;">
@@ -332,18 +343,6 @@
                 </a>
             </li>
             @endcan
-
-            {{-- 2FA Security --}}
-            <li style="margin: 2px 0;">
-                <a href="{{ route('admin.security.2fa') }}" style="{{ $menuStyle }}"
-                   onmouseover="this.style.background='rgba(255,255,255,0.08)'; this.style.borderLeftColor='#4f8ef7';"
-                   onmouseout="this.style.background='transparent'; this.style.borderLeftColor='transparent';">
-                    <div style="display:flex; align-items:center; gap:12px; flex:1;">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
-                        <span style="{{ $spanStyle }}">2FA Security</span>
-                    </div>
-                </a>
-            </li>
 
             {{-- Logout --}}
             <li style="margin: 20px 0 8px 0; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 12px;">

@@ -14,6 +14,7 @@ class Kernel extends HttpKernel
      * @var array<int, class-string|string>
      */
     protected $middleware = [
+        \App\Http\Middleware\CorrelationIdMiddleware::class,
         // \App\Http\Middleware\TrustHosts::class,
         //\Illuminate\Session\Middleware\StartSession::class,
         \App\Http\Middleware\TrustProxies::class,
@@ -79,7 +80,6 @@ class Kernel extends HttpKernel
         'notBlocked' => \App\Http\Middleware\EnsureUserNotBlocked::class,
         'deduplicateMoney' => \App\Http\Middleware\DeduplicateMoneyRequest::class,
         'admin.pin' => \App\Http\Middleware\AdminPinMiddleware::class,
-        'admin.2fa' => \App\Http\Middleware\EnsureAdmin2FaVerified::class,
 
     ];
 }

@@ -130,7 +130,7 @@ class PhysicalCardController extends Controller
                 \DB::rollBack();
                 return response()->json([
                     'success' => false,
-                    'message' => $balanceAction['message'] ?? 'Wallet balance error. Please try again.',
+                    'message' => 'Wallet balance error. Please try again.',
                 ], 400);
             }
             $init_balance  = $balanceAction["init_balance"];
@@ -450,14 +450,12 @@ class PhysicalCardController extends Controller
         $user = Auth::user();
         
         //check transaction pin
-        if (!isset($_SERVER['HTTP_ISMART']) || $_SERVER['HTTP_ISMART'] != "api" || request("fingerPrint") != true) {
-            if (!$request->transaction_pin) {
-                return response(['success' => false, 'message' => "Please Enter Transaction Pin"]);
-            } elseif (!$user->transaction_pin) {
-                return response(['success' => false, 'message' => "Transaction Pin not set"]);
-            } elseif (!Hash::check($request->transaction_pin, $user->transaction_pin)) {
-                return response(['success' => false, 'message' => "Incorrect Transaction Pin"]);
-            }
+        if (!$request->transaction_pin) {
+            return response(['success' => false, 'message' => "Please Enter Transaction Pin"]);
+        } elseif (!$user->transaction_pin) {
+            return response(['success' => false, 'message' => "Transaction Pin not set"]);
+        } elseif (!Hash::check($request->transaction_pin, $user->transaction_pin)) {
+            return response(['success' => false, 'message' => "Incorrect Transaction Pin"]);
         }
     
         if (!$user->walletVerification) {
@@ -595,10 +593,10 @@ class PhysicalCardController extends Controller
         
         // Deduct card creation fee from user balance
         $balanceAction = userBalanceAction($user, $card_creation_fee, '1', "-");
-        if (!$balanceAction || empty($balanceAction["success"])) {
+        if (!$balanceAction || !isset($balanceAction["init_balance"], $balanceAction["final_balance"])) {
             return response()->json([
                 'success' => false,
-                'message' => $balanceAction['message'] ?? 'Failed to process card creation fee deduction. Please try again later.',
+                'message' => 'Failed to process card creation fee deduction. Please try again later.',
             ]);
         }
     
@@ -703,14 +701,12 @@ class PhysicalCardController extends Controller
         
         $validatedData = $validator->validated();
         
-        if (!isset($_SERVER['HTTP_ISMART']) || $_SERVER['HTTP_ISMART'] != "api" || request("fingerPrint") != true) {
-            if (!$request->transaction_pin) {
-                return response(['success' => false, 'message' => "Please Enter Transaction Pin"]);
-            } elseif (!$user->transaction_pin) {
-                return response(['success' => false, 'message' => "Transaction Pin not set"]);
-            } elseif (!Hash::check($request->transaction_pin, $user->transaction_pin)) {
-                return response(['success' => false, 'message' => "Incorrect Transaction Pin"]);
-            }
+        if (!$request->transaction_pin) {
+            return response(['success' => false, 'message' => "Please Enter Transaction Pin"]);
+        } elseif (!$user->transaction_pin) {
+            return response(['success' => false, 'message' => "Transaction Pin not set"]);
+        } elseif (!Hash::check($request->transaction_pin, $user->transaction_pin)) {
+            return response(['success' => false, 'message' => "Incorrect Transaction Pin"]);
         }
     
         // ── Check 1: Card credentials must exist and belong to THIS user ────────
@@ -927,14 +923,12 @@ class PhysicalCardController extends Controller
         | Transaction Pin Check
         |--------------------------------------------------------------------------
         */
-        if (!isset($_SERVER['HTTP_ISMART']) || $_SERVER['HTTP_ISMART'] != "api" || request("fingerPrint") != true) {
-            if (!$request->transaction_pin) {
-                return response(['success' => false, 'message' => "Please Enter Transaction Pin"]);
-            } elseif (!$user->transaction_pin) {
-                return response(['success' => false, 'message' => "Transaction Pin not set"]);
-            } elseif (!Hash::check($request->transaction_pin, $user->transaction_pin)) {
-                return response(['success' => false, 'message' => "Incorrect Transaction Pin"]);
-            }
+        if (!$request->transaction_pin) {
+            return response(['success' => false, 'message' => "Please Enter Transaction Pin"]);
+        } elseif (!$user->transaction_pin) {
+            return response(['success' => false, 'message' => "Transaction Pin not set"]);
+        } elseif (!Hash::check($request->transaction_pin, $user->transaction_pin)) {
+            return response(['success' => false, 'message' => "Incorrect Transaction Pin"]);
         }
     
         $card = PhysicalCard::where('id', $validated['physical_card_id'])
@@ -1072,14 +1066,12 @@ class PhysicalCardController extends Controller
         | Transaction Pin Check
         |--------------------------------------------------------------------------
         */
-        if (!isset($_SERVER['HTTP_ISMART']) || $_SERVER['HTTP_ISMART'] != "api" || request("fingerPrint") != true) {
-            if (!$request->transaction_pin) {
-                return response(['success' => false, 'message' => "Please Enter Transaction Pin"]);
-            } elseif (!$user->transaction_pin) {
-                return response(['success' => false, 'message' => "Transaction Pin not set"]);
-            } elseif (!Hash::check($request->transaction_pin, $user->transaction_pin)) {
-                return response(['success' => false, 'message' => "Incorrect Transaction Pin"]);
-            }
+        if (!$request->transaction_pin) {
+            return response(['success' => false, 'message' => "Please Enter Transaction Pin"]);
+        } elseif (!$user->transaction_pin) {
+            return response(['success' => false, 'message' => "Transaction Pin not set"]);
+        } elseif (!Hash::check($request->transaction_pin, $user->transaction_pin)) {
+            return response(['success' => false, 'message' => "Incorrect Transaction Pin"]);
         }
     
         $card = PhysicalCard::where('id', $validated['physical_card_id'])
@@ -1176,14 +1168,12 @@ class PhysicalCardController extends Controller
         | Transaction Pin Check
         |--------------------------------------------------------------------------
         */
-        if (!isset($_SERVER['HTTP_ISMART']) || $_SERVER['HTTP_ISMART'] != "api" || request("fingerPrint") != true) {
-            if (!$request->transaction_pin) {
-                return response(['success' => false, 'message' => "Please Enter Transaction Pin"]);
-            } elseif (!$user->transaction_pin) {
-                return response(['success' => false, 'message' => "Transaction Pin not set"]);
-            } elseif (!Hash::check($request->transaction_pin, $user->transaction_pin)) {
-                return response(['success' => false, 'message' => "Incorrect Transaction Pin"]);
-            }
+        if (!$request->transaction_pin) {
+            return response(['success' => false, 'message' => "Please Enter Transaction Pin"]);
+        } elseif (!$user->transaction_pin) {
+            return response(['success' => false, 'message' => "Transaction Pin not set"]);
+        } elseif (!Hash::check($request->transaction_pin, $user->transaction_pin)) {
+            return response(['success' => false, 'message' => "Incorrect Transaction Pin"]);
         }
     
         $card = PhysicalCard::where('id', $request->physical_card_id)
@@ -1283,14 +1273,12 @@ class PhysicalCardController extends Controller
         | Transaction Pin Check
         |--------------------------------------------------------------------------
         */
-        if (!isset($_SERVER['HTTP_ISMART']) || $_SERVER['HTTP_ISMART'] != "api" || request("fingerPrint") != true) {
-            if (!$request->transaction_pin) {
-                return response(['success' => false, 'message' => "Please Enter Transaction Pin"]);
-            } elseif (!$user->transaction_pin) {
-                return response(['success' => false, 'message' => "Transaction Pin not set"]);
-            } elseif (!Hash::check($request->transaction_pin, $user->transaction_pin)) {
-                return response(['success' => false, 'message' => "Incorrect Transaction Pin"]);
-            }
+        if (!$request->transaction_pin) {
+            return response(['success' => false, 'message' => "Please Enter Transaction Pin"]);
+        } elseif (!$user->transaction_pin) {
+            return response(['success' => false, 'message' => "Transaction Pin not set"]);
+        } elseif (!Hash::check($request->transaction_pin, $user->transaction_pin)) {
+            return response(['success' => false, 'message' => "Incorrect Transaction Pin"]);
         }
     
         $validated = $validator->validated();
@@ -1396,14 +1384,12 @@ class PhysicalCardController extends Controller
         | Transaction Pin Check
         |--------------------------------------------------------------------------
         */
-        if (!isset($_SERVER['HTTP_ISMART']) || $_SERVER['HTTP_ISMART'] != "api" || request("fingerPrint") != true) {
-            if (!$request->transaction_pin) {
-                return response(['success' => false, 'message' => "Please Enter Transaction Pin"]);
-            } elseif (!$user->transaction_pin) {
-                return response(['success' => false, 'message' => "Transaction Pin not set"]);
-            } elseif (!Hash::check($request->transaction_pin, $user->transaction_pin)) {
-                return response(['success' => false, 'message' => "Incorrect Transaction Pin"]);
-            }
+        if (!$request->transaction_pin) {
+            return response(['success' => false, 'message' => "Please Enter Transaction Pin"]);
+        } elseif (!$user->transaction_pin) {
+            return response(['success' => false, 'message' => "Transaction Pin not set"]);
+        } elseif (!Hash::check($request->transaction_pin, $user->transaction_pin)) {
+            return response(['success' => false, 'message' => "Incorrect Transaction Pin"]);
         }
     
         $card = PhysicalCard::where('card_id', $validated['card_id'])->first();
@@ -1482,14 +1468,12 @@ class PhysicalCardController extends Controller
         | Transaction Pin Check
         |--------------------------------------------------------------------------
         */
-        if (!isset($_SERVER['HTTP_ISMART']) || $_SERVER['HTTP_ISMART'] != "api" || request("fingerPrint") != true) {
-            if (!$request->transaction_pin) {
-                return response(['success' => false, 'message' => "Please Enter Transaction Pin"]);
-            } elseif (!$user->transaction_pin) {
-                return response(['success' => false, 'message' => "Transaction Pin not set"]);
-            } elseif (!Hash::check($request->transaction_pin, $user->transaction_pin)) {
-                return response(['success' => false, 'message' => "Incorrect Transaction Pin"]);
-            }
+        if (!$request->transaction_pin) {
+            return response(['success' => false, 'message' => "Please Enter Transaction Pin"]);
+        } elseif (!$user->transaction_pin) {
+            return response(['success' => false, 'message' => "Transaction Pin not set"]);
+        } elseif (!Hash::check($request->transaction_pin, $user->transaction_pin)) {
+            return response(['success' => false, 'message' => "Incorrect Transaction Pin"]);
         }
     
         $card = PhysicalCard::where('user_id', $user->id)

@@ -33,11 +33,6 @@ class Admin extends Authenticatable
         's_password',
         's_pin',
         'pin',
-        'two_factor_enabled',
-        'two_factor_secret',
-        'two_factor_type',
-        'two_factor_recovery_codes',
-        'two_factor_confirmed_at',
     ];
 
      /**
@@ -50,8 +45,6 @@ class Admin extends Authenticatable
         's_password',
         'pin',
         's_pin',
-        'two_factor_secret',
-        'two_factor_recovery_codes',
         'remember_token',
     ];
 
@@ -63,33 +56,25 @@ class Admin extends Authenticatable
      */
     protected $casts = [
         'email_verified_at' => 'datetime',
-        'two_factor_enabled' => 'boolean',
-        'two_factor_confirmed_at' => 'datetime',
-        'two_factor_recovery_codes' => 'array',
     ];
 
-    /**
-     * Determine if admin has two-factor authentication enabled.
-     */
-    public function hasTwoFactorEnabled(): bool
+    protected static function booted()
     {
-        return (bool) $this->two_factor_enabled && ! empty($this->two_factor_confirmed_at);
-    }
-
-    /**
-     * Get decrypted two-factor TOTP secret.
-     */
-    public function getDecryptedTwoFactorSecret(): ?string
-    {
-        if (empty($this->two_factor_secret)) {
-            return null;
-        }
-
-        try {
-            return \Illuminate\Support\Facades\Crypt::decryptString($this->two_factor_secret);
-        } catch (\Throwable $e) {
-            return null;
-        }
+        static::created(function ($admin) {
+            try {
+                \App\Services\SecurityAlertService::record(
+                    'new_admin_created',
+                    'critical',
+                    'New Admin Account Created',
+                    "A new administrative account '{$admin->username}' ({$admin->email}) was created with ID #{$admin->id}.",
+                    $admin->id,
+                    request()->ip() ?? '127.0.0.1',
+                    ['admin_id' => $admin->id, 'username' => $admin->username, 'email' => $admin->email]
+                );
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::error('Failed to trigger new admin alert: ' . $e->getMessage());
+            }
+        });
     }
 
     public function roles()
