@@ -17,6 +17,10 @@
           "development": {
             "command": "flutter build ios --simulator --debug",
             "artifact": "build/ios/iphonesimulator/Runner.app"
+          },
+          "production": {
+            "command": "flutter build ipa --release",
+            "artifact": "build/ios/ipa/*.ipa"
           }
         }
       }
