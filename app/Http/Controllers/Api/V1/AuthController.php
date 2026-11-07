@@ -33,7 +33,7 @@ class AuthController extends Controller
         $exist['data'] = null;
         $exist['type'] = null;
         if ($request->email) {
-            if (\AppRules\NotDisposableEmail::isDisposable(substr(strrchr($request->email, "@"), 1))) {
+            if (\App\Rules\NotDisposableEmail::isDisposable(substr(strrchr($request->email, "@"), 1))) {
                 return response(['success' => false, 'message' => 'Disposable or temporary email addresses are not allowed.'], 422);
             }
             $exist['data'] = User::where('email',$request->email)->first();
@@ -530,7 +530,7 @@ class AuthController extends Controller
             'phone_number' => 'required_without:email|nullable|string',
             'password' => 'required|string',
             'fcmToken' => 'nullable|string',
-            'device_id' => 'required|string|min:16|max:255'
+            'device_id' => 'nullable|string'
         ]);
 
         if ($validator->fails()) {
@@ -555,17 +555,49 @@ class AuthController extends Controller
             'password' => $request->input('password')
         ];
 
-        // Verify the password, then require the short-lived OTP challenge.
-        $challengeService = app(\App\Services\LoginChallengeService::class);
         $user = User::where($loginField, $loginType)->first();
         if (!$user) {
-            app(\App\Services\UserSecurityService::class)->recordEvent('password_failed', null, $request);
+            try {
+                app(\App\Services\UserSecurityService::class)->recordEvent('password_failed', null, $request);
+            } catch (\Throwable $th) {}
             return response(['success' => false, 'message' => 'Invalid Login Details']);
         }
-        $result = $challengeService->begin($user, $loginData['password'], $request);
-        $status = $result['code'] === 'otp_required' ? 200 : ($result['_status'] ?? ($result['success'] ? 200 : 401));
-        unset($result['_status']);
-        return response()->json($result, $status);
+
+        // Attempt authentication
+        if (!auth()->attempt($loginData)) {
+            try {
+                app(\App\Services\UserSecurityService::class)->recordEvent('password_failed', $user, $request);
+            } catch (\Throwable $th) {}
+            return response(['success' => false, 'message' => 'Invalid Login Details']);
+        }
+
+        $user = User::whereId(auth()->user()->id)->with('profile')->first();
+        if (!$user) {
+            return response(['success' => false, 'message' => 'User not found.']);
+        }
+
+        // Check if the user is banned
+        if ((int) $user->ban_status === 1) {
+            return response(['success' => false, 'message' => 'Sorry, your account is blocked. Contact support.']);
+        }
+
+        if ($request->filled('fcmToken')) {
+            $user->update(['fcmToken' => $request->fcmToken]);
+        }
+
+        // Generate access token for mobile app
+        $accessToken = auth()->user()->createToken('authToken');
+
+        try {
+            app(\App\Services\UserSecurityService::class)->recordEvent('password_verified', $user, $request);
+            app(\App\Services\UserSecurityService::class)->recordEvent('token_issued', $user, $request);
+        } catch (\Throwable $th) {}
+
+        return response([
+            'success' => true,
+            'user' => $user,
+            'access_token' => $accessToken->accessToken,
+        ]);
     }
 
 
