@@ -45,7 +45,6 @@ workflows:
 
       - name: Install CocoaPods
         script: |
-          flutter build ios --config-only --release
           cd ios && pod install --repo-update
 
       - name: Set up code signing and auto-create provisioning profile
@@ -55,16 +54,17 @@ workflows:
             --type IOS_APP_STORE \
             --create
           keychain add-certificates
-          cd ios && xcode-project use-profiles
 
           # If the active provisioning profile contains Push Notifications, enable it dynamically
           for prof in ~/Library/MobileDevice/Provisioning\ Profiles/*.mobileprovision; do
             if [ -f "$prof" ] && security cms -D -i "$prof" 2>/dev/null | grep -q "aps-environment"; then
               echo "Provisioning profile contains Push Notifications capability. Injecting aps-environment..."
-              printf '<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n<plist version="1.0">\n<dict>\n\t<key>aps-environment</key>\n\t<string>production</string>\n</dict>\n</plist>\n' > Runner/Runner.entitlements
+              printf '<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n<plist version="1.0">\n<dict>\n\t<key>aps-environment</key>\n\t<string>production</string>\n</dict>\n</plist>\n' > ios/Runner/Runner.entitlements
               break
             fi
           done
+
+          xcode-project use-profiles --export-options-plist=/Users/builder/export_options.plist
 
       - name: Build iOS Release IPA
         script: |
