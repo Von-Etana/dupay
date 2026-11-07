@@ -56,40 +56,49 @@ class UserSecurityService
     }
 
     /** Only explicit context is stored; passwords, OTPs and request bodies are excluded. */
-    public function recordEvent(string $event, ?User $user, Request $request, ?int $adminId = null, ?string $reason = null): SecurityEvent
+    public function recordEvent(string $event, ?User $user, Request $request, ?int $adminId = null, ?string $reason = null): ?SecurityEvent
     {
-        $payload = [
-            'user_id' => $user ? $user->getKey() : null,
-            'event' => $event,
-            'ip_address' => $request->ip(),
-            'user_agent' => mb_substr((string) $request->userAgent(), 0, 2048),
-        ];
-
-        if (Schema::hasColumn('security_events', 'device_hash')) {
-            $payload['device_hash'] = $request->filled('device_id') ? hash('sha256', (string) $request->input('device_id')) : null;
-        }
-        if (Schema::hasColumn('security_events', 'admin_id')) {
-            $payload['admin_id'] = $adminId;
-        }
-        if (Schema::hasColumn('security_events', 'reason')) {
-            $payload['reason'] = $reason;
-        }
-        $requestId = $request->attributes->get('request_id') ?? $request->header('X-Request-ID');
-        if ($requestId && Schema::hasColumn('security_events', 'request_id')) {
-            $payload['request_id'] = $requestId;
-        }
-
         try {
-            Log::info("Security event: {$event}", [
-                'event' => $event,
-                'user_id' => $payload['user_id'],
-                'admin_id' => $adminId,
-                'request_id' => $requestId,
-                'ip_address' => $payload['ip_address'],
-            ]);
-        } catch (\Throwable $e) {}
+            if (!Schema::hasTable('security_events')) {
+                return null;
+            }
 
-        return SecurityEvent::create($payload);
+            $payload = [
+                'user_id' => $user ? $user->getKey() : null,
+                'event' => $event,
+                'ip_address' => $request->ip(),
+                'user_agent' => mb_substr((string) $request->userAgent(), 0, 2048),
+            ];
+
+            if (Schema::hasColumn('security_events', 'device_hash')) {
+                $payload['device_hash'] = $request->filled('device_id') ? hash('sha256', (string) $request->input('device_id')) : null;
+            }
+            if (Schema::hasColumn('security_events', 'admin_id')) {
+                $payload['admin_id'] = $adminId;
+            }
+            if (Schema::hasColumn('security_events', 'reason')) {
+                $payload['reason'] = $reason;
+            }
+            $requestId = $request->attributes->get('request_id') ?? $request->header('X-Request-ID');
+            if ($requestId && Schema::hasColumn('security_events', 'request_id')) {
+                $payload['request_id'] = $requestId;
+            }
+
+            try {
+                Log::info("Security event: {$event}", [
+                    'event' => $event,
+                    'user_id' => $payload['user_id'],
+                    'admin_id' => $adminId,
+                    'request_id' => $requestId,
+                    'ip_address' => $payload['ip_address'],
+                ]);
+            } catch (\Throwable $e) {}
+
+            return SecurityEvent::create($payload);
+        } catch (\Throwable $e) {
+            Log::warning("Failed to record security event: {$event} - " . $e->getMessage());
+            return null;
+        }
     }
 
     /** Caller must hold the user row lock. Includes refresh tokens and browser sessions. */
