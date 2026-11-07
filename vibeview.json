@@ -1,0 +1,25 @@
+{
+  "defaultPlatform": "android",
+  "platforms": {
+    "android": {
+      "build": {
+        "profiles": {
+          "development": {
+            "command": "cd mobile && flutter build apk --debug",
+            "artifact": "mobile/build/app/outputs/flutter-apk/app-debug.apk"
+          }
+        }
+      }
+    },
+    "ios": {
+      "build": {
+        "profiles": {
+          "development": {
+            "command": "cd mobile && flutter build ios --simulator --debug",
+            "artifact": "mobile/build/ios/iphonesimulator/Runner.app"
+          }
+        }
+      }
+    }
+  }
+}
