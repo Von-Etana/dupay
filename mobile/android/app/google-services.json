@@ -1,0 +1,68 @@
+{
+  "project_info": {
+    "project_number": "615532986243",
+    "firebase_url": "https://dupay-app-default-rtdb.firebaseio.com",
+    "project_id": "dupay-app",
+    "storage_bucket": "dupay-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:615532986243:android:62654472f85d7a05c5c0b6",
+        "android_client_info": {
+          "package_name": "com.dupay.wallet.com"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD3rTDl_mqdEkX4Rz2v2ES4nKcQMLT6_Rk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:615532986243:android:d4350186dbb0a0afc5c0b6",
+        "android_client_info": {
+          "package_name": "com.mydupay.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD3rTDl_mqdEkX4Rz2v2ES4nKcQMLT6_Rk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:615532986243:android:e5461297ecb1b1ba65c0b7",
+        "android_client_info": {
+          "package_name": "com.my.dupay.app.new"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD3rTDl_mqdEkX4Rz2v2ES4nKcQMLT6_Rk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
