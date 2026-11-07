@@ -51,19 +51,27 @@ workflows:
       - name: Set up code signing and auto-create provisioning profile
         script: |
           keychain initialize
+          mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
+          mkdir -p "$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles"
           app-store-connect fetch-signing-files "com.my.dupay.app.new" \
             --type IOS_APP_STORE \
+            --profiles-dir="$HOME/Library/MobileDevice/Provisioning Profiles" \
             --create
           keychain add-certificates
 
-          PROV_FILE=$(find ~/Library/MobileDevice/Provisioning\ Profiles -name "*.mobileprovision" 2>/dev/null | head -n 1)
+          PROV_FILE=$(find ~/Library -name "*.mobileprovision" 2>/dev/null | head -n 1)
           if [ -n "$PROV_FILE" ]; then
+            cp "$PROV_FILE" "$HOME/Library/MobileDevice/Provisioning Profiles/" 2>/dev/null || true
+            cp "$PROV_FILE" "$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles/" 2>/dev/null || true
             PROV_UUID=$(security cms -D -i "$PROV_FILE" | grep -A1 "<key>UUID</key>" | grep "<string>" | sed -e 's/.*<string>//' -e 's/<\/string>.*//' | tr -d ' \r\n')
             PROV_NAME=$(security cms -D -i "$PROV_FILE" | grep -A1 "<key>Name</key>" | grep "<string>" | sed -e 's/.*<string>//' -e 's/<\/string>.*//' | tr -d '\r\n')
-            echo "Provisioning profile identified: Name='$PROV_NAME', UUID='$PROV_UUID'"
+            echo "Provisioning profile identified: Name='$PROV_NAME', UUID='$PROV_UUID', Path='$PROV_FILE'"
+
+            xcode-project use-profiles --project ios/Runner.xcodeproj --profile "$PROV_FILE" --archive-method=app-store --export-options-plist=/Users/builder/export_options.plist || true
 
             # Explicitly set PROVISIONING_PROFILE_SPECIFIER in project.pbxproj
             sed -i '' "s/PROVISIONING_PROFILE_SPECIFIER = \"\"/PROVISIONING_PROFILE_SPECIFIER = \"$PROV_NAME\"/g" ios/Runner.xcodeproj/project.pbxproj
+            sed -i '' "s/PROVISIONING_PROFILE_SPECIFIER = ''/PROVISIONING_PROFILE_SPECIFIER = \"$PROV_NAME\"/g" ios/Runner.xcodeproj/project.pbxproj
 
             # Create ExportOptions.plist for manual distribution
             printf '<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n<plist version="1.0">\n<dict>\n  <key>method</key>\n  <string>app-store</string>\n  <key>teamID</key>\n  <string>VDFCU7TD4W</string>\n  <key>signingStyle</key>\n  <string>manual</string>\n  <key>signingCertificate</key>\n  <string>Apple Distribution</string>\n  <key>provisioningProfiles</key>\n  <dict>\n    <key>com.my.dupay.app.new</key>\n    <string>%s</string>\n  </dict>\n</dict>\n</plist>\n' "$PROV_NAME" > /Users/builder/export_options.plist
@@ -73,9 +81,13 @@ workflows:
               echo "Provisioning profile contains Push Notifications capability. Injecting aps-environment..."
               printf '<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n<plist version="1.0">\n<dict>\n\t<key>aps-environment</key>\n\t<string>production</string>\n</dict>\n</plist>\n' > ios/Runner/Runner.entitlements
             fi
+          else
+            echo "Warning: No .mobileprovision file located in ~/Library"
+            xcode-project use-profiles --project ios/Runner.xcodeproj --archive-method=app-store --export-options-plist=/Users/builder/export_options.plist || true
           fi
 
-          xcode-project use-profiles --project ios/Runner.xcodeproj --archive-method=app-store --export-options-plist=/Users/builder/export_options.plist || true
+          echo "=== Project PBXPROJ signing diff ==="
+          git diff ios/Runner.xcodeproj/project.pbxproj || true
           echo "=== Export options plist ==="
           cat /Users/builder/export_options.plist 2>/dev/null || true
 
