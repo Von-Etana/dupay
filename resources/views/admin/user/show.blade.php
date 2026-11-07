@@ -339,6 +339,26 @@
 										Referred By: {{ $data->referrer_name }}
 									</li>
 								</ul>
+				@php
+					$activeOtpLock = $data->otp_locked_until && $data->otp_locked_until->isFuture();
+					$activePasswordLock = $data->password_locked_until && $data->password_locked_until->isFuture();
+				@endphp
+				@if($activeOtpLock || $activePasswordLock)
+				<div class="alert alert-warning mt-4" role="alert">
+					<strong>Account temporarily locked</strong>
+					<p class="mb-2">
+						{{ $activeOtpLock ? 'Login OTP failures' : 'Password failures' }}.
+						Unlocks {{ ($activeOtpLock ? $data->otp_locked_until : $data->password_locked_until)->diffForHumans() }}.
+					</p>
+					@can('unlock_user_security')
+					<form method="POST" action="{{ route('admin.user-security.unlock', $data->id) }}" class="d-flex flex-wrap gap-2 align-items-center">
+						@csrf
+						<input type="text" name="reason" class="form-control" style="max-width: 360px" minlength="10" maxlength="1000" required placeholder="Reason for early unlock (at least 10 characters)">
+						<button type="submit" class="btn btn-warning">Unlock account now</button>
+					</form>
+					@endcan
+				</div>
+				@endif
 								@canany(['ban_user', 'delete_user'])
 								<ul class="list-inline mt-4">
 									@can('ban_user')
@@ -472,13 +492,7 @@
 				<div class="widget widget-wallet-one mt-2">
 					<div class="wallet-info text-center mb-3">
 						<p class="wallet-title mb-3">Daily Transaction Limit</p>
-						@php $effectiveDailyLimit = \App\Services\TransactionLimitService::limitFor($data); @endphp
-						<p class="total-amount mb-3">{{ $effectiveDailyLimit === null ? 'Unlimited' : '₦' . number_format($effectiveDailyLimit, 2) }}</p>
-						@if(\App\Services\TransactionLimitService::isEnabled())
-							<small>Spent today: ₦{{ number_format(\App\Services\TransactionLimitService::spentToday($data), 2) }}</small>
-						@else
-							<small>Daily limit enforcement is disabled in site settings.</small>
-						@endif
+						<p class="total-amount mb-3"> {{ '₦' . number_format($data->daily_transaction_limit, 2) }}</p>
 					</div>
 					<div class="wallet-action text-center">
 						<a class="btn btn-info collapsed" role="menu" data-bs-toggle="collapse"
@@ -777,7 +791,7 @@
 						<div id="TopupUSDWallet" class="collapse" aria-labelledby="TopupUSDWalletLabel"
 							data-bs-parent="#toggleAccordion">
 							<div class="card-body">
-								<form class="currency-topup-form" action="{{ route('admin.user.topup', ['id' => $data->id, 'currency' => 'USD']) }}" method="POST">
+								<form class="currency-topup-form" action="{{ route('admin.user.topup', ['id' => $data->id, 'currency' => 'USD']) }}" method="POST" onsubmit="return false;">
 									@csrf
 									<div class="form-custom form-label mt-3">
 										<label for="amount" class="label">Amount</label>
@@ -1059,7 +1073,7 @@
 					<div id="TopupEURWallet" class="collapse" aria-labelledby="TopupEURWalletLabel"
 						data-bs-parent="#toggleAccordion">
 						<div class="card-body">
-								<form class="currency-topup-form" action="{{ route('admin.user.topup', ['id' => $data->id, 'currency' => 'EUR']) }}" method="POST">
+							<form class="currency-topup-form" action="{{ route('admin.user.topup', ['id' => $data->id, 'currency' => 'EUR']) }}" method="POST" onsubmit="return false;">
 								@csrf
 								<div class="form-custom form-label mt-3">
 									<label for="amount" class="label">Amount</label>

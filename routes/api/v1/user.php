@@ -2,8 +2,8 @@
 
 use App\Http\Controllers\Api\V1\GeneralController;
 use App\Http\Controllers\Api\V1\AuthController;
-use App\Http\Controllers\Api\V1\LoginChallengeController;
-use App\Http\Controllers\Api\V1\TransactionRequestStatusController;
+use App\Http\Controllers\Api\V1\Ecommerce\IndexController as EcommerceIndexController;
+use App\Http\Controllers\Api\V1\Ecommerce\ProductController;
 use App\Http\Controllers\Api\V1\KYCVerificationController;
 use App\Http\Controllers\Api\V1\Telecom\AirtimeController;
 use App\Http\Controllers\Api\V1\Telecom\BillController;
@@ -30,6 +30,7 @@ use App\Http\Controllers\GraphWebHookController;
 use App\Http\Controllers\WebHookController;
 use App\Http\Controllers\FlutterWaveWebHookController;
 use App\Http\Controllers\Api\V1\ExchangeController;
+use App\Http\Controllers\Api\V1\LoginChallengeController;
 
 //version one
 
@@ -38,9 +39,9 @@ use App\Http\Controllers\Api\V1\ExchangeController;
 Route::group(['prefix' => 'v1'], function () {
 
 Route::post('/login', [AuthController::class, 'login'])->name("userLogin")->middleware('throttle:auth');
-Route::post('/login/otp/send', [LoginChallengeController::class, 'send'])->middleware('throttle:otp');
-Route::post('/login/otp/resend', [LoginChallengeController::class, 'resend'])->middleware('throttle:otp');
-Route::post('/login/otp/verify', [LoginChallengeController::class, 'verify'])->middleware('throttle:otp');
+Route::post('/login/otp/send', [LoginChallengeController::class, 'send'])->name('loginOtpSend')->middleware('throttle:otp');
+Route::post('/login/otp/resend', [LoginChallengeController::class, 'send'])->name('loginOtpResend')->middleware('throttle:otp');
+Route::post('/login/otp/verify', [LoginChallengeController::class, 'verify'])->name('loginOtpVerify')->middleware('throttle:otp');
 Route::post('/register', [AuthController::class, 'register'])->name("userRegister")->middleware('throttle:auth');
 Route::post('/reset-password', [AuthController::class, 'resetPassword'])->name("userResetPassword")->middleware('throttle:otp');
 Route::post('/send-email-otp', [AuthController::class, 'sendEmailOtp'])->name("sendEmailOtp")->middleware('throttle:otp');
@@ -158,7 +159,7 @@ Route::group(['middleware'=>'verifyTelecomAPiUsers'], function(){
       
      Route::post('virtual-card/withdraw', [VirtualCardController::class, 'withdrawFromVirtualCard'])->name("withdrawFromVirtualCard")->middleware(['notBlocked', 'throttle:money']);
      Route::post('virtual-card/status-update', [VirtualCardController::class, 'virtualCardStatusUpdate'])->name("virtualCardStatusUpdate");
-     Route::post('virtual-card/freeze-or-unfreeze', [VirtualCardController::class, 'freezeUnfreeze'])->name("freezeUnfreezeVirtualCard");
+     Route::post('virtual-card/freeze-or-unfreeze', [VirtualCardController::class, 'freezeUnfreeze'])->name("fundVirtualCard");
      
      Route::get('virtual-card/transactions/{id}/{currency}', [VirtualCardController::class, 'getVirtualCardTransactions'])->name("getVirtualCardTransaction");
      
@@ -290,8 +291,7 @@ Route::get('fees', [UserController::class, 'fees'])->name('fees');
 
 Route::post('/webhooks/strowallet/atm/withdraw', [StroWalletWebhookController::class, 'handleHook']);
 Route::post('/webhooks/strowallet/approve', [StroWalletWebhookController::class, 'debitTransaction']);
-Route::post('/webhooks/safehaven', [SafeHavenWebhookController::class, 'virtualAccountTransferHook'])->name('safehavenWebHook.api');
-Route::post('/v1/webhooks/safehaven', [SafeHavenWebhookController::class, 'virtualAccountTransferHook'])->name('safehavenWebHook.api.v1');
+Route::post('/webhooks/safehaven', [SafeHavenWebhookController::class, 'virtualAccountTransferHook']);
 Route::post('/webhooks/fincra', [FincraWebhookController::class, 'handle']);
 Route::post('/webhooks/graph', [GraphWebHookController::class, 'handle']);
 
@@ -307,13 +307,28 @@ Route::get('/get-json', [RechargePinController::class, 'getJson']);
 
 Route::post('/job/card-maintenance', [CardMaintenanceController::class, 'chargeAtmCardMaintenance']);
 
-// Ecommerce product routes are disabled until ProductController is restored.
+//ecommerce
+Route::group(['middleware'=>'verifyTelecomAPiUsers', 'prefix' => 'ecommerce'], function(){
+    Route::get('product', [ProductController::class, 'index'])->name('product');
+    Route::get('product/details/{id}', [ProductController::class, 'show'])->name('viewProduct');
+    
+});
 
 
 
 
 Route::group(['middleware'=>'auth:api', 'prefix' => 'ecommerce'], function(){
 
+
+
+    
+    Route::get('my-product', [ProductController::class, 'myIndex'])->name('myProduct');
+    Route::post('product/create', [ProductController::class, 'store'])->name('storeProduct');
+    Route::post('product/report', [ProductController::class, 'reportProduct'])->name('reportProduct');
+    Route::post('product/request-call-back', [ProductController::class, 'requestCallBack'])->name('requestCallBack');
+    Route::post('product/make-unavailable', [ProductController::class, 'markProductUnavailable'])->name('markProductUnavailable');
+   
+    Route::delete('product/{id}', [ProductController::class, 'destroy'])->name('destroyProduct');
 
 
 });

@@ -74,22 +74,20 @@ class DataController extends Controller
     $finalStatus = "pending";
 
     // Transaction pin validation (keep existing logic)
-    if (!isset($_SERVER['HTTP_ISMART']) || $_SERVER['HTTP_ISMART'] != "api" || request("fingerPrint") != true) {
-            if (!$request->transaction_pin) {
-                return response(['success' => false, 'message' => "Please Enter Transaction Pin"]);
-            } elseif (!$user->transaction_pin) {
-                return response(['success' => false, 'message' => "Transaction Pin not set"]);
-            } elseif (!Hash::check($request->transaction_pin, $user->transaction_pin)) {
-                return response(['success' => false, 'message' => "Incorrect Transaction Pin"]);
-            }
+        if (!$request->transaction_pin) {
+            return response(['success' => false, 'message' => "Please Enter Transaction Pin"]);
+        } elseif (!$user->transaction_pin) {
+            return response(['success' => false, 'message' => "Transaction Pin not set"]);
+        } elseif (!Hash::check($request->transaction_pin, $user->transaction_pin)) {
+            return response(['success' => false, 'message' => "Incorrect Transaction Pin"]);
         }
+    }
     
     if($user->blocked_status == true){
-        return response()->json([
-            'success' => false,
-            'message' => "Your account has been temporarily blocked due to unusual activity. Please contact support to restore access."
-        ]);
-    }
+    return response()->json([
+        'success' => false,
+        'message' => "Your account has been temporarily blocked due to unusual activity. Please contact support to restore access."
+    ]);
 
     $select_wallet_id = $request->wallet_id ?? "1";
     if (!checkWalletEnable("Data", $select_wallet_id)) {
@@ -130,7 +128,7 @@ class DataController extends Controller
     $final_balance = $balanceAction["final_balance"];
 
     if (!$balanceAction["success"]) {
-        return response(['success' => false, 'message' => $balanceAction["message"] ?? "Wallet balance error"]);
+        return response(['success' => false, 'message' => "Wallet balance error"]);
     }
 
     // Generate transaction reference

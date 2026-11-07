@@ -120,19 +120,11 @@ class ForeignAccountRequestController extends Controller
         DB::beginTransaction();
     
         try {
-            if (empty($user->graph_person_id)) {
-                $response = CreateGraphPerson($user, $requestData);
-
-                if (empty($response['status'])) {
-                    DB::rollBack();
-
-                    return $this->errorRedirect(
-                        'Graph Create Person API error: ' . ($response['message'] ?? 'Unknown error.')
-                    );
-                }
-            }
-
-            $return = CreateGraphBankAccount($user, $requestData->currency);
+            $response = CreateGraphPerson($user, $requestData);
+    
+            if ($response['status']) {
+    
+                $return = CreateGraphBankAccount($user, $requestData->currency);
     
                 if ($return['status']) {
     
@@ -156,6 +148,14 @@ class ForeignAccountRequestController extends Controller
                         'Graph Create Bank API error: ' . ($return['message'] ?? 'Unknown error.')
                     );
                 }
+    
+            } else {
+                DB::rollBack();
+    
+                return $this->errorRedirect(
+                    'Graph Create Person API error: ' . ($response['message'] ?? 'Unknown error.')
+                );
+            }
     
         } catch (\Exception $e) {
             DB::rollBack();

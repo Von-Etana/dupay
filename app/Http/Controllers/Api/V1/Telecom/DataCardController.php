@@ -83,14 +83,12 @@ class DataCardController extends Controller
         }
 
           //check transaction pin
-        if (!isset($_SERVER['HTTP_ISMART']) || $_SERVER['HTTP_ISMART'] != "api" || request("fingerPrint") != true) {
-            if (!$request->transaction_pin) {
-                return response(['success' => false, 'message' => "Please Enter Transaction Pin"]);
-            } elseif (!$user->transaction_pin) {
-                return response(['success' => false, 'message' => "Transaction Pin not set"]);
-            } elseif (!Hash::check($request->transaction_pin, $user->transaction_pin)) {
-                return response(['success' => false, 'message' => "Incorrect Transaction Pin"]);
-            }
+        if (!$request->transaction_pin) {
+            return response(['success' => false, 'message' => "Please Enter Transaction Pin"]);
+        } elseif (!$user->transaction_pin) {
+            return response(['success' => false, 'message' => "Transaction Pin not set"]);
+        } elseif (!Hash::check($request->transaction_pin, $user->transaction_pin)) {
+            return response(['success' => false, 'message' => "Incorrect Transaction Pin"]);
         }
         
         if($user->blocked_status == true){
@@ -167,9 +165,6 @@ class DataCardController extends Controller
         $init_balance = $balanceAction["init_balance"];
         $final_balance = $balanceAction["final_balance"];
 
-        if (!$balanceAction["success"]) {
-            return response(['success' => false, 'message' => $balanceAction["message"] ?? "Wallet balance error"]);
-        }
 
         if ($balanceAction["success"]) {
             $description = $quantity." ".$dataPlan->networks->name . " " . $dataPlan->plan." Data E-Pin";

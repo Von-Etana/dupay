@@ -70,13 +70,6 @@ return [
             'days' => 14,
         ],
 
-        'safehaven' => [
-            'driver' => 'daily',
-            'path' => storage_path('logs/safehaven.log'),
-            'level' => env('LOG_LEVEL', 'debug'),
-            'days' => 14,
-        ],
-
         'slack' => [
             'driver' => 'slack',
             'url' => env('LOG_SLACK_WEBHOOK_URL'),

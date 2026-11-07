@@ -47,16 +47,16 @@ class UserController extends Controller
 
     public function logoutCurrentToken(Request $request)
     {
-        $deviceHash = UserSecurityService::deviceHash($request->input('device_id'));
-        if ($deviceHash) {
-            DB::table('user_devices')->where('user_id', $request->user('api')->id)
-                ->where('device_id_hash', $deviceHash)
-                ->update(['revoked_at' => now(), 'updated_at' => now()]);
-        }
-        $token = $request->user('api')->token();
+        $user = $request->user('api');
+        $token = $user?->token();
         if ($token === null || !$token->revoke()) {
             return response()->json(['success' => false, 'message' => 'Could not revoke token'], 503);
         }
+
+        try {
+            app(\App\Services\UserSecurityService::class)->recordEvent('token_revoked', $user, $request, null, 'User logout');
+            app(\App\Services\UserSecurityService::class)->recordEvent('session_logout', $user, $request);
+        } catch (\Throwable $e) {}
 
         return response()->json(['success' => true, 'message' => 'Logged out']);
     }

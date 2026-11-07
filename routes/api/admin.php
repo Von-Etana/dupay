@@ -5,7 +5,7 @@ use App\Http\Controllers\Admin\DashboardController;
 
 Route::group(['prefix' => 'admin'], function () {
 
-    Route::put('page/edit/{pageType}/{id}', [GeneralViewController::class, 'update'])->name('api.UpdateItem');
+    Route::put('page/edit/{pageType}/{id}', [GeneralViewController::class, 'update'])->name('UpdateItem');
     Route::get('visitor-chart', [DashboardController::class, 'getVisitorChart'])->name('visitorChart');
 
     Route::get('get-js-item', [DashboardController::class, 'getJsItem'])->name('adminGetJsItem');

@@ -77,28 +77,15 @@ function getPriceA($amount, $currency = 'NGN')
 //     }
     
     
-    function updateUserBalance($newBalance, $select_wallet_id = "1")
+    function updateUserBalance($newBalance)
 {
-    $user = \Illuminate\Support\Facades\Auth::guard('api')->user()
-        ?: \Illuminate\Support\Facades\Auth::guard('web')->user()
-        ?: \Illuminate\Support\Facades\Auth::user();
-
+    $user = auth()->user();
     if (!$user) {
         return false;
     }
 
-    $currentBalance = (float) $user->balance;
-    $diff = (float) $newBalance - $currentBalance;
-
-    if ($diff < 0) {
-        $res = userBalanceAction($user, abs($diff), $select_wallet_id, "-");
-        return !empty($res['success']);
-    } elseif ($diff > 0) {
-        $res = userBalanceAction($user, $diff, $select_wallet_id, "+");
-        return !empty($res['success']);
-    }
-
-    return true;
+    $user->balance = $newBalance;
+    return $user->save();
 }
     
     
@@ -263,31 +250,7 @@ function sendFcmNotification($deviceToken, $title, $body, $data = [])
                 'title' => $title,
                 'body' => $body,
             ],
-            'android' => [
-                'priority' => 'high',
-                'notification' => [
-                    'channel_id' => 'high_importance',
-                    'notification_priority' => 'PRIORITY_MAX',
-                    'default_sound' => true,
-                    'default_vibrate_timings' => true,
-                    'visibility' => 'PUBLIC',
-                ],
-            ],
-            'apns' => [
-                'headers' => [
-                    'apns-priority' => '10',
-                ],
-                'payload' => [
-                    'aps' => [
-                        'alert' => [
-                            'title' => $title,
-                            'body' => $body,
-                        ],
-                        'sound' => 'default',
-                        'badge' => 1,
-                    ],
-                ],
-            ],
+            
             'data' => is_array($data) ? array_map('strval', $data) : new \stdClass()
         ]
     ];
@@ -331,31 +294,6 @@ function sendFcmToMultipleDevices(array $tokens, string $title, string $body, ar
                 'notification' => [
                     'title' => $title,
                     'body' => $body,
-                ],
-                'android' => [
-                    'priority' => 'high',
-                    'notification' => [
-                        'channel_id' => 'high_importance',
-                        'notification_priority' => 'PRIORITY_MAX',
-                        'default_sound' => true,
-                        'default_vibrate_timings' => true,
-                        'visibility' => 'PUBLIC',
-                    ],
-                ],
-                'apns' => [
-                    'headers' => [
-                        'apns-priority' => '10',
-                    ],
-                    'payload' => [
-                        'aps' => [
-                            'alert' => [
-                                'title' => $title,
-                                'body' => $body,
-                            ],
-                            'sound' => 'default',
-                            'badge' => 1,
-                        ],
-                    ],
                 ],
                 'data' => array_map('strval', $data),
             ]
@@ -419,21 +357,6 @@ function getSiteSettings($column_name)
 }
 
 function addSiteActitvity($user, $ac){
-
-    // Persist the audit event without depending on a third-party geolocation
-    // service. The previous path silently discarded activity when that lookup
-    // failed and skipped the primary administrator entirely.
-    if (!$user) return;
-    $ac['user_id'] = $user->id;
-    $ac['ip'] = request()->ip();
-    $ac['browser'] = substr((string) request()->userAgent(), 0, 255);
-    $ac['location'] = '';
-    try {
-        SiteActivity::create($ac);
-    } catch (\Throwable $error) {
-        \Log::warning('Admin activity could not be saved', ['admin_id' => $user->id, 'error' => $error->getMessage()]);
-    }
-    return;
 
     $ip = NULL; $deep_detect = TRUE;
         if (filter_var($ip, FILTER_VALIDATE_IP) === FALSE) {
@@ -737,13 +660,7 @@ function userShouldEnforceSpendGuards($user, $enforceGuards = null): bool
     }
 
     try {
-        if (\Illuminate\Support\Facades\Auth::guard('admin')->check()) {
-            return false;
-        }
-
-        $apiUser = \Illuminate\Support\Facades\Auth::guard('api')->user()
-            ?: \Illuminate\Support\Facades\Auth::guard('web')->user()
-            ?: \Illuminate\Support\Facades\Auth::user();
+        $apiUser = Auth::guard('api')->user();
     } catch (\Throwable $e) {
         return false;
     }

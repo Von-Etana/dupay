@@ -33,6 +33,9 @@ class AuthController extends Controller
         $exist['data'] = null;
         $exist['type'] = null;
         if ($request->email) {
+            if (\AppRules\NotDisposableEmail::isDisposable(substr(strrchr($request->email, "@"), 1))) {
+                return response(['success' => false, 'message' => 'Disposable or temporary email addresses are not allowed.'], 422);
+            }
             $exist['data'] = User::where('email',$request->email)->first();
             $exist['type'] = 'email';
         }
@@ -64,7 +67,7 @@ class AuthController extends Controller
             'phone_number'     => 'required|digits:11|unique:users,phone_number',
             'username'         => 'required|alpha_dash|unique:profiles,username',
             'referral'         => 'nullable|string',
-            'email'            => 'required|string|email|max:255|unique:users,email',
+            'email'            => ['required', 'string', 'email', 'max:255', 'unique:users,email', new \App\Rules\NotDisposableEmail],
             'password'         => 'required|string|min:4|confirmed',
             'fcmToken'         => 'nullable|string',
     
@@ -223,7 +226,7 @@ class AuthController extends Controller
     
             try {
     
-                if (getSiteSettings("auto_create_virtual_account") == "Yes") {
+                if (getSiteSettings("auto_create_virtual_account") == "Yes" && getSiteSettings("email_verify") != "Yes") {
     
                     GeneralJob::dispatch($user, "", "createVirtualAccount");
                 }
@@ -308,6 +311,13 @@ class AuthController extends Controller
             }
     
             DB::commit();
+
+            try {
+                app(\App\Services\UserSecurityService::class)->recordEvent('user_registered', $user, $request);
+                app(\App\Services\UserSecurityService::class)->recordEvent('token_issued', $user, $request);
+            } catch (\Throwable $th) {
+                \Log::warning('Registration audit logging failed: ' . $th->getMessage());
+            }
     
             return response([
                 'success'       => true,
@@ -516,10 +526,11 @@ class AuthController extends Controller
         
         // Validate the input
         $validator = Validator::make($request->all(), [
-            'email' => 'required_without:phone_number',
-            'phone_number' => 'required_without:email',
-            'password' => 'required',
-            'fcmToken' => 'nullable|string'
+            'email' => 'required_without:phone_number|nullable|string',
+            'phone_number' => 'required_without:email|nullable|string',
+            'password' => 'required|string',
+            'fcmToken' => 'nullable|string',
+            'device_id' => 'required|string|min:16|max:255'
         ]);
 
         if ($validator->fails()) {
@@ -544,69 +555,17 @@ class AuthController extends Controller
             'password' => $request->input('password')
         ];
 
-        $candidate = User::where($loginField, $loginType)->first();
-        if ($candidate && (UserSecurityService::passwordLocked($candidate) || UserSecurityService::otpLocked($candidate))) {
-            return response(['success' => false, 'code' => 'account_locked', 'message' => 'Account temporarily locked. Check your email for recovery instructions.'], 423);
-        }
-
-        // Attempt to authenticate the user
-        if (!auth()->attempt($loginData)) {
-            if ($candidate) {
-                UserSecurityService::recordPasswordFailure($candidate);
-            }
+        // Verify the password, then require the short-lived OTP challenge.
+        $challengeService = app(\App\Services\LoginChallengeService::class);
+        $user = User::where($loginField, $loginType)->first();
+        if (!$user) {
+            app(\App\Services\UserSecurityService::class)->recordEvent('password_failed', null, $request);
             return response(['success' => false, 'message' => 'Invalid Login Details']);
         }
-
-        // Fetch the authenticated user
-        $user = User::whereId(auth()->user()->id)->with('profile')->firstOrFail();
-        UserSecurityService::resetPasswordFailures($user);
-
-        // Check if the user is banned
-        if ($user->ban_status == "1") {
-            return response(['success' => false, 'message' => 'Sorry, your account is blocked.']);
-        }
-        
-        if ($request->filled('fcmToken')) {
-            $user->update(['fcmToken' => $request->fcmToken]);
-        }
-
-        // A device verified through OTP remains trusted until explicitly
-        // revoked. This avoids prompting for OTP on every login while still
-        // requiring OTP for genuinely new devices.
-        $deviceHash = UserSecurityService::deviceHash($request->input('device_id'));
-        $trusted = $deviceHash && DB::table('user_devices')
-            ->where('user_id', $user->id)
-            ->where('device_id_hash', $deviceHash)
-            ->whereNull('revoked_at')
-            ->exists();
-
-        if ($trusted) {
-            DB::table('user_devices')->where('user_id', $user->id)
-                ->where('device_id_hash', $deviceHash)
-                ->update(['last_seen_at' => now(), 'last_ip' => $request->ip(), 'updated_at' => now()]);
-            $accessToken = $user->createToken('authToken');
-            UserSecurityService::recordEvent('trusted_device_login', $user, ['device_id_hash' => $deviceHash]);
-            return response(['success' => true, 'user' => $user, 'access_token' => $accessToken->accessToken]);
-        }
-
-        try {
-            $challenge = app(LoginChallengeService::class)->begin($user, $request->input('device_id'));
-        } catch (\RuntimeException $e) {
-            return response(['success'=>false,'code'=>'otp_delivery_failed','message'=>'Unable to deliver login code. Please try again.'], 503);
-        }
-        return response(['success'=>false,'code'=>'otp_required','challenge_id'=>$challenge->id,'send_count'=>1,'remaining_sends'=>5], 200);
-
-        // Generate access token
-        $accessToken = auth()->user()->createToken('authToken');
-
-        // Update Firebase user details
-        // (new FirebaseUserUpdate)->updateUser($user);
-
-        return response([
-            'success' => true,
-            'user' => $user,
-            'access_token' => $accessToken->accessToken,
-        ]);
+        $result = $challengeService->begin($user, $loginData['password'], $request);
+        $status = $result['code'] === 'otp_required' ? 200 : ($result['_status'] ?? ($result['success'] ? 200 : 401));
+        unset($result['_status']);
+        return response()->json($result, $status);
     }
 
 
@@ -814,6 +773,14 @@ class AuthController extends Controller
         $user->email_verify = "1";
         $user->save();
         $user->profile;
+
+        if (getSiteSettings("auto_create_virtual_account") == "Yes" && !$user->virtualAccount) {
+            try {
+                GeneralJob::dispatch($user, "", "createVirtualAccount");
+            } catch (\Throwable $th) {
+                \Log::error('Virtual Account Error: ' . $th->getMessage());
+            }
+        }
 
         return response(['success' => true, 'message' => "Verification Successful", "user" => $user]);
 

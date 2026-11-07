@@ -3,264 +3,185 @@
 @section('content')
 <div class="layout-px-spacing">
     <div class="middle-content container-xxl p-0">
-        <!-- HEADER & BREADCRUMB -->
-        <div class="page-meta my-4">
-            <nav class="breadcrumb-style-one" aria-label="breadcrumb">
-                <ol class="breadcrumb">
-                    <li class="breadcrumb-item"><a href="{{ route('admin.index') }}">Dashboard</a></li>
-                    <li class="breadcrumb-item active" aria-current="page">Security Alerts</li>
-                </ol>
-            </nav>
-        </div>
-
-        <!-- STATS CARDS -->
-        <div class="row mb-4">
-            <div class="col-xl-4 col-lg-4 col-md-6 col-sm-12 mb-3">
-                <div class="card border-0 shadow-sm rounded-3">
-                    <div class="card-body d-flex align-items-center justify-content-between p-3">
-                        <div>
-                            <span class="text-muted text-uppercase fw-semibold" style="font-size: 11px; letter-spacing: 0.5px;">Pending Alerts</span>
-                            <h3 class="mb-0 fw-bold {{ $openCount > 0 ? 'text-warning' : 'text-success' }}">{{ number_format($openCount) }}</h3>
-                        </div>
-                        <div class="rounded-circle p-3 {{ $openCount > 0 ? 'bg-warning-subtle text-warning' : 'bg-success-subtle text-success' }}">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-xl-4 col-lg-4 col-md-6 col-sm-12 mb-3">
-                <div class="card border-0 shadow-sm rounded-3">
-                    <div class="card-body d-flex align-items-center justify-content-between p-3">
-                        <div>
-                            <span class="text-muted text-uppercase fw-semibold" style="font-size: 11px; letter-spacing: 0.5px;">High / Critical Unresolved</span>
-                            <h3 class="mb-0 fw-bold {{ $criticalCount > 0 ? 'text-danger' : 'text-muted' }}">{{ number_format($criticalCount) }}</h3>
-                        </div>
-                        <div class="rounded-circle p-3 {{ $criticalCount > 0 ? 'bg-danger-subtle text-danger' : 'bg-light text-muted' }}">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-xl-4 col-lg-4 col-md-6 col-sm-12 mb-3">
-                <div class="card border-0 shadow-sm rounded-3">
-                    <div class="card-body d-flex align-items-center justify-content-between p-3">
-                        <div>
-                            <span class="text-muted text-uppercase fw-semibold" style="font-size: 11px; letter-spacing: 0.5px;">Today's Alerts</span>
-                            <h3 class="mb-0 fw-bold text-primary">{{ number_format($todayCount) }}</h3>
-                        </div>
-                        <div class="rounded-circle p-3 bg-primary-subtle text-primary">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        @if(session('message'))
-            <div class="alert alert-success alert-dismissible fade show mb-4" role="alert">
-                <strong>Success!</strong> {{ session('message') }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-        @endif
-
-        <div class="widget-content widget-content-area br-8 p-4 mb-4">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <div>
-                    <h4 class="mb-1">Accounts currently locked</h4>
-                    <p class="text-muted mb-0 small">Active login locks, their expiry time, and early unlock controls.</p>
-                </div>
-                <span class="badge bg-danger">{{ $lockedUsers->total() }} locked</span>
-            </div>
-            <div class="table-responsive">
-                <table class="table table-hover align-middle">
-                    <thead class="table-light"><tr><th>User</th><th>Email</th><th>Lock type</th><th>Expires / time remaining</th><th>Action</th></tr></thead>
-                    <tbody>
-                    @forelse($lockedUsers as $lockedUser)
-                        @php
-                            $lockUntil = $lockedUser->otp_locked_until && $lockedUser->otp_locked_until->isFuture()
-                                ? $lockedUser->otp_locked_until
-                                : $lockedUser->login_locked_until;
-                            $lockType = $lockedUser->otp_locked_until && $lockedUser->otp_locked_until->isFuture() ? 'OTP verification' : 'Password login';
-                        @endphp
-                        <tr>
-                            <td><a href="{{ route('admin.user.show', $lockedUser->id) }}">{{ $lockedUser->profile->username ?? $lockedUser->email ?? ('User #' . $lockedUser->id) }}</a></td>
-                            <td>{{ $lockedUser->email }}</td>
-                            <td><span class="badge bg-warning text-dark">{{ $lockType }}</span></td>
-                            <td>{{ $lockUntil?->format('d M Y H:i') }} <span class="text-muted">({{ $lockUntil?->diffForHumans() }})</span></td>
-                            <td>
-                                @can('manage_security_alerts')
-                                    <form method="POST" action="{{ route('admin.security.users.unlock', $lockedUser) }}" class="d-flex gap-2" style="min-width: 300px;">
-                                        @csrf
-                                        <input class="form-control form-control-sm" name="reason" minlength="5" maxlength="500" required placeholder="Reason for unlocking" aria-label="Reason for unlocking">
-                                        <button class="btn btn-sm btn-danger" type="submit">Unlock</button>
-                                    </form>
-                                @else
-                                    <span class="text-muted small">Unlock permission required</span>
-                                @endcan
-                            </td>
-                        </tr>
-                    @empty
-                        <tr><td colspan="5" class="text-center text-muted py-4">No accounts are currently locked.</td></tr>
-                    @endforelse
-                    </tbody>
-                </table>
-            </div>
-            <div class="mt-3">{{ $lockedUsers->links() }}</div>
-        </div>
-
-        <div class="widget-content widget-content-area br-8 p-4 mb-4">
-            <h4 class="mb-3">Recent admin activity</h4>
-            <div class="table-responsive"><table class="table table-hover align-middle">
-                <thead><tr><th>Time</th><th>Admin</th><th>Action</th><th>Module</th><th>IP</th></tr></thead>
-                <tbody>
-                @forelse($recentActivity as $activity)
-                    <tr><td>{{ $activity->created_at?->format('d M Y H:i') }}</td>
-                        <td>{{ $activity->user->username ?? 'Unknown' }}</td>
-                        <td>{{ $activity->activity }}</td><td>{{ $activity->module }}</td><td>{{ $activity->ip }}</td></tr>
-                @empty
-                    <tr><td colspan="5" class="text-muted">No recent activity.</td></tr>
-                @endforelse
-                </tbody>
-            </table></div>
-        </div>
-
-        <!-- MAIN TABLE -->
-        <div class="row">
+        <div class="row layout-top-spacing">
             <div class="col-12">
-                <div class="widget-content widget-content-area br-8 p-4">
-                    <div class="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom">
+                <div class="widget-content widget-content-area br-8">
+
+                    {{-- Header --}}
+                    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
                         <div>
-                            <h4 class="mb-1 fw-bold">Security Alerts & Audit Log</h4>
-                            <p class="text-muted mb-0 small">Real-time alerts, admin actions, and wallet adjustment notifications</p>
+                            <h4 class="mb-1">Security Incident Alerts</h4>
+                            <p class="text-muted mb-0">Monitor and investigate automated security anomalies, lockouts, and unusual activities.</p>
+                        </div>
+                        <div class="d-flex gap-2">
+                            @can('view_user_security')
+                                <a href="{{ route('admin.user-security.index') }}" class="btn btn-outline-primary btn-sm">
+                                    View Locked Users
+                                </a>
+                            @endcan
                         </div>
                     </div>
 
+                    @if(session('message'))
+                        <div class="alert alert-success alert-dismissible fade show" role="alert">
+                            {{ session('message') }}
+                        </div>
+                    @endif
+
+                    {{-- Status Filter Tabs / Quick Filter Buttons --}}
+                    @php
+                        $currentStatus = request('status', 'all');
+                        $currentSeverity = request('severity', 'all');
+                    @endphp
+                    <div class="d-flex flex-wrap gap-2 mb-3">
+                        <a href="{{ route('admin.security-alerts.index', ['status' => 'pending'] + request()->except(['status', 'page'])) }}"
+                           class="btn btn-sm {{ $currentStatus === 'pending' ? 'btn-danger text-white' : 'btn-outline-danger' }}">
+                            &#9888; Pending Review
+                            <span class="badge bg-white text-danger ms-1">{{ $openCount }}</span>
+                        </a>
+
+                        <a href="{{ route('admin.security-alerts.index', ['severity' => 'critical'] + request()->except(['severity', 'page'])) }}"
+                           class="btn btn-sm {{ $currentSeverity === 'critical' ? 'btn-dark text-white' : 'btn-outline-dark' }}">
+                            Critical Severity
+                            <span class="badge bg-danger ms-1">{{ $criticalCount }}</span>
+                        </a>
+
+                        <a href="{{ route('admin.security-alerts.index', ['status' => 'acknowledged'] + request()->except(['status', 'page'])) }}"
+                           class="btn btn-sm {{ $currentStatus === 'acknowledged' ? 'btn-success text-white' : 'btn-outline-success' }}">
+                            &#10003; Acknowledged / Resolved
+                            <span class="badge bg-light text-success ms-1">{{ $acknowledgedCount }}</span>
+                        </a>
+
+                        <a href="{{ route('admin.security-alerts.index', ['status' => 'all'] + request()->except(['status', 'page'])) }}"
+                           class="btn btn-sm {{ $currentStatus === 'all' && $currentSeverity === 'all' && !request('search') ? 'btn-secondary text-white' : 'btn-outline-secondary' }}">
+                            All Alerts
+                            <span class="badge bg-light text-dark ms-1">{{ $totalCount }}</span>
+                        </a>
+                    </div>
+
+                    {{-- Search & Severity Filters Form --}}
+                    <div class="card bg-light border-0 mb-4 p-3">
+                        <form method="GET" action="{{ route('admin.security-alerts.index') }}" class="row g-2 align-items-center">
+                            @if(request('status'))
+                                <input type="hidden" name="status" value="{{ request('status') }}">
+                            @endif
+
+                            <div class="col-md-5">
+                                <input type="text" name="search" value="{{ request('search') }}"
+                                       class="form-control form-control-sm"
+                                       placeholder="Search alert title, message, IP, or type...">
+                            </div>
+
+                            <div class="col-md-3">
+                                <select name="severity" class="form-select form-select-sm">
+                                    <option value="all" {{ request('severity') == 'all' ? 'selected' : '' }}>All Severities</option>
+                                    <option value="critical" {{ request('severity') == 'critical' ? 'selected' : '' }}>Critical</option>
+                                    <option value="high" {{ request('severity') == 'high' ? 'selected' : '' }}>High</option>
+                                    <option value="medium" {{ request('severity') == 'medium' ? 'selected' : '' }}>Medium</option>
+                                    <option value="low" {{ request('severity') == 'low' ? 'selected' : '' }}>Low</option>
+                                </select>
+                            </div>
+
+                            <div class="col-md-4 d-flex gap-2">
+                                <button type="submit" class="btn btn-primary btn-sm">Filter</button>
+                                <a href="{{ route('admin.security-alerts.index') }}" class="btn btn-outline-secondary btn-sm">Reset</a>
+                            </div>
+                        </form>
+                    </div>
+
+                    {{-- Alerts Table --}}
                     <div class="table-responsive">
                         <table class="table table-hover align-middle">
                             <thead class="table-light">
                                 <tr>
-                                    <th style="min-width: 140px;">Time</th>
-                                    <th>Severity</th>
-                                    <th style="min-width: 250px;">Alert Details</th>
-                                    <th style="min-width: 180px;">Target User</th>
-                                    <th>Admin</th>
-                                    <th>IP Address</th>
-                                    <th>Status</th>
-                                    <th class="text-end">Action</th>
+                                    <th style="width: 150px;">Time</th>
+                                    <th style="width: 90px;">Severity</th>
+                                    <th>Incident Alert (Click to view full report)</th>
+                                    <th style="width: 140px;">IP / Correlation</th>
+                                    <th style="width: 130px;">Status</th>
+                                    <th style="width: 160px;" class="text-end">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
                             @forelse($alerts as $alert)
-                                <tr>
+                                @php
+                                    $sev = strtolower($alert->severity ?? 'medium');
+                                    $sevBadge = $sev === 'critical' ? 'danger' : ($sev === 'high' ? 'warning' : ($sev === 'medium' ? 'info' : 'secondary'));
+                                    $showUrl = route('admin.security-alerts.show', $alert);
+                                @endphp
+                                <tr style="cursor: pointer;" onclick="if (!event.target.closest('a, button, form, input')) window.location='{{ $showUrl }}';" title="Click to view full report">
                                     <td>
-                                        <div class="fw-semibold text-dark">{{ $alert->created_at->format('d M Y') }}</div>
-                                        <div class="text-muted small">{{ $alert->created_at->format('H:i:s') }} ({{ $alert->created_at->diffForHumans() }})</div>
+                                        <small class="d-block text-dark fw-bold">{{ $alert->created_at->format('Y-m-d H:i') }}</small>
+                                        <small class="text-muted">{{ $alert->created_at->diffForHumans() }}</small>
                                     </td>
                                     <td>
-                                        @php
-                                            $sev = strtolower($alert->severity);
-                                            $badgeBg = $sev === 'critical' ? 'danger' : ($sev === 'high' ? 'warning' : ($sev === 'medium' ? 'info' : 'secondary'));
-                                        @endphp
-                                        <span class="badge bg-{{ $badgeBg }} text-uppercase fw-bold" style="letter-spacing: 0.5px;">
+                                        <span class="badge bg-{{ $sevBadge }} text-uppercase px-2 py-1">
                                             {{ $alert->severity }}
                                         </span>
                                     </td>
                                     <td>
-                                        <div class="fw-bold text-dark mb-1">{{ $alert->title }}</div>
-                                        <div class="text-muted small">{{ $alert->message }}</div>
+                                        <a href="{{ $showUrl }}" class="fw-bold text-primary text-decoration-none d-block">
+                                            {{ $alert->title }}
+                                        </a>
+                                        <small class="text-muted d-block text-truncate" style="max-width: 460px;">
+                                            {{ $alert->message }}
+                                        </small>
+                                        @if(!empty($alert->metadata['user_id']))
+                                            <small class="badge bg-light text-dark border mt-1">
+                                                User #{{ $alert->metadata['user_id'] }}
+                                            </small>
+                                        @endif
                                         @if(!empty($alert->metadata['amount']))
-                                            <div class="mt-2 d-flex flex-wrap gap-1 align-items-center">
-                                                <span class="badge bg-dark text-white">
-                                                    {{ $alert->metadata['currency'] ?? 'NGN' }} {{ number_format((float)$alert->metadata['amount'], 2) }}
-                                                </span>
-                                                @if(!empty($alert->metadata['reference']))
-                                                    <span class="badge bg-light text-muted border">
-                                                        Ref: {{ $alert->metadata['reference'] }}
-                                                    </span>
-                                                @endif
-                                                @if(!empty($alert->metadata['action']))
-                                                    <span class="badge {{ strtolower($alert->metadata['action']) === 'credit' ? 'bg-success' : 'bg-danger' }}">
-                                                        {{ strtoupper($alert->metadata['action']) }}
-                                                    </span>
-                                                @endif
-                                            </div>
+                                            <small class="badge bg-light text-danger border mt-1">
+                                                &#8358;{{ number_format((float)$alert->metadata['amount'], 2) }}
+                                            </small>
                                         @endif
                                     </td>
                                     <td>
-                                        @if($alert->target_username || $alert->target_user_id)
-                                            <div>
-                                                <a href="{{ $alert->target_user_url }}" target="_blank" class="badge bg-primary-subtle text-primary border border-primary-subtle p-2 text-decoration-none d-inline-flex align-items-center" title="Open User Profile in Admin">
-                                                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="me-1"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-                                                    {{ '@' . ltrim($alert->target_username ?: ('id:' . $alert->target_user_id), '@') }}
-                                                    <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="ms-1 opacity-75"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
-                                                </a>
-                                                @if($alert->target_name)
-                                                    <div class="text-dark small fw-semibold mt-1">{{ $alert->target_name }}</div>
-                                                @endif
-                                                @if($alert->target_email)
-                                                    <div class="text-muted small">{{ $alert->target_email }}</div>
-                                                @endif
-                                            </div>
-                                        @else
-                                            <span class="text-muted">—</span>
+                                        <small class="font-monospace d-block">{{ $alert->ip_address ?? '—' }}</small>
+                                        @if(!empty($alert->metadata['request_id']))
+                                            <small class="font-monospace text-muted" title="{{ $alert->metadata['request_id'] }}">
+                                                {{ Str::limit($alert->metadata['request_id'], 12) }}
+                                            </small>
                                         @endif
-                                    </td>
-                                    <td>
-                                        @if($alert->admin)
-                                            <div class="fw-semibold text-dark">{{ $alert->admin->username ?? ($alert->admin->name ?? $alert->admin->email) }}</div>
-                                            <span class="text-muted small">Admin #{{ $alert->admin->id }}</span>
-                                        @else
-                                            <span class="text-muted">System / Guest</span>
-                                        @endif
-                                    </td>
-                                    <td>
-                                        <code class="text-muted small">{{ $alert->ip_address ?? '—' }}</code>
                                     </td>
                                     <td>
                                         @if($alert->acknowledged_at)
-                                            <span class="badge bg-success-subtle text-success border border-success-subtle">
-                                                Acknowledged
+                                            <span class="badge bg-success-subtle text-success border border-success px-2 py-1">
+                                                &#10003; Acknowledged
                                             </span>
-                                            @if($alert->acknowledgedBy)
-                                                <div class="text-muted small mt-1">by {{ $alert->acknowledgedBy->username ?? $alert->acknowledgedBy->name }}</div>
-                                            @endif
+                                            <small class="d-block text-muted mt-1" style="font-size: 11px;">
+                                                {{ $alert->acknowledgedBy->username ?? ($alert->acknowledgedBy->email ?? 'Admin') }}
+                                            </small>
                                         @else
-                                            <span class="badge bg-warning-subtle text-warning border border-warning-subtle">
-                                                Pending
+                                            <span class="badge bg-danger-subtle text-danger border border-danger px-2 py-1">
+                                                &#9888; Pending Review
                                             </span>
                                         @endif
                                     </td>
                                     <td class="text-end">
-                                        @can('manage_security_alerts')
-                                            @if($alert->type === 'otp_account_locked' && !empty($alert->metadata['user_id']))
-                                                <form method="POST" action="{{ route('admin.security.users.unlock', $alert->metadata['user_id']) }}" class="mb-1">
-                                                    @csrf
-                                                    <input class="form-control form-control-sm mb-1" name="reason" minlength="5" maxlength="500" required placeholder="Reason for unlocking">
-                                                    <button class="btn btn-sm btn-danger" type="submit">Unlock account</button>
-                                                </form>
-                                            @endif
-                                            @if(!$alert->acknowledged_at)
-                                                <form method="POST" action="{{ route('admin.security-alerts.acknowledge', $alert) }}" class="d-inline">
-                                                    @csrf
-                                                    <button class="btn btn-sm btn-outline-primary" type="submit">
-                                                        Acknowledge
-                                                    </button>
-                                                </form>
-                                            @else
-                                                <span class="text-muted small">Done</span>
-                                            @endif
-                                        @endcan
+                                        <div class="d-flex gap-1 justify-content-end">
+                                            <a href="{{ $showUrl }}" class="btn btn-sm btn-outline-primary" title="View Full Investigation Report">
+                                                View Report &rarr;
+                                            </a>
+
+                                            @can('manage_security_alerts')
+                                                @if(!$alert->acknowledged_at)
+                                                    <form method="POST" action="{{ route('admin.security-alerts.acknowledge', $alert) }}" class="d-inline" onsubmit="return confirm('Acknowledge alert #{{ $alert->id }}?');">
+                                                        @csrf
+                                                        <button class="btn btn-sm btn-outline-success" type="submit" title="Mark as Acknowledged">
+                                                            &#10003;
+                                                        </button>
+                                                    </form>
+                                                @endif
+                                            @endcan
+                                        </div>
                                     </td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="8" class="text-center py-5 text-muted">
-                                        <div class="my-3">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="text-muted mb-2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
-                                            <p class="mb-0 fw-semibold">No security alerts recorded.</p>
-                                        </div>
+                                    <td colspan="6" class="text-center py-4 text-muted">
+                                        <em>No security alerts found matching the current filter criteria.</em>
                                     </td>
                                 </tr>
                             @endforelse
@@ -268,9 +189,11 @@
                         </table>
                     </div>
 
-                    <div class="mt-4">
+                    {{-- Pagination --}}
+                    <div class="mt-3">
                         {{ $alerts->links() }}
                     </div>
+
                 </div>
             </div>
         </div>

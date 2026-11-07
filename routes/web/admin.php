@@ -29,7 +29,6 @@ use App\Http\Controllers\Admin\Auth\ForgotPinController;
 use App\Http\Controllers\Admin\ErrorLogController;
 use App\Http\Controllers\Admin\VerificationController;
 use App\Http\Controllers\Admin\SecurityAlertController;
-use App\Http\Controllers\Admin\Auth\TwoFactorController;
 use App\Http\Controllers\Admin\UserSecurityController;
 
 Route::group(['prefix' => 'adminoffice'], function () {
@@ -47,11 +46,6 @@ Route::group(['prefix' => 'adminoffice'], function () {
 
     Route::get('/pin', [PinController::class,'showForm'])->name('admin.pin.form')->middleware('Admin');
     Route::post('/pin', [PinController::class,'verifyPin'])->name('admin.pin.verify')->middleware('Admin');
-
-    // 2FA Challenge & Verification (Pre-Dashboard)
-    Route::get('/2fa/challenge', [TwoFactorController::class, 'showChallenge'])->name('admin.2fa.challenge')->middleware('Admin');
-    Route::post('/2fa/verify', [TwoFactorController::class, 'verifyChallenge'])->name('admin.2fa.verify')->middleware('Admin');
-    Route::post('/2fa/resend', [TwoFactorController::class, 'resendEmailOtp'])->name('admin.2fa.resend')->middleware('Admin');
 
     // Route::get('logout', [AuthController::class, 'logout'])->name('AdminLogout')->middleware('Admin');
     Route::get('logout', [LoginController::class, 'logout'])->name('AdminLogout')->middleware('Admin');
@@ -71,7 +65,7 @@ Route::group(['prefix' => 'adminoffice'], function () {
 
 
     //admin controls
-    Route::group(['middleware'=>['Admin', 'visitors', 'admin.2fa'],'as'=>'admin.'],function(){
+    Route::group(['middleware'=>['Admin', 'visitors', 'admin.pin'],'as'=>'admin.'],function(){
 
     //dashboard
     Route::get('/', [DashboardController::class, 'index'])->name('index');
@@ -94,22 +88,16 @@ Route::group(['prefix' => 'adminoffice'], function () {
     Route::get('security-alerts', [SecurityAlertController::class, 'index'])
         ->middleware('can:view_security_alerts')
         ->name('security-alerts.index');
+    Route::get('security-alerts/{securityAlert}', [SecurityAlertController::class, 'show'])
+        ->middleware('can:view_security_alerts')
+        ->name('security-alerts.show');
     Route::post('security-alerts/{securityAlert}/acknowledge', [SecurityAlertController::class, 'acknowledge'])
         ->middleware('can:manage_security_alerts')
         ->name('security-alerts.acknowledge');
-    Route::post('security/users/{user}/unlock', [UserSecurityController::class, 'unlock'])->middleware('can:manage_security_alerts')->name('security.users.unlock');
-    Route::post('security/users/{user}/revoke-sessions', [UserSecurityController::class, 'revokeSessions'])->middleware('can:manage_security_alerts')->name('security.users.revoke-sessions');
-
-    // Two-Factor Authentication Settings
-    Route::get('security', function () {
-        return redirect()->route('admin.security.2fa');
-    })->name('security.index');
-    Route::get('security/2fa', [TwoFactorController::class, 'showSettings'])->name('security.2fa');
-    Route::post('security/2fa/confirm', [TwoFactorController::class, 'confirmTotp'])->name('security.2fa.confirm');
-    Route::post('security/2fa/email', [TwoFactorController::class, 'enableEmail'])->name('security.2fa.email');
-    Route::post('security/2fa/switch', [TwoFactorController::class, 'switchMethod'])->name('security.2fa.switch');
-    Route::post('security/2fa/recovery-codes', [TwoFactorController::class, 'regenerateRecoveryCodes'])->name('security.2fa.recovery');
-    Route::post('security/2fa/disable', [TwoFactorController::class, 'disable'])->name('security.2fa.disable');
+    Route::get('user-security', [UserSecurityController::class, 'index'])->middleware('can:view_user_security')->name('user-security.index');
+    Route::post('user-security/{user}/unlock', [UserSecurityController::class, 'unlock'])->middleware('can:unlock_user_security')->name('user-security.unlock');
+    Route::post('user-security/{user}/revoke', [UserSecurityController::class, 'revoke'])->middleware('can:revoke_user_sessions')->name('user-security.revoke');
+    Route::get('user-security/export', [UserSecurityController::class, 'export'])->middleware('can:export_user_security')->name('user-security.export');
     
     
     //user
@@ -119,10 +107,10 @@ Route::group(['prefix' => 'adminoffice'], function () {
     Route::post('users/update-js2/{username}', [UserController::class, 'updateReceiveSms'])->name('UserUpdateJsAction2');
     
     Route::get('users/wallet-action/{username}', [UserController::class, 'userWalletAction'])->name('AdminUserWalletAction');
-    Route::post('users/wallet-action/{username}', [UserController::class, 'updateUserWallet'])->name('AdminUserWalletAction.post');
+    Route::post('users/wallet-action/{username}', [UserController::class, 'updateUserWallet'])->name('AdminUserWalletAction');
     
     Route::get('users/level-action/{username}', [UserController::class, 'userLevelAction'])->name('AdminUserLevelAction');
-    Route::post('users/level-action/{username}', [UserController::class, 'updateUserLevel'])->name('AdminUserLevelAction.post');
+    Route::post('users/level-action/{username}', [UserController::class, 'updateUserLevel'])->name('AdminUserLevelAction');
     
     Route::post('users/transaction-pin/{username}', [UserController::class, 'resetTransactionPin'])->name('AdminResetUserTransactionPin');
     Route::post('users/reset-password/{username}', [UserController::class, 'resetPassword'])->name('AdminResetUserPassword');
@@ -271,6 +259,7 @@ Route::group(['prefix' => 'adminoffice'], function () {
     Route::post('transactions/bulk/delete',[TransactionController::class, 'bulk_delete'])->name('transactions.bulk_delete');
     Route::post('transactions-edit-bulk-status/', [TransactionController::class, 'editBulkTransactionStatus'])->name('editBulkTransactionStatus');
     Route::post('transactions-verify-status-api/', [TransactionController::class, 'verifyTransactionFromApi'])->name('verifyTransactionApiStatus');
+    Route::post('transactions/bulk/delete',[TransactionController::class, 'bulk_delete'])->name('transactions.bulk_delete');
     Route::get('transaction/view/{reference}', [TransactionController::class, 'transactionView'])->name('transaction.view');
     
     
@@ -281,9 +270,9 @@ Route::group(['prefix' => 'adminoffice'], function () {
 
     //settings
     Route::get('settings/password', [SettingsController::class, 'passwordSettings'])->name('PasswordSetting');
-    Route::post('settings/password', [SettingsController::class, 'updatePassword'])->name('PasswordSetting.post');
+    Route::post('settings/password', [SettingsController::class, 'updatePassword'])->name('PasswordSetting');
     Route::get('settings/{pageType}', [SettingsController::class, 'edit'])->name('settings');
-    Route::post('settings/{pageType}', [SettingsController::class, 'update'])->name('settings.post');
+    Route::post('settings/{pageType}', [SettingsController::class, 'update'])->name('settings');
     
     
     
@@ -292,9 +281,9 @@ Route::group(['prefix' => 'adminoffice'], function () {
     Route::get('page/view-details/{pageType}', [GeneralViewController::class, 'show'])->name('ViewItemDetails');
     Route::get('page/general-ajax/{pageType}', [GeneralViewController::class, 'ajax'])->name('ajaxGetItem');
     Route::get('page/add/{pageType}/{id?}', [GeneralViewController::class, 'create'])->name('AddNewItem');
-    Route::post('page/add/{pageType}/{id?}', [GeneralViewController::class, 'store'])->name('AddNewItem.post');
+    Route::post('page/add/{pageType}/{id?}', [GeneralViewController::class, 'store'])->name('AddNewItem');
     Route::get('page/edit/{pageType}/{id}', [GeneralViewController::class, 'edit'])->name('UpdateItem');
-    Route::put('page/edit/{pageType}/{id}', [GeneralViewController::class, 'update'])->name('UpdateItem.put');
+    Route::put('page/edit/{pageType}/{id}', [GeneralViewController::class, 'update'])->name('UpdateItem');
     Route::put('page/update/{pageType}/{id}', [GeneralViewController::class, 'ajaxUpdate'])->name('UpdateItemApi');
     Route::delete('page/delete/{pageType}/{id}', [GeneralViewController::class, 'destroy'])->name('DeleteItem');
     Route::delete('page/delete-bulk/{pageType}', [GeneralViewController::class, 'bulkDestroy'])->name('BulkDeleteItem');

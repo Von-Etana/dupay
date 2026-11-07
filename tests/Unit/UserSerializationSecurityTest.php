@@ -9,7 +9,7 @@ class UserSerializationSecurityTest extends TestCase
 {
     public function test_user_json_exposes_pin_presence_without_secrets(): void
     {
-        $user = new User([
+        $user = (new User)->forceFill([
             'transaction_pin' => 'hashed-pin-value',
             'email_code' => '123456',
             'phone_code' => '1234',

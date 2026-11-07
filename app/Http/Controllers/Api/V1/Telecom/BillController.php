@@ -194,14 +194,12 @@ class BillController extends Controller
         $user = Auth::user();
     
         //check transaction pin
-        if (!isset($_SERVER['HTTP_ISMART']) || $_SERVER['HTTP_ISMART'] != "api" || request("fingerPrint") != true) {
-            if (!$request->transaction_pin) {
-                return response(['success' => false, 'message' => "Please Enter Transaction Pin"]);
-            } elseif (!$user->transaction_pin) {
-                return response(['success' => false, 'message' => "Transaction Pin not set"]);
-            } elseif (!Hash::check($request->transaction_pin, $user->transaction_pin)) {
-                return response(['success' => false, 'message' => "Incorrect Transaction Pin"]);
-            }
+        if (!$request->transaction_pin) {
+            return response(['success' => false, 'message' => "Please Enter Transaction Pin"]);
+        } elseif (!$user->transaction_pin) {
+            return response(['success' => false, 'message' => "Transaction Pin not set"]);
+        } elseif (!Hash::check($request->transaction_pin, $user->transaction_pin)) {
+            return response(['success' => false, 'message' => "Incorrect Transaction Pin"]);
         }
         
         if($user->blocked_status == true){
@@ -387,7 +385,7 @@ class BillController extends Controller
             $ul['status'] = $finalStatus;
             $tansaction =  $user->transaction()->create($ul);
         }else{
-            return response(['success' => false, 'message' => $balanceAction["message"] ?? "Wallet balance error"]);
+            return response(['success' => false, 'message' => "Wallet balance error"]);
         }
         $token_unit = "null";
         $sucess = false;

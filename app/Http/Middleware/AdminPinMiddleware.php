@@ -20,17 +20,11 @@ class AdminPinMiddleware
     {
         // admin guard check
         if (!auth()->guard('admin')->check()) {
-            return redirect()->route('adminAuth.Login');
+            return redirect()->route('admin.login');
         }
 
         // check pin session
-        $adminId = (int) auth()->guard('admin')->id();
-        $pinVerifiedAdminId = (int) session('admin_pin_verified_admin_id');
         $pinVerifiedAt = session('admin_pin_verified_at');
-        if ($pinVerifiedAdminId !== $adminId) {
-            session()->forget(['admin_pin_verified_at', 'admin_pin_verified_admin_id']);
-            return redirect()->route('admin.pin.form');
-        }
 
         // if no pin session
         if (!$pinVerifiedAt) {
@@ -41,7 +35,7 @@ class AdminPinMiddleware
         $expireMinutes = 40;
 
         if (Carbon::parse($pinVerifiedAt)->addMinutes($expireMinutes)->isPast()) {
-            session()->forget(['admin_pin_verified_at', 'admin_pin_verified_admin_id']);
+            session()->forget('admin_pin_verified_at');
 
             return redirect()->route('admin.pin.form')
                 ->with('error', 'Pin session expired. Enter PIN again.');

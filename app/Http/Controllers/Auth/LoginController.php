@@ -9,6 +9,9 @@ use App\Models\UserLogin;
 use Carbon\Carbon;
 use FirebaseUserUpdate;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
+use App\Models\User;
 
 class LoginController extends Controller
 {
@@ -47,6 +50,63 @@ class LoginController extends Controller
     {
         $data['page_title'] = 'Log In';
         return view(enableMobile().'auth.login',$data);
+    }
+
+    public function login(Request $request)
+    {
+        $request->merge(['device_id' => $request->session()->get('browser_device_id', Str::random(32))]);
+        $request->session()->put('browser_device_id', $request->input('device_id'));
+        $validator = Validator::make($request->all(), ['email' => 'required|email', 'password' => 'required|string']);
+        if ($validator->fails()) return back()->withErrors($validator)->withInput();
+        $user = User::where('email', $request->email)->first();
+        if (!$user) {
+            app(\App\Services\UserSecurityService::class)->recordEvent('password_failed', null, $request);
+            return back()->withErrors(['email' => 'Invalid login details.'])->withInput();
+        }
+        $result = app(\App\Services\LoginChallengeService::class)->begin($user, $request->password, $request, 'web');
+        if (($result['code'] ?? null) !== 'otp_required') {
+            return back()->withErrors(['email' => $result['message'] ?? 'Invalid login details.'])->withInput();
+        }
+        $request->session()->put('login_challenge_id', $result['challenge_id']);
+        $sent = app(\App\Services\LoginChallengeService::class)->send(Request::create('/login/otp/send', 'POST', ['challenge_id' => $result['challenge_id'], 'device_id' => $request->input('device_id')]));
+        if (!($sent['success'] ?? false)) {
+            return back()->withErrors(['email' => $sent['message'] ?? 'We could not send a verification code.'])->withInput();
+        }
+        return redirect()->route('login.otp.form');
+    }
+
+    public function showOtpForm(Request $request)
+    {
+        abort_unless($request->session()->has('login_challenge_id'), 403);
+        return view('auth.login-otp');
+    }
+
+    public function verifyOtp(Request $request)
+    {
+        $challengeId = $request->session()->get('login_challenge_id');
+        $request->merge(['challenge_id' => $challengeId, 'device_id' => $request->session()->get('browser_device_id')]);
+        $request->validate(['otp' => ['required', 'regex:/^[0-9]{6}$/']]);
+        $result = app(\App\Services\LoginChallengeService::class)->verify($request, 'web');
+        if (!$result['success']) return back()->withErrors(['otp' => $result['message'] ?? 'Unable to verify code.']);
+        $this->guard()->login(User::findOrFail($result['user_id']), $request->boolean('remember'));
+        $request->session()->forget('login_challenge_id');
+        return redirect()->intended($this->redirectTo);
+    }
+
+    protected function attemptLogin(Request $request)
+    {
+        $credentials = $this->credentials($request);
+        $field = $this->username();
+        $user = \App\Models\User::where($field, $credentials[$field])->first();
+        if (!$user) {
+            app(\App\Services\UserSecurityService::class)->recordEvent('password_failed', null, $request);
+            return false;
+        }
+        if (!app(\App\Services\UserSecurityService::class)->verifyPassword($user, $credentials['password'], $request)) {
+            return false;
+        }
+        $this->guard()->login($user, $request->boolean('remember'));
+        return true;
     }
 
     public function logout(Request $request)

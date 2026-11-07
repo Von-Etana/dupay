@@ -13,8 +13,6 @@ class VerifyCsrfToken extends Middleware
      */
     protected $except = [
         '/monnify-webhook',
-        '/flutterwave-virtual-account-webhook',
-        '/webhooks/safehaven',
-        'webhooks/safehaven',
+        '/flutterwave-virtual-account-webhook'
     ];
 }

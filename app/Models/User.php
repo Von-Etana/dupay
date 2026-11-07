@@ -29,7 +29,7 @@ class User extends Authenticatable
      *
      * @var array<int, string>
      */
-    public $guarded=[];
+    public $guarded=['password_failed_attempts', 'password_locked_until', 'otp_failed_attempts', 'otp_locked_until', 'login_otp_sent_at', 'security_session_version'];
     
     // protected $fillable = ['payscribe_customer_id'];
 
@@ -39,6 +39,8 @@ class User extends Authenticatable
      * @var array<int, string>
      */
     protected $hidden = [
+        'login_otp_sent_at', 'security_session_version',
+        'password_failed_attempts', 'password_locked_until', 'otp_failed_attempts', 'otp_locked_until',
         'password',
         'remember_token',
         's_password'
@@ -58,6 +60,12 @@ class User extends Authenticatable
      * @var array<string, string>
      */
     protected $casts = [
+        'login_otp_sent_at' => 'datetime',
+        'security_session_version' => 'integer',
+        'password_failed_attempts' => 'integer',
+        'password_locked_until' => 'datetime',
+        'otp_failed_attempts' => 'integer',
+        'otp_locked_until' => 'datetime',
         'email_verified_at' => 'datetime',
         'login_locked_until' => 'datetime',
         'otp_locked_until' => 'datetime',
@@ -77,6 +85,21 @@ class User extends Authenticatable
                 'status'  => '',
             ],
             $merge);
+    }
+
+    public function securityEvents()
+    {
+        return $this->hasMany(SecurityEvent::class);
+    }
+
+    public function latestSecurityEvent()
+    {
+        return $this->hasOne(SecurityEvent::class)->latestOfMany();
+    }
+
+    public function trustedDevices()
+    {
+        return $this->hasMany(TrustedDevice::class);
     }
 
     public function profile(){
