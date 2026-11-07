@@ -56,16 +56,46 @@ workflows:
             --create
           keychain add-certificates
 
-          # If the active provisioning profile contains Push Notifications, enable it dynamically
-          for prof in ~/Library/MobileDevice/Provisioning\ Profiles/*.mobileprovision; do
-            if [ -f "$prof" ] && security cms -D -i "$prof" 2>/dev/null | grep -q "aps-environment"; then
+          PROV_FILE=$(find ~/Library/MobileDevice/Provisioning\ Profiles -name "*.mobileprovision" 2>/dev/null | head -n 1)
+          if [ -n "$PROV_FILE" ]; then
+            PROV_UUID=$(security cms -D -i "$PROV_FILE" | grep -A1 "<key>UUID</key>" | grep "<string>" | sed -e 's/.*<string>//' -e 's/<\/string>.*//' | tr -d ' \r\n')
+            PROV_NAME=$(security cms -D -i "$PROV_FILE" | grep -A1 "<key>Name</key>" | grep "<string>" | sed -e 's/.*<string>//' -e 's/<\/string>.*//' | tr -d '\r\n')
+            echo "Provisioning profile identified: Name='$PROV_NAME', UUID='$PROV_UUID'"
+
+            # Explicitly set PROVISIONING_PROFILE_SPECIFIER in project.pbxproj
+            sed -i '' "s/PROVISIONING_PROFILE_SPECIFIER = \"\"/PROVISIONING_PROFILE_SPECIFIER = \"$PROV_NAME\"/g" ios/Runner.xcodeproj/project.pbxproj
+
+            # Create ExportOptions.plist for manual distribution
+            cat <<EOF > /Users/builder/export_options.plist
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>method</key>
+    <string>app-store</string>
+    <key>teamID</key>
+    <string>VDFCU7TD4W</string>
+    <key>signingStyle</key>
+    <string>manual</string>
+    <key>signingCertificate</key>
+    <string>Apple Distribution</string>
+    <key>provisioningProfiles</key>
+    <dict>
+        <key>com.my.dupay.app.new</key>
+        <string>$PROV_NAME</string>
+    </dict>
+</dict>
+</plist>
+EOF
+
+            # If the profile contains Push Notifications capability, adapt Runner.entitlements
+            if security cms -D -i "$PROV_FILE" 2>/dev/null | grep -q "aps-environment"; then
               echo "Provisioning profile contains Push Notifications capability. Injecting aps-environment..."
               printf '<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n<plist version="1.0">\n<dict>\n\t<key>aps-environment</key>\n\t<string>production</string>\n</dict>\n</plist>\n' > ios/Runner/Runner.entitlements
-              break
             fi
-          done
+          fi
 
-          xcode-project use-profiles --project ios/Runner.xcodeproj --archive-method=app-store --export-options-plist=/Users/builder/export_options.plist
+          xcode-project use-profiles --project ios/Runner.xcodeproj --archive-method=app-store --export-options-plist=/Users/builder/export_options.plist || true
           echo "=== Export options plist ==="
           cat /Users/builder/export_options.plist 2>/dev/null || true
 
