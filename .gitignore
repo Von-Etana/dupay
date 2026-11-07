@@ -30,6 +30,7 @@ trowallet_customer_id
 *.pem
 *.key
 *.p12
+*.mobileprovision
 *.jks
 *.keystore
 error_log
