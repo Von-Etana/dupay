@@ -22,6 +22,7 @@ class AuthRepository {
 
   // Login
   Future<ApiResponse<LoginResponse>> login(LoginRequest request) async {
+
     final response = await _apiService.post<LoginResponse>(
       ApiConstants.login,
       data: request.toJson(),
@@ -29,40 +30,13 @@ class AuthRepository {
     );
 
     // Save tokens if login successful
-    if (response.success &&
-        response.data != null &&
-        response.data!.accessToken.isNotEmpty) {
+    if (response.success && response.data != null) {
       await SecureStorageService.saveAccessToken(response.data!.accessToken);
       await SecureStorageService.saveUserId(response.data!.user.id.toString());
     }
 
     return response;
   }
-
-  Future<ApiResponse<LoginResponse>> verifyLoginOtp({
-    required String challengeId,
-    required String otp,
-  }) async {
-    final response = await _apiService.post<LoginResponse>(
-      ApiConstants.loginOtpVerify,
-      data: {'challenge_id': challengeId, 'otp': otp},
-      fromJson: LoginResponse.fromJson,
-    );
-    if (response.success &&
-        response.data != null &&
-        response.data!.accessToken.isNotEmpty) {
-      await SecureStorageService.saveAccessToken(response.data!.accessToken);
-      await SecureStorageService.saveUserId(response.data!.user.id.toString());
-    }
-    return response;
-  }
-
-  Future<ApiResponse<LoginResponse>> resendLoginOtp(String challengeId) =>
-      _apiService.post<LoginResponse>(
-        ApiConstants.loginOtpResend,
-        data: {'challenge_id': challengeId},
-        fromJson: LoginResponse.fromJson,
-      );
 
   // Register
   //
@@ -72,6 +46,7 @@ class AuthRepository {
   Future<ApiResponse<RegisterResponse>> register(
     RegisterRequest request,
   ) async {
+
     final formData = await request.toFormData();
 
     final response = await _apiService.post<RegisterResponse>(
@@ -140,11 +115,15 @@ class AuthRepository {
     required String email,
     required String code,
   }) async {
+    final deviceId = await SecureStorageService.getDeviceId();
     return await _apiService.post<UserModel>(
       ApiConstants.verifyEmailOtp,
-      data: {'email': email, 'code': code},
-      fromJson:
-          (json) => UserModel.fromJson(json['user'] as Map<String, dynamic>),
+      data: {
+        'email': email,
+        'code': code,
+        if (deviceId != null && deviceId.isNotEmpty) 'device_id': deviceId,
+      },
+      fromJson: (json) => UserModel.fromJson(json['user'] as Map<String, dynamic>),
     );
   }
 
@@ -190,16 +169,12 @@ class AuthRepository {
   Future<void> logout() async {
     try {
       if (await SecureStorageService.getAccessToken() != null) {
-        final deviceId = await SecureStorageService.getDeviceId();
-        await _apiService.postSimple(
-          ApiConstants.logout,
-          data: deviceId == null ? null : {'device_id': deviceId},
-        );
+        await _apiService.postSimple(ApiConstants.logout);
       }
     } catch (_) {
       // Local sign-out must still work when the API cannot be reached.
     } finally {
-      await SecureStorageService.clearSession();
+      await SecureStorageService.clearAll();
     }
   }
 

@@ -588,14 +588,61 @@ class AuthController extends Controller
         // Generate access token for mobile app
         $accessToken = auth()->user()->createToken('authToken');
 
-        try {
-            app(\App\Services\UserSecurityService::class)->recordEvent('password_verified', $user, $request);
-            app(\App\Services\UserSecurityService::class)->recordEvent('token_issued', $user, $request);
-        } catch (\Throwable $th) {}
+        // Check if device is recognized and if email is already verified
+        $deviceHash = $request->filled('device_id') ? hash('sha256', (string) $request->input('device_id')) : null;
+        $isDeviceTrusted = false;
+        if ($deviceHash && \Illuminate\Support\Facades\Schema::hasTable('trusted_devices')) {
+            $isDeviceTrusted = \App\Models\TrustedDevice::where('user_id', $user->id)
+                ->where('device_hash', $deviceHash)
+                ->whereNull('revoked_at')
+                ->where('expires_at', '>', now())
+                ->exists();
+        }
+
+        $isEmailUnverified = ((string) $user->email_verify !== "1");
+
+        // Require OTP verification for unverified emails OR new/unrecognized devices
+        if ($isEmailUnverified || !$isDeviceTrusted) {
+            $email_code = (string) random_int(100000, 999999);
+            $user->email_code = $email_code;
+            $user->email_time = Carbon::now()->addMinutes(10);
+            $user->email_verify = "0"; // Triggers OTP verification screen on mobile app
+            $user->save();
+
+            if ($deviceHash) {
+                \Illuminate\Support\Facades\Cache::put("pending_device_hash_{$user->id}", $deviceHash, now()->addMinutes(15));
+            }
+
+            try {
+                $username = $user->profile?->username ?? $user->first_name ?? 'User';
+                $message = "
+                    <p>Your one-time verification code for signing in to <strong>Dupay</strong> is below.</p>
+                    <p style='margin:24px 0; font-size:16px; text-align:center;'>
+                      <span style='display:inline-block; padding:14px 24px; background:#f0f0f0; border-radius:6px; font-size:28px; font-weight:bold; color:#0052cc; letter-spacing:6px;'>
+                        {$email_code}
+                      </span>
+                    </p>
+                    <p>This code expires in <strong>10 minutes</strong>. Do not share it with anyone.</p>
+                ";
+                $this->sendMail($user->email, $username, "Your Login Verification Code — Dupay", $message);
+            } catch (\Throwable $th) {
+                \Log::warning("Could not send login OTP: " . $th->getMessage());
+            }
+
+            try {
+                app(\App\Services\UserSecurityService::class)->recordEvent('otp_sent', $user, $request);
+            } catch (\Throwable $th) {}
+        } else {
+            // Verified user on recognized device: log directly in
+            try {
+                app(\App\Services\UserSecurityService::class)->recordEvent('password_verified', $user, $request);
+                app(\App\Services\UserSecurityService::class)->recordEvent('token_issued', $user, $request);
+            } catch (\Throwable $th) {}
+        }
 
         return response([
             'success' => true,
-            'user' => $user,
+            'user' => $user->fresh('profile'),
             'access_token' => $accessToken->accessToken,
         ]);
     }
@@ -805,6 +852,32 @@ class AuthController extends Controller
         $user->email_verify = "1";
         $user->save();
         $user->profile;
+
+        // Register device as trusted for future logins (90 days)
+        $deviceHash = \Illuminate\Support\Facades\Cache::pull("pending_device_hash_{$user->id}")
+            ?? ($request->filled('device_id') ? hash('sha256', (string) $request->input('device_id')) : null);
+
+        if ($deviceHash && \Illuminate\Support\Facades\Schema::hasTable('trusted_devices')) {
+            try {
+                \App\Models\TrustedDevice::updateOrCreate(
+                    ['user_id' => $user->id, 'device_hash' => $deviceHash],
+                    [
+                        'token_hash' => hash('sha256', \Illuminate\Support\Str::random(64)),
+                        'ip_address' => $request->ip(),
+                        'user_agent' => mb_substr((string) $request->userAgent(), 0, 2048),
+                        'last_used_at' => now(),
+                        'expires_at' => now()->addDays(90),
+                        'revoked_at' => null,
+                    ]
+                );
+            } catch (\Throwable $th) {
+                \Log::warning("Could not register trusted device: " . $th->getMessage());
+            }
+        }
+
+        try {
+            app(\App\Services\UserSecurityService::class)->recordEvent('otp_success', $user, $request);
+        } catch (\Throwable $th) {}
 
         if (getSiteSettings("auto_create_virtual_account") == "Yes" && !$user->virtualAccount) {
             try {
