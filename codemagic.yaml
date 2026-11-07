@@ -9,6 +9,9 @@ workflows:
       app_store_connect: "ilemhendia hope"
 
     environment:
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.my.dupay.app.new
       vars:
         APP_STORE_APPLE_ID: 6479637481
         BUNDLE_ID: "com.my.dupay.app.new"
@@ -65,7 +68,9 @@ workflows:
             fi
           done
 
-          xcode-project use-profiles --export-options-plist=/Users/builder/export_options.plist
+          xcode-project use-profiles --project ios/Runner.xcodeproj --archive-method=app-store --export-options-plist=/Users/builder/export_options.plist
+          echo "=== Export options plist ==="
+          cat /Users/builder/export_options.plist 2>/dev/null || true
 
       - name: Build iOS Release IPA
         script: |
