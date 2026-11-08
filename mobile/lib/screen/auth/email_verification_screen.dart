@@ -98,7 +98,11 @@ class _EmailVerificationScreenState
           .verifyEmailOtp(email: email, code: _otpCode);
       if (!mounted) return;
       if (success) {
-        Navigator.of(context).pushReplacementNamed('/transactionPinSetup');
+        final user = ref.read(currentUserProvider);
+        final route = user?.hasTransactionPin == true
+            ? '/homeNav'
+            : '/transactionPinSetup';
+        Navigator.of(context).pushReplacementNamed(route);
       } else {
         _showError(ref.read(authErrorProvider) ?? 'Invalid verification code.');
       }
