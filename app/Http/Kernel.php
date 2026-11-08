@@ -80,6 +80,7 @@ class Kernel extends HttpKernel
         'notBlocked' => \App\Http\Middleware\EnsureUserNotBlocked::class,
         'deduplicateMoney' => \App\Http\Middleware\DeduplicateMoneyRequest::class,
         'admin.pin' => \App\Http\Middleware\AdminPinMiddleware::class,
+        'admin.2fa' => \App\Http\Middleware\EnsureAdmin2FaVerified::class,
 
     ];
 }
