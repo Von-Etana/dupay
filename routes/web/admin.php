@@ -30,6 +30,7 @@ use App\Http\Controllers\Admin\ErrorLogController;
 use App\Http\Controllers\Admin\VerificationController;
 use App\Http\Controllers\Admin\SecurityAlertController;
 use App\Http\Controllers\Admin\UserSecurityController;
+use App\Http\Controllers\Admin\Auth\TwoFactorController;
 
 Route::group(['prefix' => 'adminoffice'], function () {
 
@@ -46,6 +47,11 @@ Route::group(['prefix' => 'adminoffice'], function () {
 
     Route::get('/pin', [PinController::class,'showForm'])->name('admin.pin.form')->middleware('Admin');
     Route::post('/pin', [PinController::class,'verifyPin'])->name('admin.pin.verify')->middleware('Admin');
+
+    // 2FA Challenge & Verification (Pre-Dashboard)
+    Route::get('/2fa/challenge', [TwoFactorController::class, 'showChallenge'])->name('admin.2fa.challenge')->middleware('Admin');
+    Route::post('/2fa/verify', [TwoFactorController::class, 'verifyChallenge'])->name('admin.2fa.verify')->middleware('Admin');
+    Route::post('/2fa/resend', [TwoFactorController::class, 'resendEmailOtp'])->name('admin.2fa.resend')->middleware('Admin');
 
     // Route::get('logout', [AuthController::class, 'logout'])->name('AdminLogout')->middleware('Admin');
     Route::get('logout', [LoginController::class, 'logout'])->name('AdminLogout')->middleware('Admin');
@@ -65,7 +71,7 @@ Route::group(['prefix' => 'adminoffice'], function () {
 
 
     //admin controls
-    Route::group(['middleware'=>['Admin', 'visitors', 'admin.pin'],'as'=>'admin.'],function(){
+    Route::group(['middleware'=>['Admin', 'visitors', 'admin.2fa', 'admin.pin'],'as'=>'admin.'],function(){
 
     //dashboard
     Route::get('/', [DashboardController::class, 'index'])->name('index');
@@ -98,6 +104,14 @@ Route::group(['prefix' => 'adminoffice'], function () {
     Route::post('user-security/{user}/unlock', [UserSecurityController::class, 'unlock'])->middleware('can:unlock_user_security')->name('user-security.unlock');
     Route::post('user-security/{user}/revoke', [UserSecurityController::class, 'revoke'])->middleware('can:revoke_user_sessions')->name('user-security.revoke');
     Route::get('user-security/export', [UserSecurityController::class, 'export'])->middleware('can:export_user_security')->name('user-security.export');
+
+    // Two-Factor Authentication Settings
+    Route::get('security/2fa', [TwoFactorController::class, 'showSettings'])->name('security.2fa');
+    Route::post('security/2fa/confirm', [TwoFactorController::class, 'confirmTotp'])->name('security.2fa.confirm');
+    Route::post('security/2fa/email', [TwoFactorController::class, 'enableEmail'])->name('security.2fa.email');
+    Route::post('security/2fa/switch', [TwoFactorController::class, 'switchMethod'])->name('security.2fa.switch');
+    Route::post('security/2fa/recovery-codes', [TwoFactorController::class, 'regenerateRecoveryCodes'])->name('security.2fa.recovery');
+    Route::post('security/2fa/disable', [TwoFactorController::class, 'disable'])->name('security.2fa.disable');
     
     
     //user

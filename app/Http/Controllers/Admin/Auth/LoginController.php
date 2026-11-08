@@ -8,6 +8,7 @@ use Illuminate\Foundation\Auth\AuthenticatesUsers;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
 use App\Services\SecurityAlertService;
+use App\Services\TwoFactorAuthService;
 
 class LoginController extends Controller
 {
@@ -55,10 +56,22 @@ class LoginController extends Controller
     }*/
     public function logout()
     {
-        $ac['activity'] = "Logout from admin panel";
-        $ac['actions'] = "logout";
-        $ac['user_type'] = "2";
-        addSiteActitvity($this->guard('admin')->user(), $ac);
+        $admin = $this->guard('admin')->user();
+        if ($admin) {
+            $ac['activity'] = "Logout from admin panel";
+            $ac['actions'] = "logout";
+            $ac['user_type'] = "2";
+            addSiteActitvity($admin, $ac);
+        }
+
+        session()->forget([
+            'admin_2fa_verified',
+            'admin_2fa_verified_at',
+            'admin_pin_verified_at',
+            'admin_pin_verified_admin_id',
+            'admin_2fa_temp_secret',
+        ]);
+
         $this->guard('admin')->logout();
         session()->flash('title','Logout');
         session()->flash('message','Successfully Log Out.');
@@ -69,12 +82,15 @@ class LoginController extends Controller
 
     public function authenticated(Request $request, $user)
     {
-
         $ac['activity'] = "Login to admin panel";
         $ac['actions'] = "login";
         $ac['user_type'] = "2";
         $ac['module'] = "Login";
         addSiteActitvity($user, $ac);
+
+        session(['admin_2fa_verified' => false, 'admin_2fa_verified_at' => null]);
+        TwoFactorAuthService::sendEmailOtp($user);
+        return redirect()->route('admin.2fa.challenge');
     }
 
     protected function sendFailedLoginResponse(Request $request)

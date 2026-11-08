@@ -257,6 +257,20 @@
             </a>
         </li>
 
+        <li>
+            <a href="{{ route('admin.security-alerts.index') }}" class="dw-item">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 2l8 4v6c0 5-3.5 9-8 10-4.5-1-8-5-8-10V6l8-4z"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>
+                <span class="txt">Security Alerts</span>
+            </a>
+        </li>
+
+        <li>
+            <a href="{{ route('admin.security.2fa') }}" class="dw-item">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                <span class="txt">2FA Security</span>
+            </a>
+        </li>
+
         <li style="margin-top:8px;border-top:1px solid var(--line);padding-top:8px;">
             <a href="{{ route('AdminLogout') }}" class="dw-item dw-logout">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
