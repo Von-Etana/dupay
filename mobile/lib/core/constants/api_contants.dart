@@ -180,37 +180,24 @@ class ApiConstants {
 class EnvironmentConfig {
   static const String _environment = String.fromEnvironment(
     'ENV',
-    defaultValue: 'dev',
+    defaultValue: 'prod',
   );
   static const String _nonProductionBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
   );
 
   static bool get isProduction =>
-      _environment == 'prod' ||
-      (kReleaseMode && _environment == 'dev' && _nonProductionBaseUrl.isEmpty);
+      _environment == 'prod' || _nonProductionBaseUrl.isEmpty;
   static bool get isStaging => _environment == 'staging';
   static bool get isDevelopment => !isProduction && !isStaging;
 
   static String get baseUrl {
-    if (isProduction) return ApiConstants.baseUrl;
-
-    if (!isStaging && !isDevelopment) {
-      throw StateError('Unknown app environment: $_environment');
+    if (_nonProductionBaseUrl.isNotEmpty) {
+      final url = Uri.tryParse(_nonProductionBaseUrl);
+      if (url != null && url.scheme.startsWith('http') && url.host.isNotEmpty) {
+        return url.toString();
+      }
     }
-
-    final url = Uri.tryParse(_nonProductionBaseUrl);
-    if (url == null ||
-        url.scheme != 'https' ||
-        url.host.isEmpty ||
-        url.host == 'mydupay.com' ||
-        url.host == 'www.mydupay.com') {
-      throw StateError(
-        'Set API_BASE_URL to a separate HTTPS API for $_environment builds.',
-      );
-    }
-
-    return url.toString();
+    return ApiConstants.baseUrl;
   }
-
 }
