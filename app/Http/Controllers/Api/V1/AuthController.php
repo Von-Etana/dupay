@@ -598,10 +598,10 @@ class AuthController extends Controller
                 ->exists();
         }
 
-        $isEmailUnverified = ((string) $user->email_verify !== "1");
+        $isEmailVerified = ((string) $user->email_verify === "1" || !empty($user->email_verified_at));
 
-        // Require OTP verification for unverified emails OR new/unrecognized devices
-        if ($isEmailUnverified || !$isDeviceTrusted) {
+        // Require OTP verification ONLY for unverified accounts
+        if (!$isEmailVerified) {
             $email_code = (string) random_int(100000, 999999);
             $user->email_code = $email_code;
             $user->email_time = Carbon::now()->addMinutes(10);
@@ -632,7 +632,29 @@ class AuthController extends Controller
                 app(\App\Services\UserSecurityService::class)->recordEvent('otp_sent', $user, $request);
             } catch (\Throwable $th) {}
         } else {
-            // Verified user on recognized device: log directly in
+            // Ensure email_verify remains "1" for verified users
+            if ((string) $user->email_verify !== "1") {
+                $user->email_verify = "1";
+                $user->save();
+            }
+
+            // Register device as trusted
+            if ($deviceHash && \Illuminate\Support\Facades\Schema::hasTable('trusted_devices')) {
+                try {
+                    \App\Models\TrustedDevice::updateOrCreate(
+                        ['user_id' => $user->id, 'device_hash' => $deviceHash],
+                        [
+                            'token_hash' => hash('sha256', \Illuminate\Support\Str::random(64)),
+                            'ip_address' => $request->ip(),
+                            'user_agent' => mb_substr((string) $request->userAgent(), 0, 2048),
+                            'last_used_at' => now(),
+                            'expires_at' => now()->addDays(90),
+                            'revoked_at' => null,
+                        ]
+                    );
+                } catch (\Throwable $th) {}
+            }
+
             try {
                 app(\App\Services\UserSecurityService::class)->recordEvent('password_verified', $user, $request);
                 app(\App\Services\UserSecurityService::class)->recordEvent('token_issued', $user, $request);
