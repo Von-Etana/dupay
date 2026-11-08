@@ -5,7 +5,6 @@
 // token synchronously via NotificationService.fcmToken (e.g. login/register).
 
 import 'dart:async' show unawaited, Timer;
-import 'dart:convert';
 import 'dart:io' show Platform;
 
 import 'package:firebase_core/firebase_core.dart';
@@ -14,7 +13,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:logger/logger.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:dupay/screen/transaction/transaction_receipt_screen.dart';
 
 /// Must be a top-level function (not a class method) and annotated so the
 /// Flutter engine can find it when the app is killed/in the background.
@@ -33,9 +31,8 @@ class NotificationService {
   NotificationService._internal();
 
   final Logger _logger = Logger();
-  final FirebaseMessaging _messaging = FirebaseMessaging.instance;
-  final FlutterLocalNotificationsPlugin _local =
-      FlutterLocalNotificationsPlugin();
+  FirebaseMessaging get _messaging => FirebaseMessaging.instance;
+  final FlutterLocalNotificationsPlugin _local = FlutterLocalNotificationsPlugin();
 
   /// Global navigator key reference for routing upon notification taps.
   static GlobalKey<NavigatorState>? navigatorKey;
@@ -69,29 +66,19 @@ class NotificationService {
       onDidReceiveNotificationResponse: (response) {
         final payload = response.payload;
         if (payload != null && payload.isNotEmpty) {
-          try {
-            final decoded = jsonDecode(payload);
-            handleNotificationTap(
-              RemoteMessage(data: Map<String, dynamic>.from(decoded)),
-            );
-          } catch (_) {
-            handleNotificationTap(RemoteMessage(data: {'route': payload}));
-          }
+          handleNotificationTap(RemoteMessage(data: {'route': payload}));
         }
       },
     );
 
     // Register high-priority channels for heads-up top bar notifications
-    final androidPlugin =
-        _local
-            .resolvePlatformSpecificImplementation<
-              AndroidFlutterLocalNotificationsPlugin
-            >();
+    final androidPlugin = _local
+        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
     if (androidPlugin != null) {
       const channelHigh = AndroidNotificationChannel(
         'high_importance',
         'High importance notifications',
-        description: 'Dupay transaction and security alerts',
+        description: 'DuPay transaction and security alerts',
         importance: Importance.max,
         playSound: true,
         enableVibration: true,
@@ -99,8 +86,8 @@ class NotificationService {
       );
       const channelDefault = AndroidNotificationChannel(
         'dupay_channel',
-        'Dupay General Notifications',
-        description: 'Dupay updates and notifications',
+        'DuPay General Notifications',
+        description: 'DuPay updates and notifications',
         importance: Importance.max,
         playSound: true,
         enableVibration: true,
@@ -127,135 +114,15 @@ class NotificationService {
 
   /// Handles user tapping on a notification banner or notification list item.
   static void handleNotificationTap(RemoteMessage message) {
-    final data = message.data;
-    final title =
-        message.notification?.title ??
-        data['title']?.toString() ??
-        'Dupay Notification';
-    final body =
-        message.notification?.body ??
-        data['body']?.toString() ??
-        data['message']?.toString() ??
-        '';
-
-    final type = data['type']?.toString().toLowerCase() ?? '';
-    final isTransaction =
-        data.containsKey('reference') ||
-        data.containsKey('transaction_id') ||
-        type == 'transfer' ||
-        type == 'transaction' ||
-        type == 'credit' ||
-        type == 'debit' ||
-        title.toLowerCase().contains('transfer') ||
-        title.toLowerCase().contains('credited') ||
-        title.toLowerCase().contains('debited') ||
-        body.toLowerCase().contains('transfer') ||
-        body.toLowerCase().contains('credited') ||
-        body.toLowerCase().contains('debited');
+    final targetRoute = resolveRoute(message.data);
+    if (targetRoute == null) return;
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final nav = navigatorKey?.currentState;
-      if (nav == null) return;
-
-      if (isTransaction &&
-          (data['reference'] != null || data['amount'] != null)) {
-        // Direct to detailed transaction receipt
-        final receiptData = TransactionReceiptData(
-          service:
-              data['service']?.toString() ??
-              (title.isNotEmpty ? title : 'Transfer'),
-          type: data['type']?.toString() ?? 'Transfer',
-          description: body,
-          amount: data['amount']?.toString() ?? '₦0.00',
-          // A push without an explicit status must never be presented as a
-          // successful payment; the backend may still be processing it.
-          status: data['status']?.toString() ?? 'pending',
-          reference: data['reference']?.toString() ?? '',
-          sessionId: data['session_id']?.toString(),
-          initialBalance: data['initial_balance']?.toString() ?? '',
-          finalBalance: data['final_balance']?.toString() ?? '',
-          date: DateTime.now(),
-          phoneNumber: data['phone_number']?.toString(),
-          extraFields: _notificationReceiptFields(data),
-        );
-
-        nav.push(
-          MaterialPageRoute(
-            builder:
-                (_) => TransactionReceiptScreen(
-                  data: receiptData,
-                  isNewTransaction: false,
-                ),
-          ),
-        );
-      } else {
-        // Open Notification Center and reveal the detailed notification
-        nav.pushNamed(
-          '/notification',
-          arguments: {
-            'title': title,
-            'body': body,
-            'type': type.isNotEmpty ? type : 'info',
-            'amount': data['amount']?.toString(),
-            'reference': data['reference']?.toString(),
-            'session_id': data['session_id']?.toString(),
-            'status': data['status']?.toString() ?? 'pending',
-            'service': data['service']?.toString(),
-            'details': Map<String, dynamic>.from(data),
-          },
-        );
+      if (nav != null) {
+        nav.pushNamed(targetRoute);
       }
     });
-  }
-
-  static List<ReceiptField>? _notificationReceiptFields(
-    Map<String, dynamic> data,
-  ) {
-    const excluded = {
-      'type',
-      'amount',
-      'status',
-      'reference',
-      'paymentreference',
-      'service',
-      'description',
-      'sessionid',
-      'session_id',
-      'phone_number',
-      'initial_balance',
-      'final_balance',
-      'title',
-      'body',
-      'message',
-      'route',
-    };
-    final fields = <ReceiptField>[];
-    for (final entry in data.entries) {
-      final key = entry.key.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
-      final value = entry.value?.toString().trim() ?? '';
-      if (excluded.contains(key) ||
-          value.isEmpty ||
-          key.contains('token') ||
-          key.contains('password') ||
-          key.contains('pin') ||
-          key.contains('otp')) {
-        continue;
-      }
-      final label = entry.key
-          .replaceAll(RegExp(r'([a-z])([A-Z])'), r'$1 $2')
-          .replaceAll('_', ' ')
-          .replaceAll('-', ' ')
-          .split(' ')
-          .map(
-            (word) =>
-                word.isEmpty
-                    ? word
-                    : '${word[0].toUpperCase()}${word.substring(1)}',
-          )
-          .join(' ');
-      fields.add(ReceiptField(label, value));
-    }
-    return fields.isEmpty ? null : fields;
   }
 
   /// Displays an in-app drop-down notification banner in the top bar of the screen.
@@ -263,7 +130,6 @@ class NotificationService {
     required String title,
     required String body,
     String? route,
-    Map<String, dynamic>? details,
   }) {
     final navState = navigatorKey?.currentState;
     final navContext = navState?.context;
@@ -284,21 +150,13 @@ class NotificationService {
           topPadding: topPadding,
           title: title,
           body: body,
-          details: details,
           onTap: () {
             _bannerDismissTimer?.cancel();
             entry.remove();
             _activeTopBanner = null;
-            handleNotificationTap(
-              RemoteMessage(
-                data: {
-                  if (route != null) 'route': route,
-                  'title': title,
-                  'body': body,
-                  if (details != null) ...details,
-                },
-              ),
-            );
+            if (route != null && route.isNotEmpty) {
+              navigatorKey?.currentState?.pushNamed(route);
+            }
           },
           onDismiss: () {
             _bannerDismissTimer?.cancel();
@@ -321,6 +179,10 @@ class NotificationService {
   /// Call once in main(), AFTER Firebase.initializeApp().
   Future<void> initialize() async {
     if (_initialized) return;
+    if (Platform.isIOS) {
+      _logger.i('Push notification service skipped on iOS until Firebase is configured.');
+      return;
+    }
     _initialized = true;
 
     try {
@@ -350,9 +212,7 @@ class NotificationService {
       try {
         final initialMessage = await _messaging.getInitialMessage();
         if (initialMessage != null) {
-          _logger.i(
-            '🚀 Cold-start launch via notification: ${initialMessage.messageId}',
-          );
+          _logger.i('🚀 Cold-start launch via notification: ${initialMessage.messageId}');
           pendingInitialMessage = initialMessage;
         }
       } catch (e) {
@@ -378,55 +238,41 @@ class NotificationService {
 
       // 7. Foreground messages (app in use). Triggers both OS top status bar and in-app banner.
       FirebaseMessaging.onMessage.listen((message) {
-        final title =
-            message.notification?.title ??
-            message.data['title']?.toString() ??
-            'Dupay';
-        final body =
-            message.notification?.body ??
-            message.data['body']?.toString() ??
-            message.data['message']?.toString() ??
-            '';
+        final title = message.notification?.title ?? message.data['title']?.toString() ?? 'DuPay';
+        final body = message.notification?.body ?? message.data['body']?.toString() ?? message.data['message']?.toString() ?? '';
         final targetRoute = resolveRoute(message.data);
 
         if (title.isNotEmpty || body.isNotEmpty) {
           // A. Trigger OS Heads-Up Notification (appears in top mobile status bar)
-          unawaited(
-            _local.show(
-              message.hashCode,
-              title,
-              body,
-              const NotificationDetails(
-                android: AndroidNotificationDetails(
-                  'high_importance',
-                  'High importance notifications',
-                  channelDescription: 'Dupay transaction and security alerts',
-                  importance: Importance.max,
-                  priority: Priority.max,
-                  playSound: true,
-                  enableVibration: true,
-                  icon: '@mipmap/launcher_icon',
-                  channelShowBadge: true,
-                  visibility: NotificationVisibility.public,
-                  category: AndroidNotificationCategory.message,
-                  ticker: 'Dupay Notification',
-                ),
-                iOS: DarwinNotificationDetails(
-                  presentAlert: true,
-                  presentBanner: true,
-                  presentSound: true,
-                  presentBadge: true,
-                  presentList: true,
-                ),
+          unawaited(_local.show(
+            message.hashCode,
+            title,
+            body,
+            const NotificationDetails(
+              android: AndroidNotificationDetails(
+                'high_importance',
+                'High importance notifications',
+                channelDescription: 'DuPay transaction and security alerts',
+                importance: Importance.max,
+                priority: Priority.max,
+                playSound: true,
+                enableVibration: true,
+                icon: '@mipmap/launcher_icon',
+                channelShowBadge: true,
+                visibility: NotificationVisibility.public,
+                category: AndroidNotificationCategory.message,
+                ticker: 'DuPay Notification',
               ),
-              payload: jsonEncode({
-                ...message.data,
-                'route': targetRoute,
-                'title': title,
-                'body': body,
-              }),
+              iOS: DarwinNotificationDetails(
+                presentAlert: true,
+                presentBanner: true,
+                presentSound: true,
+                presentBadge: true,
+                presentList: true,
+              ),
             ),
-          );
+            payload: targetRoute,
+          ));
 
           // B. Show in-app drop-down top bar notification banner
           WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -434,7 +280,6 @@ class NotificationService {
               title: title,
               body: body,
               route: targetRoute,
-              details: message.data,
             );
           });
         }
@@ -444,9 +289,7 @@ class NotificationService {
 
       // 8. User tapped a notification that opened the app from background.
       FirebaseMessaging.onMessageOpenedApp.listen((message) {
-        _logger.i(
-          '📲 Notification tapped from background: ${message.messageId}',
-        );
+        _logger.i('📲 Notification tapped from background: ${message.messageId}');
         handleNotificationTap(message);
       });
     } catch (e) {
@@ -492,9 +335,7 @@ class NotificationService {
     }
   }
 
-  Future<String?> _waitForApnsToken({
-    Duration timeout = const Duration(seconds: 30),
-  }) async {
+  Future<String?> _waitForApnsToken({Duration timeout = const Duration(seconds: 30)}) async {
     final deadline = DateTime.now().add(timeout);
     while (DateTime.now().isBefore(deadline)) {
       try {
@@ -524,6 +365,10 @@ class NotificationService {
   /// pushes for the previous user.
   Future<void> deleteToken() async {
     try {
+      if (Platform.isIOS) {
+        fcmToken = null;
+        return;
+      }
       await _messaging.deleteToken();
       fcmToken = null;
     } catch (e) {
@@ -537,7 +382,6 @@ class _InAppTopBannerWidget extends StatefulWidget {
   final double topPadding;
   final String title;
   final String body;
-  final Map<String, dynamic>? details;
   final VoidCallback onTap;
   final VoidCallback onDismiss;
 
@@ -545,7 +389,6 @@ class _InAppTopBannerWidget extends StatefulWidget {
     required this.topPadding,
     required this.title,
     required this.body,
-    this.details,
     required this.onTap,
     required this.onDismiss,
   });
@@ -570,13 +413,17 @@ class _InAppTopBannerWidgetState extends State<_InAppTopBannerWidget>
     _slideAnimation = Tween<Offset>(
       begin: const Offset(0, -1),
       end: Offset.zero,
-    ).animate(
-      CurvedAnimation(parent: _animController, curve: Curves.easeOutCubic),
-    );
+    ).animate(CurvedAnimation(
+      parent: _animController,
+      curve: Curves.easeOutCubic,
+    ));
     _fadeAnimation = Tween<double>(
       begin: 0.0,
       end: 1.0,
-    ).animate(CurvedAnimation(parent: _animController, curve: Curves.easeIn));
+    ).animate(CurvedAnimation(
+      parent: _animController,
+      curve: Curves.easeIn,
+    ));
 
     _animController.forward();
     try {
@@ -598,22 +445,6 @@ class _InAppTopBannerWidgetState extends State<_InAppTopBannerWidget>
 
   @override
   Widget build(BuildContext context) {
-    final type = widget.details?['type']?.toString().toLowerCase() ?? '';
-    final titleLower = widget.title.toLowerCase();
-    final bodyLower = widget.body.toLowerCase();
-    final isCredit = type == 'credit' ||
-        titleLower.contains('credit') ||
-        titleLower.contains('received') ||
-        bodyLower.contains(' cr') ||
-        bodyLower.contains('credited');
-    final isDebit = type == 'debit' ||
-        titleLower.contains('debit') ||
-        titleLower.contains('withdrawal') ||
-        titleLower.contains('withdraw') ||
-        titleLower.contains('transfer') ||
-        bodyLower.contains(' dr') ||
-        bodyLower.contains('debited');
-
     return Positioned(
       top: widget.topPadding + 8,
       left: 14,
@@ -634,12 +465,9 @@ class _InAppTopBannerWidgetState extends State<_InAppTopBannerWidget>
               elevation: 8,
               borderRadius: BorderRadius.circular(16),
               child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF1E3A34), // Dupay brand dark green
+                  color: const Color(0xFF1E3A34), // DuPay brand dark green
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: const [
                     BoxShadow(
@@ -649,45 +477,24 @@ class _InAppTopBannerWidgetState extends State<_InAppTopBannerWidget>
                     ),
                   ],
                   border: Border.all(
-                    color: isCredit
-                        ? const Color(0xFF2ED573).withOpacity(0.6)
-                        : (isDebit
-                            ? const Color(0xFFFFA502).withOpacity(0.6)
-                            : const Color(0x597CA183)),
-                    width: (isCredit || isDebit) ? 1.4 : 1.0,
+                    color: Color(0x597CA183),
+                    width: 1,
                   ),
                 ),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Container(
-                      width: 42,
-                      height: 42,
+                      width: 40,
+                      height: 40,
                       decoration: BoxDecoration(
-                        color: isCredit
-                            ? const Color(0xFF133827)
-                            : (isDebit ? const Color(0xFF3D2714) : const Color(0xFF34544A)),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: (isCredit
-                                  ? const Color(0xFF2ED573)
-                                  : (isDebit
-                                      ? const Color(0xFFFFA502)
-                                      : const Color(0xFFE2F1E8)))
-                              .withOpacity(0.35),
-                          width: 1,
-                        ),
+                        color: const Color(0xFF34544A),
+                        borderRadius: BorderRadius.circular(10),
                       ),
-                      child: Icon(
-                        isCredit
-                            ? Icons.arrow_downward_rounded
-                            : (isDebit
-                                ? Icons.arrow_upward_rounded
-                                : Icons.notifications_active_rounded),
-                        color: isCredit
-                            ? const Color(0xFF2ED573)
-                            : (isDebit ? const Color(0xFFFFA502) : const Color(0xFFE2F1E8)),
-                        size: 24,
+                      child: const Icon(
+                        Icons.notifications_active_rounded,
+                        color: Color(0xFFE2F1E8),
+                        size: 22,
                       ),
                     ),
                     const SizedBox(width: 12),
