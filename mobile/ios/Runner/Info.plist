@@ -32,6 +32,12 @@
 	<string>Dupay uses the camera to capture documents for identity verification (KYC).</string>
 	<key>NSFaceIDUsageDescription</key>
 	<string>Dupay uses Face ID to securely sign you in and authorize transactions.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Dupay uses your location to prevent fraud and ensure secure transactions.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Dupay uses your location to prevent fraud and ensure secure transactions.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Dupay does not actively record audio, but access may be requested when uploading verification videos.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>Dupay saves your recharge card images and transaction receipts to your photo library.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
