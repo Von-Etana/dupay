@@ -599,10 +599,10 @@ class AuthController extends Controller
                 ->exists();
         }
 
-        $isEmailVerified = ((string) $user->email_verify === "1" || !empty($user->email_verified_at));
+        $isEmailUnverified = ((string) $user->email_verify !== "1" && empty($user->email_verified_at));
 
-        // Require OTP verification ONLY for unverified accounts
-        if (!$isEmailVerified) {
+        // Require OTP verification for unverified emails OR new/unrecognized devices
+        if ($isEmailUnverified || !$isDeviceTrusted) {
             $email_code = (string) random_int(100000, 999999);
             $user->email_code = $email_code;
             $user->email_time = Carbon::now()->addMinutes(10);
