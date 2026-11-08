@@ -31,7 +31,7 @@ class NotificationService {
   NotificationService._internal();
 
   final Logger _logger = Logger();
-  final FirebaseMessaging _messaging = FirebaseMessaging.instance;
+  FirebaseMessaging get _messaging => FirebaseMessaging.instance;
   final FlutterLocalNotificationsPlugin _local = FlutterLocalNotificationsPlugin();
 
   /// Global navigator key reference for routing upon notification taps.
@@ -179,6 +179,10 @@ class NotificationService {
   /// Call once in main(), AFTER Firebase.initializeApp().
   Future<void> initialize() async {
     if (_initialized) return;
+    if (Platform.isIOS) {
+      _logger.i('Push notification service skipped on iOS until Firebase is configured.');
+      return;
+    }
     _initialized = true;
 
     try {
@@ -361,6 +365,10 @@ class NotificationService {
   /// pushes for the previous user.
   Future<void> deleteToken() async {
     try {
+      if (Platform.isIOS) {
+        fcmToken = null;
+        return;
+      }
       await _messaging.deleteToken();
       fcmToken = null;
     } catch (e) {

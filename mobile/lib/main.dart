@@ -75,19 +75,22 @@ void main() async {
   // Android from android/app/google-services.json — Firebase.initializeApp()
   // picks the right one up automatically. The try/catch keeps a missing or
   // malformed config non-fatal: the app still starts, just without push.
-  try {
-    await Firebase.initializeApp();
-    NotificationService.navigatorKey = navigatorKey;
-    FcmTokenSync.install();
-    unawaited(NotificationService().initialize());
-  } catch (e) {
-    print('⚠️ Firebase/FCM init skipped: $e');
-    if (Platform.isIOS) {
-      print(
-        '   iOS: make sure ios/Runner/GoogleService-Info.plist exists and '
-        'is added to the Runner target — see docs/ios_push_setup.md',
-      );
+  // Firebase + FCM on both platforms. iOS reads its config from
+  // ios/Runner/GoogleService-Info.plist and Android from android/app/google-services.json.
+  // On iOS, if real Firebase configuration is not present, placeholder credentials cause
+  // native iOS Firebase SDK to throw an unhandled NSException (SIGABRT) terminating the
+  // process on launch before Dart can catch it. Guard iOS until real credentials are ready.
+  if (!Platform.isIOS) {
+    try {
+      await Firebase.initializeApp();
+      NotificationService.navigatorKey = navigatorKey;
+      FcmTokenSync.install();
+      unawaited(NotificationService().initialize());
+    } catch (e) {
+      print('[FCM] init skipped: $e');
     }
+  } else {
+    print('ℹ️ iOS: Push notification setup pending real GoogleService-Info.plist. Init skipped.');
   }
 
   try {
