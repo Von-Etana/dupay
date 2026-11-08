@@ -162,7 +162,19 @@ class SecureStorageService {
   // Clear all data (for credential reset and full local cleanup)
   static Future<void> clearAll() async {
     try {
+      final deviceId = await getDeviceId();
+      final rememberedEmail = await getRememberedEmail();
+      final biometricEnabled = await _storage.read(key: _biometricEnabledKey);
       await _storage.deleteAll();
+      if (deviceId != null && deviceId.isNotEmpty) {
+        await saveDeviceId(deviceId);
+      }
+      if (rememberedEmail != null && rememberedEmail.isNotEmpty) {
+        await saveRememberedEmail(rememberedEmail);
+      }
+      if (biometricEnabled != null) {
+        await _storage.write(key: _biometricEnabledKey, value: biometricEnabled);
+      }
     } catch (e) {
       _logger.e('Error clearing secure storage: $e');
       rethrow;

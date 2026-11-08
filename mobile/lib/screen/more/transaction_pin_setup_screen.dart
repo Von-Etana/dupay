@@ -646,8 +646,14 @@ class _TransactionPinSetupScreenState
       duration: const Duration(milliseconds: 350),
     );
     _controller.addListener(_onPinChanged);
-    // Bring up native keyboard automatically.
+    // Bring up native keyboard automatically, or redirect if already has PIN.
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final user = ref.read(currentUserProvider);
+      if (user?.hasTransactionPin == true) {
+        Navigator.of(context).pushReplacementNamed('/homeNav');
+        return;
+      }
       _openKeyboard();
     });
   }

@@ -118,7 +118,11 @@ class _EmailVerificationScreenState
         _showTopMessage('Email verified successfully!', isError: false);
         await Future.delayed(const Duration(milliseconds: 300));
         if (!mounted) return;
-        Navigator.of(context).pushReplacementNamed('/transactionPinSetup');
+        final user = ref.read(currentUserProvider);
+        final route = user?.hasTransactionPin == true
+            ? '/homeNav'
+            : '/transactionPinSetup';
+        Navigator.of(context).pushReplacementNamed(route);
       } else {
         setState(() => _isProcessing = false);
         _otpController.clear();
