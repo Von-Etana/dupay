@@ -15,7 +15,7 @@ class DataNetworkModel {
 
   factory DataNetworkModel.fromJson(Map<String, dynamic> json) {
     return DataNetworkModel(
-      id: json['id'],
+      id: _asInt(json['id']),
       name: json['name'],
       otherName: json['other_name'],
       extraId: json['extra_id'],
@@ -44,8 +44,8 @@ class DataTypeModel {
 
   factory DataTypeModel.fromJson(Map<String, dynamic> json) {
     return DataTypeModel(
-      id: json['id'],
-      networkId: json['network_id'],
+      id: _asInt(json['id']),
+      networkId: _asInt(json['network_id']),
       name: json['name'],
       networkName: json['networkName'],
     );
@@ -102,15 +102,15 @@ class DataPlanModel {
 
   factory DataPlanModel.fromJson(Map<String, dynamic> json) {
     return DataPlanModel(
-      id: json['id'],
-      networkId: json['network_id'],
-      dataTypeId: json['data_type_id'],
+      id: _asInt(json['id']),
+      networkId: _asInt(json['network_id']),
+      dataTypeId: _asInt(json['data_type_id']),
       name: json['name'],
       code: json['code'],
       variationCode: json['variation_code'],
       extra: json['extra'],
       size: json['size'],
-      price: json['price'],
+      price: _asInt(json['price']),
       promoId: json['promo_id'],
       status: json['status'],
       createdAt: json['created_at'],
@@ -168,8 +168,8 @@ class DataTypeWithPlansModel {
 
   factory DataTypeWithPlansModel.fromJson(Map<String, dynamic> json) {
     return DataTypeWithPlansModel(
-      id: json['id'],
-      networkId: json['network_id'],
+      id: _asInt(json['id']),
+      networkId: _asInt(json['network_id']),
       name: json['name'],
       networkName: json['networkName'],
       plan:
@@ -211,7 +211,7 @@ class DataNetworkWithTypesModel {
 
   factory DataNetworkWithTypesModel.fromJson(Map<String, dynamic> json) {
     return DataNetworkWithTypesModel(
-      id: json['id'],
+      id: _asInt(json['id']),
       name: json['name'],
       otherName: json['other_name'],
       extraId: json['extra_id'],
@@ -235,4 +235,9 @@ class DataNetworkWithTypesModel {
       'data_type': dataType?.map((typeData) => typeData.toJson()).toList(),
     };
   }
+}
+
+int? _asInt(dynamic value) {
+  if (value is int) return value;
+  return int.tryParse(value?.toString() ?? '');
 }
