@@ -165,6 +165,7 @@ class _TransactionSummaryScreenState
 
     final enteredPin = _pinController.text;
 
+    var loaderVisible = false;
     try {
       showDialog(
         context: context,
@@ -174,10 +175,14 @@ class _TransactionSummaryScreenState
               child: CircularProgressIndicator(color: Color(0xFF34544A)),
             ),
       );
+      loaderVisible = true;
 
       final result = await widget.data.onConfirm(enteredPin);
       if (!mounted) return;
-      Navigator.of(context).pop(); // Close loader
+      if (loaderVisible && Navigator.of(context).canPop()) {
+        Navigator.of(context).pop(); // Close loader
+        loaderVisible = false;
+      }
 
       final success = result['success'] == true;
       if (success) {
@@ -268,9 +273,9 @@ class _TransactionSummaryScreenState
       }
     } catch (e) {
       if (!mounted) return;
-      Navigator.of(context).pop();
-      if (mounted && Navigator.of(context).canPop()) {
+      if (loaderVisible && Navigator.of(context).canPop()) {
         Navigator.of(context).pop();
+        loaderVisible = false;
       }
       _clearPin();
       setState(() => _isProcessing = false);
