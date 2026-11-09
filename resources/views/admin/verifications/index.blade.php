@@ -226,6 +226,8 @@ $(document).ready(function () {
 
     table = $('#verificationTable').DataTable({
         processing: true,
+        pageLength: 25,
+        lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'All']],
         // Keep the server's order. VerificationController::fetch() sorts by
         // submitted_at DESC so the newest submission is row one. Without
         // order: [] DataTables re-sorts A-Z on the first column and buries it.
