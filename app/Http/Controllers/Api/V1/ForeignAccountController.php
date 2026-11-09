@@ -104,7 +104,9 @@ class ForeignAccountController extends Controller
     
             Storage::disk('public')->put($path, $binary);
     
-            return Storage::url($path);
+            // Persist the disk-relative path.  Storing Storage::url() here made
+            // the admin view prepend /storage a second time (/storage/storage/...).
+            return $path;
         };
     
         // Save Documents

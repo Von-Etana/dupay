@@ -15,6 +15,17 @@
 @section('title', $page_title)
 
 @section('content')
+@php
+    // Requests created by older releases may contain a public URL while newer
+    // requests store a disk-relative path. Normalize both forms for previews.
+    $documentUrl = function ($value) {
+        if (!$value) return null;
+        $path = (string) $value;
+        if (str_starts_with($path, '/storage/')) $path = substr($path, 9);
+        if (str_starts_with($path, 'storage/')) $path = substr($path, 8);
+        return \Illuminate\Support\Facades\Storage::disk('public')->url($path);
+    };
+@endphp
 <div class="layout-px-spacing">
 	<div class="middle-content container-xxl p-0">
 		<!-- BREADCRUMB -->
@@ -68,19 +79,19 @@
                                 
                                     @if(in_array(strtolower($ext1), ['jpg', 'jpeg', 'png', 'gif']))
                                         <img 
-                                            src="{{ asset('storage/'.$request->document) }}" 
+                                            src="{{ $documentUrl($request->document) }}"
                                             alt="Document 1" 
                                             width="300"
-                                            onerror="this.onerror=null;this.src='{{ asset($request->document) }}';"
+                                            onerror="this.onerror=null;"
                                         ><br>
                                     @else
                                         <i class="fa fa-file-pdf text-danger"></i> File Uploaded<br>
                                     @endif
                                 
-                                    <a href="{{ asset('storage/'.$request->document) }}" 
+                                    <a href="{{ $documentUrl($request->document) }}"
                                        class="btn btn-success btn-sm mt-1" 
                                        target="_blank"
-                                       onclick="this.href='{{ asset('storage/'.$request->document) }}';">
+                                       >
                                        View File
                                     </a>
                                 @else
@@ -100,19 +111,19 @@
                                 
                                     @if(in_array(strtolower($ext2), ['jpg', 'jpeg', 'png', 'gif']))
                                         <img 
-                                            src="{{ asset('storage/'.$request->document2) }}" 
+                                            src="{{ $documentUrl($request->document2) }}"
                                             alt="Document 2" 
                                             width="300"
-                                            onerror="this.onerror=null;this.src='{{ asset($request->document2) }}';"
+                                            onerror="this.onerror=null;"
                                         ><br>
                                     @else
                                         <i class="fa fa-file-pdf text-danger"></i> File Uploaded<br>
                                     @endif
                                 
-                                    <a href="{{ asset('storage/'.$request->document2) }}" 
+                                    <a href="{{ $documentUrl($request->document2) }}"
                                        class="btn btn-success btn-sm mt-1" 
                                        target="_blank"
-                                       onclick="this.href='{{ asset('storage/'.$request->document2) }}';">
+                                       >
                                        View File
                                     </a>
                                 @else
