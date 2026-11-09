@@ -633,6 +633,7 @@ class RechargePinController extends Controller
         'message' => 'Recharge PINs fetched successfully',
         'data' => $epins
     ]);
+    }
     
     public function trysms(Request $request)
     {
