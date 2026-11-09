@@ -20,7 +20,10 @@ class GeneralViewController extends Controller
 
     public function __construct()
     {
-        $this->pageType = request()->route()->parameter('pageType');
+        // Route compilation/view caching can instantiate controllers without a
+        // bound route. Keep the controller safe in CLI and non-route contexts.
+        $route = request()->route();
+        $this->pageType = $route ? $route->parameter('pageType') : null;
     }
 
     /**
