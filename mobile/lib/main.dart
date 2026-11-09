@@ -38,8 +38,7 @@ import 'package:dupay/screen/card/claim_cards_screen.dart';
 // import 'package:dupay/screen/card/card_management_screen.dart';
 
 import 'package:dupay/screen/auth/contact_support_screen.dart';
-import 'dart:async' show unawaited;
-import 'dart:io' show Platform;
+import 'dart:async' show TimeoutException, unawaited;
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:dupay/services/notifications/notification_service.dart';
@@ -71,33 +70,29 @@ void main() async {
   // SplashScreen no longer flashes its own logo underneath.
   FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
 
-  // Firebase + FCM on both platforms. iOS reads its config from
-  // ios/Runner/GoogleService-Info.plist (bundled into the Runner target) and
-  // Android from android/app/google-services.json — Firebase.initializeApp()
-  // picks the right one up automatically. The try/catch keeps a missing or
-  // malformed config non-fatal: the app still starts, just without push.
-  // Firebase + FCM on both platforms. iOS reads its config from
-  // ios/Runner/GoogleService-Info.plist and Android from android/app/google-services.json.
-  // On iOS, if real Firebase configuration is not present, placeholder credentials cause
-  // native iOS Firebase SDK to throw an unhandled NSException (SIGABRT) terminating the
-  // process on launch before Dart can catch it. Guard iOS until real credentials are ready.
-  if (!Platform.isIOS) {
-    try {
-      await Firebase.initializeApp();
-      NotificationService.navigatorKey = navigatorKey;
-      FcmTokenSync.install();
-      unawaited(NotificationService().initialize());
-    } catch (e) {
-      print('[FCM] init skipped: $e');
-    }
-  } else {
-    print('ℹ️ iOS: Push notification setup pending real GoogleService-Info.plist. Init skipped.');
+  // Firebase reads ios/Runner/GoogleService-Info.plist on iOS and
+  // android/app/google-services.json on Android. The plist is now a real
+  // project configuration, so FCM can be initialized on both platforms.
+  try {
+    await Firebase.initializeApp();
+    NotificationService.navigatorKey = navigatorKey;
+    FcmTokenSync.install();
+    unawaited(NotificationService().initialize());
+  } catch (e) {
+    // Push is optional at startup; keep the app usable if a platform service
+    // is temporarily unavailable.
+    print('[FCM] init skipped: $e');
   }
 
   try {
     print('🚀 Starting Dupay app initialization...');
 
-    await AppInitializationService.initialize();
+    // Never leave the native splash screen up indefinitely if a platform
+    // plugin or configuration hangs during startup.
+    await AppInitializationService.initialize().timeout(
+      const Duration(seconds: 15),
+      onTimeout: () => throw TimeoutException('App startup timed out'),
+    );
 
     print('✅ App initialization completed successfully');
     runApp(const MyApp());
@@ -261,8 +256,12 @@ class AppInitializationErrorScreen extends StatelessWidget {
                     ),
                   ),
                   onPressed: () {
-                    // Restart the app
-                    main();
+                    // Do not call main() recursively: that creates duplicate
+                    // Flutter bindings/listeners and can crash on iOS. Retry
+                    // by returning to the login flow instead.
+                    Navigator.of(
+                      context,
+                    ).pushNamedAndRemoveUntil('/login', (_) => false);
                   },
                   child: const Text(
                     'Retry',
