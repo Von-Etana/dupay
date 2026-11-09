@@ -36,20 +36,24 @@ class TransactionModel {
       ...?(json['metadata'] is Map<String, dynamic>
           ? json['metadata'] as Map<String, dynamic>
           : null),
-      if (json['service_type'] != null)    'service_type':    json['service_type'],
-      if (json['phone_number'] != null)    'phone_number':    json['phone_number'],
-      if (json['session_id'] != null)      'session_id':      json['session_id']?.toString(),
-      if (json['initial_balance'] != null) 'initial_balance': _cleanAmount(json['initial_balance'].toString()),
-      if (json['final_balance'] != null)   'final_balance':   _cleanAmount(json['final_balance'].toString()),
+      if (json['service_type'] != null) 'service_type': json['service_type'],
+      if (json['phone_number'] != null) 'phone_number': json['phone_number'],
+      if (json['session_id'] != null)
+        'session_id': json['session_id']?.toString(),
+      if (json['initial_balance'] != null)
+        'initial_balance': _cleanAmount(json['initial_balance'].toString()),
+      if (json['final_balance'] != null)
+        'final_balance': _cleanAmount(json['final_balance'].toString()),
     };
     return TransactionModel(
-      id:          json['id']?.toString() ?? '',
-      type:        json['type']?.toString() ?? '',
-      status:      json['status']?.toString() ?? '',
+      id: json['id']?.toString() ?? '',
+      type: json['type']?.toString() ?? '',
+      status: json['status']?.toString() ?? '',
       // amount comes as "$8,800,000.00" or "₦5,100.00" — strip symbols/commas
-      amount:      _cleanAmount(json['amount']?.toString() ?? '0'),
+      amount: _cleanAmount(json['amount']?.toString() ?? '0'),
       description: json['description']?.toString(),
-      reference:   json['reference']?.toString() ?? json['paymentReference']?.toString(),
+      reference:
+          json['reference']?.toString() ?? json['paymentReference']?.toString(),
       createdAt:
           DateTime.tryParse(json['created_at']?.toString() ?? '') ??
           DateTime.now(),
@@ -76,9 +80,35 @@ class TransactionModel {
   }
 
   // Helper getters
-  bool get isSuccessful => status.toLowerCase() == 'success';
-  bool get isPending => status.toLowerCase() == 'pending';
-  bool get isFailed => status.toLowerCase() == 'failed';
+  bool get isSuccessful => {
+    'success',
+    'successful',
+    'completed',
+    'complete',
+    'approved',
+    '1',
+  }.contains(status.trim().toLowerCase());
+
+  bool get isPending => {
+    'pending',
+    'processing',
+    'queued',
+    'in_progress',
+    'in progress',
+  }.contains(status.trim().toLowerCase());
+
+  bool get isFailed => {
+    'failed',
+    'failure',
+    'unsuccessful',
+    'declined',
+    'rejected',
+    'cancelled',
+    'canceled',
+    'refund',
+    'refunded',
+    '0',
+  }.contains(status.trim().toLowerCase());
 
   double get amountValue => double.tryParse(amount) ?? 0.0;
 

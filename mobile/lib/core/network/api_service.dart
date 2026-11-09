@@ -592,8 +592,12 @@ class ApiService {
           errors: _extractErrors(responseData),
         );
       case 500:
-        return const ServerException(
-          message: 'Internal server error. Please try again later.',
+        return ServerException(
+          message:
+              _extractErrorMessage(responseData) ??
+              'Internal server error. Please try again later.',
+          statusCode: statusCode,
+          errors: _extractErrors(responseData),
         );
       default:
         return ServerException(
