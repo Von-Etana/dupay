@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Validator;
 use Yajra\DataTables\Facades\DataTables;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use App\TraitsFolder\MailTrait;
 use App\Models\ErrorLog;
 
@@ -68,7 +69,14 @@ class VerificationController extends Controller
          * stamps on every submission and re-submission, and fall back to
          * updated_at / created_at for any legacy row.
          */
-        $recency = "COALESCE(submitted_at, updated_at, created_at)";
+        // Older production databases may not yet have the KYC audit columns.
+        // Build the sort expression from columns that actually exist so the
+        // verification list continues to render during rollout.
+        $recencyColumns = ['updated_at', 'created_at'];
+        if (Schema::hasColumn('wallet_verificaitons', 'submitted_at')) {
+            array_unshift($recencyColumns, 'submitted_at');
+        }
+        $recency = 'COALESCE(' . implode(', ', $recencyColumns) . ')';
 
         if ($request->sort === 'pending_first') {
             // Pending (0) first, then rejected (2), then verified (1).
