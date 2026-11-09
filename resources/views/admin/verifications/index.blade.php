@@ -237,6 +237,17 @@ $(document).ready(function () {
                 d.method = $('#methodFilter').val();
                 d.date   = $('#dateFilter').val();
                 d.sort   = $('#sortFilter').val();
+            },
+            error: function (xhr) {
+                console.error('Verification list request failed', xhr.status, xhr.responseText);
+                const message = xhr.status === 403
+                    ? 'Your admin account does not have permission to view verification records.'
+                    : xhr.status === 401 || xhr.status === 302
+                        ? 'Your admin session has expired. Sign in again to view verification records.'
+                        : 'Unable to load verification records. Please check the request in Network tools or contact support.';
+                $('#verificationTable tbody').html(
+                    '<tr><td colspan="8" class="text-center text-warning">' + message + '</td></tr>'
+                );
             }
         },
         columns: [
