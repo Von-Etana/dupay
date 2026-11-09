@@ -297,8 +297,19 @@ $(document).on('click', '.viewBtn', function () {
             2: 'Rejected'
         };
 
-        let idImage   = res.id_image   ? `/storage/${res.id_image}`   : '/default.png';
-        let userPhoto = res.user_photo ? `/storage/${res.user_photo}` : '/default.png';
+        // KYC records may contain a disk-relative path, a legacy /storage URL,
+        // or an absolute URL. Normalize them so images never become
+        // /storage/storage/... and remain visible in the admin modal.
+        const documentUrl = (value) => {
+            if (!value) return '/default.png';
+            const path = String(value);
+            if (/^https?:\\/\\//i.test(path)) return path;
+            if (path.startsWith('/storage/')) return path;
+            if (path.startsWith('storage/')) return `/${path}`;
+            return `/storage/${path.replace(/^\\/+/, '')}`;
+        };
+        let idImage   = documentUrl(res.id_image);
+        let userPhoto = documentUrl(res.user_photo);
 
         let html = `
             <div class="row">
