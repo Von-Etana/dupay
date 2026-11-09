@@ -179,10 +179,6 @@ class NotificationService {
   /// Call once in main(), AFTER Firebase.initializeApp().
   Future<void> initialize() async {
     if (_initialized) return;
-    if (Platform.isIOS) {
-      _logger.i('Push notification service skipped on iOS until Firebase is configured.');
-      return;
-    }
     _initialized = true;
 
     try {
