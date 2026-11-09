@@ -21,7 +21,7 @@
             "artifact": "mobile/build/ios/iphonesimulator/Runner.app"
           },
           "production": {
-            "command": "cd mobile && flutter build ipa --release --export-options-plist=ios/ExportOptions.plist",
+            "command": "cd mobile && flutter pub get && flutter build ipa --release --export-options-plist=ios/ExportOptions.plist",
             "artifact": "mobile/build/ios/ipa/*.ipa"
           }
         }

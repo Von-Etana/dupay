@@ -59,3 +59,6 @@ bootstrap/cache/
 php.ini
 public/storage/
 **/__MACOSX/
+
+/mobile/build/
+/mobile/.dart_tool/

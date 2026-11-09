@@ -38,6 +38,44 @@ class AuthRepository {
     return response;
   }
 
+  /// Completes a new-device login challenge and stores the token only after
+  /// the backend has accepted the OTP.
+  Future<ApiResponse<LoginResponse>> verifyLoginOtp({
+    required String challengeId,
+    required String otp,
+  }) async {
+    final deviceId = await SecureStorageService.getDeviceId();
+    final response = await _apiService.post<LoginResponse>(
+      ApiConstants.loginOtpVerify,
+      data: {
+        'challenge_id': challengeId,
+        'otp': otp,
+        if (deviceId != null && deviceId.isNotEmpty) 'device_id': deviceId,
+      },
+      fromJson: LoginResponse.fromJson,
+    );
+
+    if (response.success && response.data != null) {
+      await SecureStorageService.saveAccessToken(response.data!.accessToken);
+      await SecureStorageService.saveUserId(response.data!.user.id.toString());
+    }
+    return response;
+  }
+
+  /// Requests another code for the existing challenge, using the same device
+  /// identifier so the backend can validate the challenge binding.
+  Future<ApiResponse<LoginResponse>> resendLoginOtp(String challengeId) async {
+    final deviceId = await SecureStorageService.getDeviceId();
+    return _apiService.post<LoginResponse>(
+      ApiConstants.loginOtpResend,
+      data: {
+        'challenge_id': challengeId,
+        if (deviceId != null && deviceId.isNotEmpty) 'device_id': deviceId,
+      },
+      fromJson: LoginResponse.fromJson,
+    );
+  }
+
   // Register
   //
   // The backend /register endpoint expects multipart/form-data because it
