@@ -1544,7 +1544,6 @@ class VirtualCardController extends Controller
             } elseif (!Hash::check($request->transaction_pin, $user->transaction_pin)) {
                 return response(['success' => false, 'message' => "Incorrect Transaction Pin"]);
             }
-            }
 
             if (!$user->hasVerifyWallet) {
                 return response()->json([
@@ -1711,12 +1710,12 @@ class VirtualCardController extends Controller
             $user = Auth::user();
             
             if (!$request->transaction_pin) {
-            return response(['success' => false, 'message' => "Please Enter Transaction Pin"]); elseif (!$user->transaction_pin) {
+                return response(['success' => false, 'message' => "Please Enter Transaction Pin"]);
+            } elseif (!$user->transaction_pin) {
                 return response(['success' => false, 'message' => "Transaction Pin not set"]);
             } elseif (!Hash::check($request->transaction_pin, $user->transaction_pin)) {
                 return response(['success' => false, 'message' => "Incorrect Transaction Pin"]);
             }
-        }
             
             $cardType = $request->currency;
             $cardId = $request->card_id;
