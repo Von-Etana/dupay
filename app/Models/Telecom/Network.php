@@ -4,6 +4,7 @@ namespace App\Models\Telecom;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Storage;
 use Shetabit\Visitor\Traits\Visitable;
 class Network extends Model
 {
@@ -103,9 +104,16 @@ class Network extends Model
         return json_decode(json_encode($column));
     }
     public function getImageAttribute()
-{
-    return  url("/")."/storage/".$this->attributes['image'];
-}
+    {
+        $image = $this->attributes['image'] ?? null;
+        if (!$image) {
+            return null;
+        }
+
+        // Handle both legacy values (/storage/foo.png) and disk-relative paths.
+        $image = preg_replace('#^/?storage/#', '', (string) $image);
+        return Storage::disk('public')->url($image);
+    }
 
     public function dataType(){
         return $this->hasMany(DataType::class)->where("status", "1")->with("plan");
