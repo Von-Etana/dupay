@@ -21,19 +21,22 @@ $n = $column->column_name;
 {{ \Carbon\Carbon::parse($item->$n)->format('d M Y h:i A') }}
 @elseif ($column->input_type == '7')
 
-    @if (isset($modeData))
-        <div class="d-flex align-items-center">
-            <div class="avatar">
-            <img src="{{ url('/') }}/storage/{{ $modeData }}"  width="64" height="64"
-                alt=""></div>
-            </div>
-    @else
-        <div class="d-flex align-items-center">
-            <div class="avatar">
-            <img src="{{ url('/') }}/storage/{{ $item->$n }}"  width="64" height="64"
-                alt=""></div>
+    @php
+        $imageValue = $modeData ?? $item->$n;
+        $imageValue = (string) $imageValue;
+        if (preg_match('/^https?:\\/\\//i', $imageValue)) {
+            $imageUrl = $imageValue;
+        } else {
+            $imageValue = preg_replace('#^/?storage/#', '', $imageValue);
+            $imageUrl = \Illuminate\Support\Facades\Storage::disk('public')->url($imageValue);
+        }
+    @endphp
+
+    <div class="d-flex align-items-center">
+        <div class="avatar">
+            <img src="{{ $imageUrl }}" width="64" height="64" alt="User image">
         </div>
-    @endif
+    </div>
 
 
 @elseif($column->input_type == '4' && $column->column_name == 'status_id' || $column->column_name == 'status' && isset($modeData))

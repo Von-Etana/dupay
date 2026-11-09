@@ -33,9 +33,16 @@
      
      
  @php
-    $imagePath = isset($data) && !empty($data->$n)
-        ? asset('storage/' . $data->$n)
-        : null;
+    $imagePath = null;
+    if (isset($data) && !empty($data->$n)) {
+        $storedPath = (string) $data->$n;
+        if (preg_match('/^https?:\\/\\//i', $storedPath)) {
+            $imagePath = $storedPath;
+        } else {
+            $storedPath = preg_replace('#^/?storage/#', '', $storedPath);
+            $imagePath = \Illuminate\Support\Facades\Storage::disk('public')->url($storedPath);
+        }
+    }
 @endphp
 
 <div class="mb-3">
