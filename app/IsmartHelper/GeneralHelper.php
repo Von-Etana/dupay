@@ -205,7 +205,11 @@ function convertCurrency(string $fromCurrency, string $toCurrency, float $amount
 
 function getFirebaseAccessToken()
 {
-    
+    $cached = \Illuminate\Support\Facades\Cache::get('firebase.messaging.access_token');
+    if ($cached) {
+        return $cached;
+    }
+
     try{
     $client = new \Google\Client();
     $credentials = config('firebase.projects.app.credentials.file');
@@ -222,7 +226,13 @@ function getFirebaseAccessToken()
     }
 
     $accessToken = $client->getAccessToken();
-    return $accessToken['access_token'] ?? null;
+    $token = $accessToken['access_token'] ?? null;
+    if ($token) {
+        // Google access tokens are valid for about one hour. Keep a safety
+        // margin so notifications do not wait for token creation on every send.
+        \Illuminate\Support\Facades\Cache::put('firebase.messaging.access_token', $token, now()->addMinutes(50));
+    }
+    return $token;
     } catch (\Exception $e) {
             \Log::error( $e->getMessage());
         }
@@ -249,6 +259,25 @@ function sendFcmNotification($deviceToken, $title, $body, $data = [])
             'notification' => [
                 'title' => $title,
                 'body' => $body,
+            ],
+            'android' => [
+                'priority' => 'high',
+                'notification' => [
+                    'channel_id' => 'high_importance',
+                    'priority' => 'PRIORITY_HIGH',
+                    'default_sound' => true,
+                ],
+            ],
+            'apns' => [
+                'headers' => [
+                    'apns-priority' => '10',
+                ],
+                'payload' => [
+                    'aps' => [
+                        'sound' => 'default',
+                        'mutable-content' => 1,
+                    ],
+                ],
             ],
             
             'data' => is_array($data) ? array_map('strval', $data) : new \stdClass()

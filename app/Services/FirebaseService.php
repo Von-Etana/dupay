@@ -23,14 +23,8 @@ class FirebaseService
     {
         // 1. Save notification in Realtime Database
             try {
-        // 1️⃣ Save notification in Realtime Database
-        $database = FirebaseService::connect();
-
-        $database
-            ->getReference('notifications/' . $user->id)
-            ->push($notification);
-
-        // 2️⃣ Send FCM notification if user has a device token
+        // Send the device alert first so transaction notifications are not
+        // delayed by the Realtime Database write.
         if (!empty($user->fcmToken)) {
             $token = $user->fcmToken;
 
@@ -40,6 +34,12 @@ class FirebaseService
 
             sendFcmNotification($token, $title, $body, $data);
         }
+
+        // Persist the full notification for the in-app center after delivery.
+        $database = FirebaseService::connect();
+        $database
+            ->getReference('notifications/' . $user->id)
+            ->push($notification);
 
         return [
             'status' => true,
