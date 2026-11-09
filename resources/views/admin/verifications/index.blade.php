@@ -217,6 +217,10 @@
 
 <script>
 let table;
+// cPanel may expose APP_URL with a legacy /public suffix, while the admin
+// virtual host serves Laravel at the domain root. Build AJAX URLs from the
+// current host so requests never go to /public/adminoffice/...
+const verificationBaseUrl = window.location.origin + '/adminoffice/verifications';
 
 $(document).ready(function () {
 
@@ -227,7 +231,7 @@ $(document).ready(function () {
         // order: [] DataTables re-sorts A-Z on the first column and buries it.
         order: [],
         ajax: {
-            url: "{{ route('admin.verifications.fetch') }}",
+            url: verificationBaseUrl + '/fetch',
             data: function (d) {
                 d.status = $('#statusFilter').val();
                 d.method = $('#methodFilter').val();
@@ -288,7 +292,7 @@ $(document).ready(function () {
 $(document).on('click', '.viewBtn', function () {
     let id = $(this).data('id');
 
-    $.get('{{ url("adminoffice/verifications") }}/' + id)
+    $.get(verificationBaseUrl + '/' + id)
     .done(function (res) {
 
         let statusText = {
@@ -415,7 +419,7 @@ $('#submitVerify').click(function () {
 
     $btn.prop('disabled', true).text('Sending...');
 
-    $.post('{{ url("adminoffice/verifications") }}/' + id + '/verify', {
+    $.post(verificationBaseUrl + '/' + id + '/verify', {
         _token: '{{ csrf_token() }}',
         method: method,
         identity_number: number,
@@ -457,7 +461,7 @@ $('#submitReject').click(function () {
         return;
     }
 
-    $.post('{{ url("adminoffice/verifications") }}/' + id + '/reject', {
+    $.post(verificationBaseUrl + '/' + id + '/reject', {
         _token: '{{ csrf_token() }}',
         reason: reason
     })
