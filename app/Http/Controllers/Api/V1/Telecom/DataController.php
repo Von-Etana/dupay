@@ -81,13 +81,13 @@ class DataController extends Controller
         } elseif (!Hash::check($request->transaction_pin, $user->transaction_pin)) {
             return response(['success' => false, 'message' => "Incorrect Transaction Pin"]);
         }
-    }
-    
+
     if($user->blocked_status == true){
     return response()->json([
         'success' => false,
         'message' => "Your account has been temporarily blocked due to unusual activity. Please contact support to restore access."
     ]);
+    }
 
     $select_wallet_id = $request->wallet_id ?? "1";
     if (!checkWalletEnable("Data", $select_wallet_id)) {
