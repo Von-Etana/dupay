@@ -16,9 +16,18 @@ class SettingsController extends Controller
 
     public function __construct(Request $request)
     {
-        $this->pageType = $request->route()->parameter('pageType');
-        $this->canEdit = "can:edit_".$this->pageType."_settings";
-        $this->middleware($this->canEdit, ['only' => ['edit','update']]);
+        // Route parameters are unavailable while Laravel resolves controllers
+        // during config/route/view cache generation. Keep construction safe in
+        // CLI contexts and apply the edit gate only for an actual settings route.
+        $route = $request->route();
+        $this->pageType = $route ? $route->parameter('pageType') : null;
+        $this->canEdit = $this->pageType
+            ? "can:edit_{$this->pageType}_settings"
+            : null;
+
+        if ($this->canEdit) {
+            $this->middleware($this->canEdit, ['only' => ['edit', 'update']]);
+        }
 
     }
 
