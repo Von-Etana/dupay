@@ -121,7 +121,13 @@ class VerificationController extends Controller
                     'name'      => trim($item->first_name . ' ' . $item->last_name),
                     'phone'     => $item->mobile_no,
                     'status'    => $this->statusBadge($item->status),
-                    'date'      => optional($item->submitted_at ?? $item->created_at)->format('Y-m-d H:i'),
+                    // Eloquent returns these legacy timestamp columns as
+                    // strings unless the model explicitly casts them. Parse
+                    // before formatting so the AJAX endpoint cannot fail with
+                    // "Call to a member function format() on string".
+                    'date'      => ($item->submitted_at ?? $item->created_at)
+                        ? Carbon::parse($item->submitted_at ?? $item->created_at)->format('Y-m-d H:i')
+                        : '—',
                     'actions'   => $actions,
                 ];
             })
