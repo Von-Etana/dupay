@@ -38,5 +38,8 @@ return [
         'public_key' => env('STROWALLET_PUBLIC_KEY'),
         'secret_key' => env('STROWALLET_SECRET_KEY'),
     ],
+    'graph' => [
+        'api_key' => env('GRAPH_API_KEY'),
+    ],
 
 ];

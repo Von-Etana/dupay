@@ -10,7 +10,7 @@ use Carbon\Carbon;
 function CreateGraphPerson(User $user, $data): array
 {
     $url = "https://api.useoval.com/person";
-    $token = env('GRAPH_API_KEY');
+    $token = config('services.graph.api_key');
     $maxRetries = 3;
     $retryDelay = 1;
 
@@ -247,7 +247,7 @@ $document1 = [
 // function CreateGraphPerson(User $user, $data): array
 // {
 //     $url = "https://api.useoval.com/person";
-//     $token = env('GRAPH_API_KEY');
+//     $token = config('services.graph.api_key');
 
 //     $client = new Client(['timeout' => 30]);
 
@@ -432,7 +432,7 @@ function FetchGraphBankAccount($bankAccountId)
     try {
         $response = $client->request('GET', "https://api.useoval.com/bank_account/{$bankAccountId}", [
             'headers' => [
-                'Authorization' => 'Bearer ' . env('GRAPH_API_KEY'),
+                'Authorization' => 'Bearer ' . config('services.graph.api_key'),
                 'Accept'        => 'application/json',
             ],
         ]);
@@ -513,7 +513,7 @@ function UpdateBankAccountStatus(string $bankAccountId, string $status)
     try {
         $response = $client->request('PATCH', "https://api.useoval.com/bank_account/{$bankAccountId}", [
             'headers' => [
-                'Authorization' => 'Bearer ' . env('GRAPH_API_KEY'),
+                'Authorization' => 'Bearer ' . config('services.graph.api_key'),
                 'accept' => 'application/json',
                 'content-type' => 'application/json',
             ],
@@ -555,7 +555,7 @@ function GraphWhitelistBankAccount(string $bankAccountId, string $accountNumber,
     try {
         $response = $client->request('POST', "https://api.useoval.com/bank_account/{$bankAccountId}/whitelist", [
             'headers' => [
-                'Authorization' => 'Bearer ' . env('GRAPH_API_KEY'),
+                'Authorization' => 'Bearer ' . config('services.graph.api_key'),
                 'accept' => 'application/json',
                 'content-type' => 'application/json',
             ],
@@ -605,7 +605,7 @@ function GraphListWhitelistedAccounts(string $bankAccountId, int $page = 1, int 
 
         $response = $client->request('GET', $url, [
             'headers' => [
-                'Authorization' => 'Bearer ' . env('GRAPH_API_KEY'),
+                'Authorization' => 'Bearer ' . config('services.graph.api_key'),
                 'accept' => 'application/json',
             ],
         ]);
@@ -653,7 +653,7 @@ function RemoveGraphWhitelistedAccount(string $accountId, string $whitelistId): 
         $client = new Client();
         $response = $client->delete($url, [
             'headers' => [
-                'Authorization' => 'Bearer ' . env('GRAPH_API_KEY'),
+                'Authorization' => 'Bearer ' . config('services.graph.api_key'),
                 'Accept'        => 'application/json',
             ],
         ]);
@@ -682,7 +682,7 @@ function clearWhitelistedAccounts(string $accountId): array
         $client = new Client();
         $response = $client->delete($url, [
             'headers' => [
-                'Authorization' => 'Bearer ' . env('GRAPH_API_KEY'),
+                'Authorization' => 'Bearer ' . config('services.graph.api_key'),
                 'Accept'        => 'application/json',
             ],
         ]);
@@ -712,7 +712,7 @@ function fetchGraphDeposit(string $depositId): array
 
         $response = $client->get("https://api.useoval.com/deposit/{$depositId}", [
             'headers' => [
-                'Authorization' => 'Bearer ' . env('GRAPH_API_KEY'),
+                'Authorization' => 'Bearer ' . config('services.graph.api_key'),
                 'Accept' => 'application/json',
             ],
             'timeout' => 30,
@@ -743,7 +743,7 @@ function listGraphDeposits(int $page = 1, int $perPage = 20): array
 
         $response = $client->get("https://api.useoval.com/deposit?page={$page}&per_page={$perPage}", [
             'headers' => [
-                'Authorization' => 'Bearer ' . env('GRAPH_API_KEY'),
+                'Authorization' => 'Bearer ' . config('services.graph.api_key'),
                 'Accept' => 'application/json',
             ],
             'timeout' => 30,
