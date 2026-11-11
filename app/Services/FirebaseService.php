@@ -11,9 +11,18 @@ class FirebaseService
 
     public static function connect()
     {
+        $credentials = config('firebase.projects.app.credentials.file');
+        if (!$credentials) {
+            throw new \RuntimeException('Firebase credentials are not configured');
+        }
+        $credentialsPath = str_starts_with($credentials, '/') ||
+            preg_match('/^[A-Za-z]:[\\\\\/]/', $credentials)
+            ? $credentials
+            : base_path($credentials);
+
         $firebase = (new Factory)
-            ->withServiceAccount(base_path(env('FIREBASE_CREDENTIALS')))
-            ->withDatabaseUri(env("FIREBASE_DATABASE_URL"));
+            ->withServiceAccount($credentialsPath)
+            ->withDatabaseUri(config('firebase.projects.app.database.url'));
 
         return $firebase->createDatabase();
     }
