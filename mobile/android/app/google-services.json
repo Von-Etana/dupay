@@ -43,25 +43,6 @@
           "other_platform_oauth_client": []
         }
       }
-    },
-    {
-      "client_info": {
-        "mobilesdk_app_id": "1:615532986243:android:e5461297ecb1b1ba65c0b7",
-        "android_client_info": {
-          "package_name": "com.my.dupay.app.new"
-        }
-      },
-      "oauth_client": [],
-      "api_key": [
-        {
-          "current_key": "AIzaSyD3rTDl_mqdEkX4Rz2v2ES4nKcQMLT6_Rk"
-        }
-      ],
-      "services": {
-        "appinvite_service": {
-          "other_platform_oauth_client": []
-        }
-      }
     }
   ],
   "configuration_version": "1"
