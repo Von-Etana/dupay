@@ -5,6 +5,7 @@ class TransactionModel {
   final String type;
   final String status;
   final String amount;
+  final String? currency;
   final String? description;
   final String? reference;
   final DateTime createdAt;
@@ -16,6 +17,7 @@ class TransactionModel {
     required this.type,
     required this.status,
     required this.amount,
+    this.currency,
     this.description,
     this.reference,
     required this.createdAt,
@@ -51,6 +53,11 @@ class TransactionModel {
       status: json['status']?.toString() ?? '',
       // amount comes as "$8,800,000.00" or "₦5,100.00" — strip symbols/commas
       amount: _cleanAmount(json['amount']?.toString() ?? '0'),
+      currency:
+          json['currency']?.toString() ??
+          (json['metadata'] is Map
+              ? json['metadata']['currency']?.toString()
+              : null),
       description: json['description']?.toString(),
       reference:
           json['reference']?.toString() ?? json['paymentReference']?.toString(),
@@ -71,6 +78,7 @@ class TransactionModel {
       'type': type,
       'status': status,
       'amount': amount,
+      if (currency != null) 'currency': currency,
       if (description != null) 'description': description,
       if (reference != null) 'reference': reference,
       'created_at': createdAt.toIso8601String(),

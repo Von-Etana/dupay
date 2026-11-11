@@ -32,6 +32,9 @@ class TransactionReceiptData {
   final String type;
   final String description;
   final String amount;
+
+  /// ISO currency code used when [amount] is a plain numeric value.
+  final String? currency;
   final String status; // success | pending | unsuccessful | failed | refund
   final String? statusMessage;
   final String reference;
@@ -47,6 +50,7 @@ class TransactionReceiptData {
     required this.type,
     required this.description,
     required this.amount,
+    this.currency,
     required this.status,
     this.statusMessage,
     required this.reference,
@@ -70,6 +74,7 @@ class TransactionReceiptData {
       type: m['service_type'] ?? m['type'] ?? service,
       description: m['description'] ?? '',
       amount: amount,
+      currency: m['currency']?.toString(),
       status: m['status'] ?? 'success',
       statusMessage: m['message']?.toString(),
       reference: m['reference'] ?? m['paymentReference'] ?? '',
@@ -142,9 +147,17 @@ class _TransactionReceiptScreenState extends State<TransactionReceiptScreen> {
     return '$hour:$min $ampm · ${d.day} ${months[d.month - 1]} ${d.year}';
   }
 
-  String _displayAmount(String raw) {
+  String _displayAmount(String raw, {String? currency}) {
     final trimmed = raw.trim();
-    if (trimmed.isEmpty) return '₦0.00';
+    final code = currency?.trim().toUpperCase();
+    final prefix = switch (code) {
+      'USD' => '\$',
+      'EUR' => '€',
+      'GBP' => '£',
+      'NGN' => '₦',
+      _ => code != null && code.isNotEmpty ? '$code ' : '₦',
+    };
+    if (trimmed.isEmpty) return '${prefix}0.00';
     if (trimmed.startsWith('₦') ||
         trimmed.startsWith('\$') ||
         trimmed.startsWith('€') ||
@@ -159,7 +172,7 @@ class _TransactionReceiptScreenState extends State<TransactionReceiptScreen> {
       final number = trimmed.substring(1);
       return '$symbol${formatNumber(number)}';
     }
-    return formatCurrency(trimmed);
+    return '$prefix${formatNumber(trimmed)}';
   }
 
   void _copyToClipboard(String text, String label) {
@@ -232,7 +245,7 @@ class _TransactionReceiptScreenState extends State<TransactionReceiptScreen> {
       await Share.shareXFiles(
         [XFile(file.path, mimeType: 'image/png', name: 'dupay_receipt.png')],
         text:
-            'Dupay Transaction Receipt\nAmount: ${_displayAmount(widget.data.amount)}\nRef: ${widget.data.reference}',
+            'Dupay Transaction Receipt\nAmount: ${_displayAmount(widget.data.amount, currency: widget.data.currency)}\nRef: ${widget.data.reference}',
         subject: 'Dupay Transaction Receipt',
         sharePositionOrigin: sharePosition,
       );
@@ -242,7 +255,7 @@ class _TransactionReceiptScreenState extends State<TransactionReceiptScreen> {
         await Share.share(
           'Dupay Transaction Receipt\n'
           'Service: ${widget.data.service}\n'
-          'Amount: ${_displayAmount(widget.data.amount)}\n'
+          'Amount: ${_displayAmount(widget.data.amount, currency: widget.data.currency)}\n'
           'Status: ${widget.data.status}\n'
           'Ref: ${widget.data.reference}'
           '${widget.data.sessionId != null && widget.data.sessionId!.isNotEmpty ? '\nSession ID: ${widget.data.sessionId}' : ''}\n'
@@ -252,7 +265,7 @@ class _TransactionReceiptScreenState extends State<TransactionReceiptScreen> {
         );
       } catch (_) {
         _copyToClipboard(
-          'Dupay Receipt\nService: ${widget.data.service}\nAmount: ${_displayAmount(widget.data.amount)}\nRef: ${widget.data.reference}',
+          'Dupay Receipt\nService: ${widget.data.service}\nAmount: ${_displayAmount(widget.data.amount, currency: widget.data.currency)}\nRef: ${widget.data.reference}',
           'Receipt details',
         );
       }
@@ -432,7 +445,7 @@ class _TransactionReceiptScreenState extends State<TransactionReceiptScreen> {
                       SizedBox(height: 4.h),
 
                       Text(
-                        _displayAmount(d.amount),
+                        _displayAmount(d.amount, currency: d.currency),
                         style: TextStyle(
                           fontSize: 28.sp,
                           fontWeight: FontWeight.w800,
@@ -483,54 +496,62 @@ class _TransactionReceiptScreenState extends State<TransactionReceiptScreen> {
                                 mainAxisAlignment:
                                     MainAxisAlignment.spaceBetween,
                                 children: [
-                                  Expanded(child: Row(
-                                    children: [
-                                      Container(
-                                        padding: EdgeInsets.all(6.w),
-                                        decoration: BoxDecoration(
-                                          color: _brandColor.withOpacity(0.08),
-                                          borderRadius: BorderRadius.circular(
-                                            8.r,
+                                  Expanded(
+                                    child: Row(
+                                      children: [
+                                        Container(
+                                          padding: EdgeInsets.all(6.w),
+                                          decoration: BoxDecoration(
+                                            color: _brandColor.withOpacity(
+                                              0.08,
+                                            ),
+                                            borderRadius: BorderRadius.circular(
+                                              8.r,
+                                            ),
+                                          ),
+                                          child: Image.asset(
+                                            'assets/images/applogo.jpeg',
+                                            width: 22.w,
+                                            height: 22.h,
+                                            errorBuilder:
+                                                (_, __, ___) => Icon(
+                                                  Icons
+                                                      .account_balance_wallet_rounded,
+                                                  size: 20.sp,
+                                                  color: _brandColor,
+                                                ),
                                           ),
                                         ),
-                                        child: Image.asset(
-                                          'assets/images/applogo.jpeg',
-                                          width: 22.w,
-                                          height: 22.h,
-                                          errorBuilder:
-                                              (_, __, ___) => Icon(
-                                                Icons
-                                                    .account_balance_wallet_rounded,
-                                                size: 20.sp,
-                                                color: _brandColor,
+                                        SizedBox(width: 8.w),
+                                        Flexible(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                'Dupay Receipt',
+                                                style: TextStyle(
+                                                  fontSize: 14.sp,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: const Color(
+                                                    0xFF1A1A1A,
+                                                  ),
+                                                ),
                                               ),
+                                              Text(
+                                                'Official Confirmation',
+                                                style: TextStyle(
+                                                  fontSize: 11.sp,
+                                                  color: _brandAccent,
+                                                  fontWeight: FontWeight.w500,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
                                         ),
-                                      ),
-                                      SizedBox(width: 8.w),
-                                      Flexible(child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            'Dupay Receipt',
-                                            style: TextStyle(
-                                              fontSize: 14.sp,
-                                              fontWeight: FontWeight.bold,
-                                              color: const Color(0xFF1A1A1A),
-                                            ),
-                                          ),
-                                          Text(
-                                            'Official Confirmation',
-                                            style: TextStyle(
-                                              fontSize: 11.sp,
-                                              color: _brandAccent,
-                                              fontWeight: FontWeight.w500,
-                                            ),
-                                          ),
-                                        ],
-                                      )),
-                                    ],
-                                  )),
+                                      ],
+                                    ),
+                                  ),
                                   // Status Badge
                                   Container(
                                     padding: EdgeInsets.symmetric(
@@ -690,7 +711,10 @@ class _TransactionReceiptScreenState extends State<TransactionReceiptScreen> {
                               SizedBox(height: 10.h),
                               _ReceiptItem(
                                 label: 'Amount Paid',
-                                value: _displayAmount(d.amount),
+                                value: _displayAmount(
+                                  d.amount,
+                                  currency: d.currency,
+                                ),
                                 isBold: true,
                                 valueColor: _brandColor,
                               ),
@@ -723,7 +747,9 @@ class _TransactionReceiptScreenState extends State<TransactionReceiptScreen> {
                                               d.reference,
                                               'Reference',
                                             ),
-                                        borderRadius: BorderRadius.circular(6.r),
+                                        borderRadius: BorderRadius.circular(
+                                          6.r,
+                                        ),
                                         child: Padding(
                                           padding: EdgeInsets.symmetric(
                                             horizontal: 4.w,
@@ -738,9 +764,12 @@ class _TransactionReceiptScreenState extends State<TransactionReceiptScreen> {
                                                   style: TextStyle(
                                                     fontSize: 13.sp,
                                                     fontWeight: FontWeight.w600,
-                                                    color: const Color(0xFF1A1A1A),
+                                                    color: const Color(
+                                                      0xFF1A1A1A,
+                                                    ),
                                                   ),
-                                                  overflow: TextOverflow.ellipsis,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
                                                 ),
                                               ),
                                               SizedBox(width: 6.w),
@@ -783,7 +812,9 @@ class _TransactionReceiptScreenState extends State<TransactionReceiptScreen> {
                                               d.sessionId!,
                                               'Session ID',
                                             ),
-                                        borderRadius: BorderRadius.circular(6.r),
+                                        borderRadius: BorderRadius.circular(
+                                          6.r,
+                                        ),
                                         child: Padding(
                                           padding: EdgeInsets.symmetric(
                                             horizontal: 4.w,
@@ -798,9 +829,12 @@ class _TransactionReceiptScreenState extends State<TransactionReceiptScreen> {
                                                   style: TextStyle(
                                                     fontSize: 13.sp,
                                                     fontWeight: FontWeight.w600,
-                                                    color: const Color(0xFF1A1A1A),
+                                                    color: const Color(
+                                                      0xFF1A1A1A,
+                                                    ),
                                                   ),
-                                                  overflow: TextOverflow.ellipsis,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
                                                 ),
                                               ),
                                               SizedBox(width: 6.w),
@@ -929,14 +963,16 @@ class _TransactionReceiptScreenState extends State<TransactionReceiptScreen> {
                                     color: Colors.grey[600],
                                   ),
                                   SizedBox(width: 6.w),
-                                  Flexible(child: Text(
-                                    'Need help with this transaction? Contact Support',
-                                    style: TextStyle(
-                                      fontSize: 12.5.sp,
-                                      color: Colors.grey[600],
-                                      fontWeight: FontWeight.w500,
+                                  Flexible(
+                                    child: Text(
+                                      'Need help with this transaction? Contact Support',
+                                      style: TextStyle(
+                                        fontSize: 12.5.sp,
+                                        color: Colors.grey[600],
+                                        fontWeight: FontWeight.w500,
+                                      ),
                                     ),
-                                  )),
+                                  ),
                                 ],
                               ),
                             ),

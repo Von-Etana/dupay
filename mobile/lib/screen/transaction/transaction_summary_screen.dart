@@ -18,6 +18,7 @@ class TransactionSummaryData {
   final String? accountName;
   final String? accountNumber;
   final String amount;
+  final String? currency;
   final String? description;
   final bool showPendingWhenUnconfirmed;
   // Callback that performs the actual API call; returns success + message.
@@ -30,6 +31,7 @@ class TransactionSummaryData {
     this.accountName,
     this.accountNumber,
     required this.amount,
+    this.currency,
     this.description,
     this.showPendingWhenUnconfirmed = false,
     required this.onConfirm,
@@ -50,6 +52,27 @@ class _TransactionSummaryScreenState
   final TextEditingController _pinController = TextEditingController();
   final FocusNode _focusNode = FocusNode();
   bool _isProcessing = false;
+
+  String _displayAmount(String raw, String? currency) {
+    final value = raw.trim();
+    if (RegExp(r'^[A-Za-z]{3}\\s').hasMatch(value) ||
+        value.startsWith('\$') ||
+        value.startsWith('€') ||
+        value.startsWith('£') ||
+        value.startsWith('₦')) {
+      return value;
+    }
+    final code = currency?.toUpperCase();
+    final prefix = switch (code) {
+      'USD' => '\$',
+      'EUR' => '€',
+      'GBP' => '£',
+      'NGN' => '₦',
+      null => '₦',
+      _ => '$code ',
+    };
+    return '$prefix${formatNumber(value)}';
+  }
 
   @override
   void initState() {
@@ -209,6 +232,7 @@ class _TransactionSummaryScreenState
           type: result['type'] ?? widget.data.service,
           description: result['description'] ?? widget.data.description ?? '',
           amount: widget.data.amount,
+          currency: result['currency']?.toString() ?? widget.data.currency,
           status: normalizedStatus,
           statusMessage:
               _isUnconfirmedStatus(result['status']) &&
@@ -247,6 +271,7 @@ class _TransactionSummaryScreenState
                 widget.data.description ??
                 '',
             amount: widget.data.amount,
+            currency: result['currency']?.toString() ?? widget.data.currency,
             status: status,
             statusMessage:
                 _isUnconfirmedStatus(result['status']) && status == 'failed'
@@ -285,6 +310,7 @@ class _TransactionSummaryScreenState
           type: widget.data.service,
           description: widget.data.description ?? '',
           amount: widget.data.amount,
+          currency: widget.data.currency,
           status: widget.data.showPendingWhenUnconfirmed ? 'pending' : 'failed',
           statusMessage:
               widget.data.showPendingWhenUnconfirmed
@@ -427,7 +453,7 @@ class _TransactionSummaryScreenState
                                       ),
                                     _DetailRow(
                                       'Amount',
-                                      formatCurrency(d.amount),
+                                      _displayAmount(d.amount, d.currency),
                                     ),
                                     if (d.description != null &&
                                         d.description!.isNotEmpty)
