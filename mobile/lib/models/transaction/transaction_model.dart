@@ -32,6 +32,19 @@ class TransactionModel {
     return cleaned;
   }
 
+  static String? _inferCurrency(Map<String, dynamic> json) {
+    final text =
+        [
+          json['description'],
+          json['service'],
+          json['service_type'],
+        ].where((value) => value != null).join(' ').toLowerCase();
+    if (text.contains('usd') || text.contains('dollar')) return 'USD';
+    if (text.contains('eur') || text.contains('euro')) return 'EUR';
+    if (text.contains('gbp') || text.contains('pound')) return 'GBP';
+    return null;
+  }
+
   factory TransactionModel.fromJson(Map<String, dynamic> json) {
     // Merge all root-level fields into metadata for easy access in UI
     final meta = <String, dynamic>{
@@ -57,7 +70,8 @@ class TransactionModel {
           json['currency']?.toString() ??
           (json['metadata'] is Map
               ? json['metadata']['currency']?.toString()
-              : null),
+              : null) ??
+          _inferCurrency(json),
       description: json['description']?.toString(),
       reference:
           json['reference']?.toString() ?? json['paymentReference']?.toString(),

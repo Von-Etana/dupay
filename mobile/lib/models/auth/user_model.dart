@@ -126,7 +126,12 @@ class UserModel {
           json['email_code'] != null ? _asString(json['email_code']) : null,
       emailTime:
           json['email_time'] != null ? _asString(json['email_time']) : null,
-      emailVerify: _asString(json['email_verify'], '0'),
+      emailVerify: _asString(
+        json['email_verify'] ??
+            json['email_verified'] ??
+            (json['email_verified_at'] != null ? '1' : '0'),
+        '0',
+      ),
       emailVerifiedAt:
           json['email_verified_at'] != null
               ? DateTime.tryParse(json['email_verified_at'].toString())
@@ -287,7 +292,8 @@ class UserModel {
     );
   }
 
-  bool get isEmailVerified => emailVerify == '1';
+  bool get isEmailVerified =>
+      {'1', 'true', 'yes'}.contains(emailVerify.toLowerCase());
   bool get isPhoneVerified => phoneVerify == '1';
   bool get isWalletVerified => hasVerifyWallet == '1';
   bool get isBanned => banStatus == '1';

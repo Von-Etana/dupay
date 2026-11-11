@@ -154,6 +154,31 @@ $document1 = [
             'response' => $result,
         ]);
 
+        // Graph is idempotent by identity information. If a person already
+        // exists, reuse the provider person id and continue account creation
+        // instead of showing an error to the admin.
+        $resultMessage = is_array($result)
+            ? (string) ($result['message'] ?? $result['error'] ?? '')
+            : '';
+        if (stripos($resultMessage, 'already exists') !== false) {
+            preg_match('/\b[a-f0-9]{24,}\b/i', $resultMessage, $matches);
+            $existingPersonId = $matches[0] ?? null;
+            if ($existingPersonId) {
+                $user->graph_person_id = $existingPersonId;
+                $user->save();
+                Log::warning('Graph person already exists; reusing existing person', [
+                    'user_id' => $user->id,
+                    'graph_person_id' => $existingPersonId,
+                ]);
+                return [
+                    'status' => true,
+                    'existing' => true,
+                    'message' => 'Graph person already exists. Reusing existing person.',
+                    'data' => ['id' => $existingPersonId],
+                ];
+            }
+        }
+
         // ✅ CORRECTED: Check API success based on actual response structure
         $isSuccess = isset($result['status']) && $result['status'] === 'success';
         

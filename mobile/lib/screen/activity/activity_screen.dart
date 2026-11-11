@@ -353,6 +353,18 @@ class _ActivityScreenState extends ConsumerState<ActivityScreen> {
   String _amountPrefix(TransactionModel tx) =>
       tx.type == '1' ? '+' : tx.type == '0' ? '-' : '';
 
+  String _txCurrency(TransactionModel tx) {
+    final explicit = tx.currency ?? tx.metadata?['currency']?.toString();
+    if (explicit != null && explicit.trim().isNotEmpty) {
+      return explicit.trim().toUpperCase();
+    }
+    final text = '${tx.description ?? ''} ${_txTitle(tx)}'.toLowerCase();
+    if (text.contains('usd') || text.contains('dollar')) return 'USD';
+    if (text.contains('eur') || text.contains('euro')) return 'EUR';
+    if (text.contains('gbp') || text.contains('pound')) return 'GBP';
+    return 'NGN';
+  }
+
   String _formatDate(DateTime date) {
     const months = ['Jan','Feb','Mar','Apr','May','Jun',
                     'Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -384,7 +396,7 @@ class _ActivityScreenState extends ConsumerState<ActivityScreen> {
           type:           tx.type == '0' ? 'Debit' : tx.type == '1' ? 'Credit' : tx.type,
           description:    tx.description ?? '',
           amount:         tx.amount,
-          currency:       tx.currency ?? tx.metadata?['currency']?.toString() ?? 'NGN',
+          currency:       _txCurrency(tx),
           status:         tx.status,
           reference:      tx.reference ?? tx.id,
           sessionId:      tx.metadata?['session_id']?.toString(),
