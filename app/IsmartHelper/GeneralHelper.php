@@ -243,7 +243,8 @@ function getFirebaseAccessToken()
 
 function sendFcmNotification($deviceToken, $title, $body, $data = [])
 {
-    $projectId = 'dupay-app';
+    $projectId = config('firebase.projects.app.project_id')
+        ?: env('FIREBASE_PROJECT_ID', 'dupay-app');
     $accessToken = getFirebaseAccessToken();
 
     if (!$accessToken) {
@@ -301,7 +302,12 @@ function sendFcmNotification($deviceToken, $title, $body, $data = [])
         ];
 
     } catch (\GuzzleHttp\Exception\RequestException $e) {
-           \Log::error('FCM send failed', ['status' => $e->getResponse()?->getStatusCode()]);
+           \Log::error('FCM send failed', [
+               'status' => $e->getResponse()?->getStatusCode(),
+               'response' => $e->getResponse()
+                   ? (string) $e->getResponse()->getBody()
+                   : $e->getMessage(),
+           ]);
         return [
             'status' => false,
             'message' => $e->getMessage(),
@@ -312,7 +318,8 @@ function sendFcmNotification($deviceToken, $title, $body, $data = [])
 
 function sendFcmToMultipleDevices(array $tokens, string $title, string $body, array $data = [])
 {
-    $projectId = "dupay-app";
+    $projectId = config('firebase.projects.app.project_id')
+        ?: env('FIREBASE_PROJECT_ID', 'dupay-app');
     $accessToken = getFirebaseAccessToken();
     $client = new GuzzleClient();
 

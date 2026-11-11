@@ -17,6 +17,7 @@ return [
      */
     'projects' => [
         'app' => [
+            'project_id' => env('FIREBASE_PROJECT_ID'),
             /*
              * ------------------------------------------------------------------------
              * Credentials / Service Account
