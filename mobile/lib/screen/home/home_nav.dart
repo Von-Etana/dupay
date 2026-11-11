@@ -335,32 +335,6 @@
 //                             ),
 //                           ],
 //                         ),
-//                         const Spacer(),
-//                         Row(
-//                           children: [
-//                             Container(
-//                               decoration: BoxDecoration(
-//                                 color: Colors.white.withOpacity(0.15),
-//                                 shape: BoxShape.circle,
-//                               ),
-//                               child: IconButton(
-//                                 icon: const Icon(
-//                                   Icons.refresh,
-//                                   color: Colors.white,
-//                                 ),
-//                                 onPressed: () async {
-//                                   await ref
-//                                       .read(authNotifierProvider.notifier)
-//                                       .refreshUser();
-//                                   if (!context.mounted) return;
-
-//                                 },
-//                               ),
-//                             ),
-//                             const SizedBox(width: 8),
-
-//                           ],
-//                         ),
 //                       ],
 //                     ),
 //                     const SizedBox(height: 16),
