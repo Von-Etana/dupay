@@ -60,6 +60,12 @@ class AuthNotifier extends StateNotifier<AuthState> {
   String? pendingChallengeId;
   int? pendingOtpRemainingSends;
 
+  /// Discard an abandoned OTP challenge when the user backs out of login.
+  void cancelPendingLoginChallenge() {
+    pendingChallengeId = null;
+    pendingOtpRemainingSends = null;
+  }
+
   AuthNotifier(this._authRepository) : super(AuthState()) {
     _sessionSubscription = SessionEvents.expired.listen((_) {
       _sessionGeneration++;

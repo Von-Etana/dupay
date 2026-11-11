@@ -101,6 +101,14 @@ class _LoginOtpScreenState extends ConsumerState<LoginOtpScreen> {
     }
   }
 
+  /// Always return to a real login route. A plain Navigator.pop() can leave
+  /// the app with an empty route when the OTP screen was opened from a cold
+  /// start or restored task, so remove the abandoned challenge route too.
+  void _backToLogin() {
+    ref.read(authNotifierProvider.notifier).cancelPendingLoginChallenge();
+    Navigator.of(context).pushNamedAndRemoveUntil('/login', (_) => false);
+  }
+
   Future<void> _verifyOtp() async {
     final code = _otpController.text.trim();
     if (_isVerifying || code.length != 6) return;
@@ -220,7 +228,12 @@ class _LoginOtpScreenState extends ConsumerState<LoginOtpScreen> {
   Widget build(BuildContext context) {
     final currentText = _otpController.text;
 
-    return Scaffold(
+    return WillPopScope(
+      onWillPop: () async {
+        _backToLogin();
+        return false;
+      },
+      child: Scaffold(
       backgroundColor: _brandColor,
       body: SafeArea(
         bottom: false,
@@ -235,7 +248,7 @@ class _LoginOtpScreenState extends ConsumerState<LoginOtpScreen> {
                   Row(
                     children: [
                       InkWell(
-                        onTap: () => Navigator.of(context).pop(),
+                        onTap: _backToLogin,
                         borderRadius: BorderRadius.circular(10.r),
                         child: Container(
                           padding: EdgeInsets.all(8.w),
@@ -594,6 +607,7 @@ class _LoginOtpScreenState extends ConsumerState<LoginOtpScreen> {
             ),
           ],
         ),
+      ),
       ),
     );
   }
