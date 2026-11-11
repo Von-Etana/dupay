@@ -367,7 +367,7 @@ $document1 = [
 function CreateGraphBankAccount(User $user, $currency): array
 {
     $url = "https://api.useoval.com/bank_account";
-    $token = env('GRAPH_API_KEY');
+    $token = config('services.graph.api_key');
 
     $client = new Client([
         'timeout' => 30,
