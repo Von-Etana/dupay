@@ -265,7 +265,6 @@ function sendFcmNotification($deviceToken, $title, $body, $data = [])
                 'priority' => 'high',
                 'notification' => [
                     'channel_id' => 'high_importance',
-                    'priority' => 'PRIORITY_HIGH',
                     'default_sound' => true,
                 ],
             ],
