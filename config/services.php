@@ -41,5 +41,11 @@ return [
     'graph' => [
         'api_key' => env('GRAPH_API_KEY'),
     ],
+    'safehaven' => [
+        'base_url' => env('SAFEHAVEN_BASE_URL', 'https://api.safehavenmfb.com'),
+        'client_id' => env('SAFEHAVEN_CLIENT_ID'),
+        'client_assertion' => env('SAFEHAVEN_CLIENT_ASSERTION'),
+        'sweep_account' => env('SAFEHAVEN_SWEEP_ACCOUNT'),
+    ],
 
 ];

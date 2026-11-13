@@ -9,17 +9,24 @@ use App\Models\Telecom\VirtualAccount;
 
 function getSafeHavenAccessToken()
 {
+    $baseUrl = rtrim(config('services.safehaven.base_url'), '/');
+    $clientId = config('services.safehaven.client_id');
+    $assertion = config('services.safehaven.client_assertion');
+    if (!$clientId || !$assertion) {
+        Log::error('SafeHaven credentials are not configured');
+        return null;
+    }
     // Cache the token for 55 minutes (SafeHaven tokens last 60 min)
-    return \Cache::remember('safehaven_access_token', 35 * 60, function () {
+    return \Cache::remember('safehaven_access_token_' . hash('sha256', $clientId . $assertion), 35 * 60, function () use ($baseUrl, $clientId, $assertion) {
         try {
             $response = Http::timeout(15)->withHeaders([
                 'Accept' => 'application/json',
                 'Content-Type' => 'application/json',
-            ])->post('https://api.safehavenmfb.com/oauth2/token', [
+            ])->post($baseUrl . '/oauth2/token', [
                 "grant_type" => "client_credentials",
                 "client_assertion_type" => "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
-                "client_id" => "23b0250d6b2c7f4c1caf1b2cc5de5f08",
-                "client_assertion" => "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL215ZHVwYXkuY29tIiwic3ViIjoiMjNiMDI1MGQ2YjJjN2Y0YzFjYWYxYjJjYzVkZTVmMDgiLCJhdWQiOiJodHRwczovL2FwaS5zYWZlaGF2ZW5tZmIuY29tIiwiaWF0IjoxNzU0NDg2MDQ0LCJleHAiOjE4MTc1NTc5MDV9.ot7Ru6p1QneBdH3WIMn6biNSy51nTO4I-K9yLgxeI_SxgfWSZvZspaVVy0pqyR8jd9PSEXln8OgR6APSOUBmbDz2s4hBIshAPdXvYwokbwzDtTM_4jIdKluiJRxXCxDdiNb-_TdC5p4vgf9ijf0jfv0mhZmpO5bAA-0le1MucaY",
+                "client_id" => $clientId,
+                "client_assertion" => $assertion,
             ]);
 
             if ($response->successful()) {
@@ -29,7 +36,7 @@ function getSafeHavenAccessToken()
 
             \Log::error('SafeHaven Token Error', [
                 'status' => $response->status(),
-                'body'   => $response->body(),
+                'provider_code' => $response->json('statusCode'),
             ]);
         } catch (\Exception $e) {
             \Log::error('SafeHaven Token Exception', ['error' => $e->getMessage()]);
@@ -47,16 +54,29 @@ function createSafeHavenSubaccount(array $data)
         return ['success' => false, 'message' => 'Token generation failed.'];
     }
 
-    $url = "https://api.safehavenmfb.com/accounts/v2/subaccount";
+    $url = rtrim(config('services.safehaven.base_url'), '/') . '/accounts/v2/subaccount';
+    $phone = preg_replace('/\D+/', '', (string) $data['phoneNumber']);
+    if (preg_match('/^0[789]\d{9}$/', $phone)) {
+        $phone = '+234' . substr($phone, 1);
+    } elseif (preg_match('/^234[789]\d{9}$/', $phone)) {
+        $phone = '+' . $phone;
+    } else {
+        return ['success' => false, 'message' => 'A valid Nigerian phone number is required.'];
+    }
+    $clientId = config('services.safehaven.client_id');
+    $sweepAccount = config('services.safehaven.sweep_account');
+    if (!$clientId || !$sweepAccount) {
+        return ['success' => false, 'message' => 'SafeHaven configuration is incomplete.'];
+    }
 
     $payload = [
-        "phoneNumber"        => $data['phoneNumber'],
+        "phoneNumber"        => $phone,
         "externalReference"  => (string) $data['externalReference'],
         "emailAddress"       => $data['emailAddress'],
         "autoSweep"          => true,
         "autoSweepDetails" => [
         "schedule"      => "Instant",
-            "accountNumber" => "0118654890",
+            "accountNumber" => $sweepAccount,
         ],
         "identityNumber"     => $data['identityNumber'],
         "identityType"       => $data['identityType'],
@@ -69,7 +89,7 @@ function createSafeHavenSubaccount(array $data)
             'Accept'        => 'application/json',
             'Content-Type'  => 'application/json',
             'Authorization' => 'Bearer ' . $token,
-            'ClientID'      => '23b0250d6b2c7f4c1caf1b2cc5de5f08',
+            'ClientID'      => $clientId,
         ])->post($url, $payload);
 
         // Log any failed response for traceability
@@ -84,6 +104,7 @@ function createSafeHavenSubaccount(array $data)
                 'success' => false,
                 'message' => $response->json('message') ?? 'Request failed.',
                 'status_code' => $response->status(),
+                'provider_code' => $response->json('statusCode'),
             ];
         }
 
