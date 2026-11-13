@@ -58,6 +58,7 @@
         <!-- TABLE -->
         <div class="card">
             <div class="card-body">
+                <div id="verificationLoadError" class="alert alert-warning d-none" role="alert"></div>
                 <div class="table-responsive">
                     <table class="table table-bordered align-middle" id="verificationTable">
                         <thead>
@@ -217,10 +218,10 @@
 
 <script>
 let table;
-// cPanel may expose APP_URL with a legacy /public suffix, while the admin
-// virtual host serves Laravel at the domain root. Build AJAX URLs from the
-// current host so requests never go to /public/adminoffice/...
-const verificationBaseUrl = window.location.origin + '/adminoffice/verifications';
+// Use the route that served this page. Some cPanel installations expose the
+// same admin page below /public; a fixed root path sends AJAX to a different
+// location and leaves the table empty.
+const verificationBaseUrl = window.location.origin + window.location.pathname.replace(/\/$/, '');
 
 $(document).ready(function () {
 
@@ -234,6 +235,16 @@ $(document).ready(function () {
         order: [],
         ajax: {
             url: verificationBaseUrl + '/fetch',
+            dataSrc: function (response) {
+                if (!response || !Array.isArray(response.data)) {
+                    $('#verificationLoadError').removeClass('d-none').text(
+                        'The verification list returned an invalid response. Reload the page or contact support.'
+                    );
+                    return [];
+                }
+                $('#verificationLoadError').addClass('d-none').text('');
+                return response.data;
+            },
             data: function (d) {
                 d.status = $('#statusFilter').val();
                 d.method = $('#methodFilter').val();
@@ -247,9 +258,7 @@ $(document).ready(function () {
                     : xhr.status === 401 || xhr.status === 302
                         ? 'Your admin session has expired. Sign in again to view verification records.'
                         : 'Unable to load verification records. Please check the request in Network tools or contact support.';
-                $('#verificationTable tbody').html(
-                    '<tr><td colspan="8" class="text-center text-warning">' + message + '</td></tr>'
-                );
+                $('#verificationLoadError').removeClass('d-none').text(message);
             }
         },
         columns: [
