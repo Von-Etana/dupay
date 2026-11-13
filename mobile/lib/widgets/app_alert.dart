@@ -155,7 +155,10 @@ class AppAlert {
     _showBanner(
       context,
       message: cleanMessage,
-      title: title ?? 'Error',
+      // The message already explains what happened (for example, "Invalid
+      // email or password" or "Too many attempts"). A generic "Error"
+      // heading is redundant and makes the iOS banner read awkwardly.
+      title: title ?? 'Unable to continue',
       icon: Icons.error_outline_rounded,
       backgroundColor: _errorColor,
       duration: duration,
