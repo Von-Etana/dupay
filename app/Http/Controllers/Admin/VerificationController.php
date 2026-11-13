@@ -34,6 +34,10 @@ class VerificationController extends Controller
             ],
         ];
 
+        // Render the list with the page. If the AJAX endpoint is redirected or
+        // blocked by the admin proxy, the records must still be visible.
+        $data['verificationRows'] = $this->fetch(request())->getData(true)['data'];
+
         return view('admin.verifications.index', $data);
     }
 

@@ -73,6 +73,20 @@
                                 <th>Actions</th>
                             </tr>
                         </thead>
+                        <tbody>
+                            @foreach ($verificationRows as $row)
+                                <tr>
+                                    <td>{{ $row['user'] }}</td>
+                                    <td>{!! $row['method'] !!}</td>
+                                    <td>{{ $row['id_number'] }}</td>
+                                    <td>{{ $row['name'] }}</td>
+                                    <td>{{ $row['phone'] }}</td>
+                                    <td>{!! $row['status'] !!}</td>
+                                    <td>{{ $row['date'] }}</td>
+                                    <td>{!! $row['actions'] !!}</td>
+                                </tr>
+                            @endforeach
+                        </tbody>
                     </table>
                 </div>
             </div>
@@ -229,53 +243,31 @@ $(document).ready(function () {
         processing: true,
         pageLength: 25,
         lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'All']],
-        // Keep the server's order. VerificationController::fetch() sorts by
-        // submitted_at DESC so the newest submission is row one. Without
-        // order: [] DataTables re-sorts A-Z on the first column and buries it.
-        order: [],
-        ajax: {
-            url: verificationBaseUrl + '/fetch',
-            dataSrc: function (response) {
-                if (!response || !Array.isArray(response.data)) {
-                    $('#verificationLoadError').removeClass('d-none').text(
-                        'The verification list returned an invalid response. Reload the page or contact support.'
-                    );
-                    return [];
-                }
-                $('#verificationLoadError').addClass('d-none').text('');
-                return response.data;
-            },
-            data: function (d) {
-                d.status = $('#statusFilter').val();
-                d.method = $('#methodFilter').val();
-                d.date   = $('#dateFilter').val();
-                d.sort   = $('#sortFilter').val();
-            },
-            error: function (xhr) {
-                console.error('Verification list request failed', xhr.status, xhr.responseText);
-                const message = xhr.status === 403
-                    ? 'Your admin account does not have permission to view verification records.'
-                    : xhr.status === 401 || xhr.status === 302
-                        ? 'Your admin session has expired. Sign in again to view verification records.'
-                        : 'Unable to load verification records. Please check the request in Network tools or contact support.';
-                $('#verificationLoadError').removeClass('d-none').text(message);
-            }
-        },
-        columns: [
-            { data: 'user' },
-            { data: 'method' },
-            { data: 'id_number' },
-            { data: 'name' },
-            { data: 'phone' },
-            { data: 'status' },
-            { data: 'date' },
-            { data: 'actions', orderable: false, searchable: false }
-        ]
+        order: [[6, 'desc']],
+        columnDefs: [{ targets: 7, orderable: false, searchable: false }]
+    });
+
+    $.fn.dataTable.ext.search.push(function (settings, row) {
+        if (settings.nTable.id !== 'verificationTable') return true;
+        const status = $('#statusFilter option:selected').text();
+        const method = $('#methodFilter').val();
+        const date = $('#dateFilter').val().trim();
+        const plain = (html) => $('<div>').html(html || '').text().trim();
+        if ($('#statusFilter').val() !== '' && plain(row[5]) !== status) return false;
+        if (method && plain(row[1]) !== method) return false;
+        if (date.includes(' to ')) {
+            const parts = date.split(' to ');
+            const submitted = (row[6] || '').slice(0, 10);
+            if (submitted < parts[0].trim() || submitted > parts[1].trim()) return false;
+        }
+        return true;
     });
 
     // FILTERS
     $('#statusFilter, #methodFilter, #dateFilter, #sortFilter').on('change', function () {
-        table.ajax.reload();
+        table.order($('#sortFilter').val() === 'pending_first'
+            ? [[5, 'asc'], [6, 'desc']]
+            : [[6, 'desc']]).draw();
     });
 
     $('#resetFilters').click(function () {
@@ -283,7 +275,7 @@ $(document).ready(function () {
         $('#methodFilter').val('');
         $('#dateFilter').val('');
         $('#sortFilter').val('newest');
-        table.ajax.reload();
+        table.order([[6, 'desc']]).draw();
     });
 
     // Fill DOB day (1-31) and year (this year down to 1920) dropdowns.
