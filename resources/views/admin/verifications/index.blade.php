@@ -236,6 +236,7 @@ let table;
 // same admin page below /public; a fixed root path sends AJAX to a different
 // location and leaves the table empty.
 const verificationBaseUrl = window.location.origin + window.location.pathname.replace(/\/$/, '');
+const verificationModal = (id) => bootstrap.Modal.getOrCreateInstance(document.getElementById(id));
 
 $(document).ready(function () {
 
@@ -308,6 +309,10 @@ $(document).on('click', '.viewBtn', function () {
 
     $.get(verificationBaseUrl + '/' + id)
     .done(function (res) {
+        if (!res || typeof res !== 'object' || !res.id) {
+            alert('Could not load verification details. Please sign in again and reload this page.');
+            return;
+        }
 
         let statusText = {
             0: 'Pending',
@@ -321,10 +326,10 @@ $(document).on('click', '.viewBtn', function () {
         const documentUrl = (value) => {
             if (!value) return '/default.png';
             const path = String(value);
-            if (/^https?:\\/\\//i.test(path)) return path;
+            if (/^https?:\/\//i.test(path)) return path;
             if (path.startsWith('/storage/')) return path;
             if (path.startsWith('storage/')) return `/${path}`;
-            return `/storage/${path.replace(/^\\/+/, '')}`;
+            return `/storage/${path.replace(/^\/+/, '')}`;
         };
         let idImage   = documentUrl(res.id_image);
         let userPhoto = documentUrl(res.user_photo);
@@ -356,7 +361,7 @@ $(document).on('click', '.viewBtn', function () {
         `;
 
         $('#viewContent').html(html);
-        $('#viewModal').modal('show');
+        verificationModal('viewModal').show();
 
     })
     .fail(function () {
@@ -388,7 +393,7 @@ $(document).on('click', '.verifyBtn', function () {
     $(`#method${method}`).prop('checked', true);
     applyMethodToForm(method);
 
-    $('#verifyModal').modal('show');
+    verificationModal('verifyModal').show();
 });
 
 function applyMethodToForm(method) {
@@ -444,9 +449,13 @@ $('#submitVerify').click(function () {
         bvn_dob: bvnDob
     })
     .done(function (res) {
+        if (res.success !== true) {
+            $err.removeClass('d-none').text(res.message || 'Verification was not completed.');
+            return;
+        }
         alert(res.message);
-        $('#verifyModal').modal('hide');
-        table.ajax.reload(null, false);
+        verificationModal('verifyModal').hide();
+        window.location.reload();
     })
     .fail(function (xhr) {
         let msg = (xhr.responseJSON && xhr.responseJSON.message) || 'Verification failed';
@@ -462,7 +471,7 @@ $('#submitVerify').click(function () {
 $(document).on('click', '.rejectBtn', function () {
     $('#rejectId').val($(this).data('id'));
     $('#rejectReason').val('');
-    $('#rejectModal').modal('show');
+    verificationModal('rejectModal').show();
 });
 
 $('#submitReject').click(function () {
@@ -480,9 +489,13 @@ $('#submitReject').click(function () {
         reason: reason
     })
     .done(function (res) {
+        if (res.success !== true) {
+            alert(res.message || 'Rejection was not completed.');
+            return;
+        }
         alert(res.message);
-        $('#rejectModal').modal('hide');
-        table.ajax.reload(null, false);
+        verificationModal('rejectModal').hide();
+        window.location.reload();
     })
     .fail(function () {
         alert('Something went wrong');
