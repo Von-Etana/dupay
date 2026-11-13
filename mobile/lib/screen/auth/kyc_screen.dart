@@ -99,9 +99,6 @@ class _KycScreenState extends State<KycScreen> {
   String _status = 'none';
   String? _rejectReason;
   Map<String, dynamic>? _record;
-  bool _safeHavenReady = false;
-  bool _safeHavenChallenge = false;
-  bool _safeHavenBusy = false;
 
   /// The backend only permits (re)submission when there is no record yet, or
   /// the previous one was rejected. Mirrored here so the form is not offered
@@ -185,9 +182,6 @@ class _KycScreenState extends State<KycScreen> {
         _record = (record is Map && record.isNotEmpty)
             ? Map<String, dynamic>.from(record)
             : null;
-        final safe = body['safehaven_verification'];
-        _safeHavenReady = safe is Map && safe['ready'] == true;
-        _safeHavenChallenge = safe is Map && safe['challenge_active'] == true;
 
         final canResubmit = body['can_resubmit'];
         _serverCanResubmit = canResubmit is bool ? canResubmit : null;
@@ -765,10 +759,6 @@ class _KycScreenState extends State<KycScreen> {
           ),
           SizedBox(height: 28.h),
           if (_record != null) _submittedSummary(),
-          if (_safeHavenReady && !approved) ...[
-            SizedBox(height: 18.h),
-            _safeHavenVerificationCard(),
-          ],
           SizedBox(height: 24.h),
           Center(
             child: TextButton.icon(
@@ -781,47 +771,6 @@ class _KycScreenState extends State<KycScreen> {
         ],
       ),
     );
-  }
-
-  Widget _safeHavenVerificationCard() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: _kFill, borderRadius: BorderRadius.circular(12), border: Border.all(color: _kMid)),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text('Complete identity verification', style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.w700, color: _kDark)),
-        SizedBox(height: 6.h),
-        Text(_safeHavenChallenge ? 'Enter the code sent to your registered phone.' : 'A verification code will be sent to your registered phone.', style: TextStyle(fontSize: 12.sp, color: Colors.grey[700])),
-        SizedBox(height: 12.h),
-        SizedBox(width: double.infinity, child: ElevatedButton(
-          onPressed: _safeHavenBusy ? null : _startSafeHavenVerification,
-          child: Text(_safeHavenChallenge ? 'Enter verification code' : 'Send verification code'),
-        )),
-      ]),
-    );
-  }
-
-  Future<void> _startSafeHavenVerification() async {
-    setState(() => _safeHavenBusy = true);
-    try {
-      if (!_safeHavenChallenge) {
-        final response = await ApiService.instance.postSimple(ApiConstants.safeHavenInitiate, data: {'method': _method});
-        if (response.data?['success'] != true) throw Exception(response.data?['message'] ?? 'Unable to send code');
-      }
-      if (!mounted) return;
-      final controller = TextEditingController();
-      final otp = await showDialog<String>(context: context, builder: (_) => AlertDialog(
-        title: const Text('Enter verification code'),
-        content: TextField(controller: controller, keyboardType: TextInputType.number, maxLength: 6, autofocus: true, decoration: const InputDecoration(hintText: '6-digit code')),
-        actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')), ElevatedButton(onPressed: () => Navigator.pop(context, controller.text.trim()), child: const Text('Verify'))],
-      ));
-      controller.dispose();
-      if (otp == null || otp.length != 6) return;
-      final response = await ApiService.instance.postSimple(ApiConstants.safeHavenComplete, data: {'otp': otp});
-      if (response.data?['success'] != true) throw Exception(response.data?['message'] ?? 'Verification failed');
-      if (mounted) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Verification completed successfully.'))); await _loadStatus(); }
-    } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))));
-    } finally { if (mounted) setState(() => _safeHavenBusy = false); }
   }
 
   Widget _submittedSummary() {

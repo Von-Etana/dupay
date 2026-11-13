@@ -255,25 +255,6 @@ class VerificationController extends Controller
 
             $verification->save();
 
-            // SafeHaven now requires customer identity verification before a
-            // BVN/NIN subaccount can be created. The customer completes the
-            // phone OTP in the mobile app; do not create an account here.
-            if (Schema::hasColumn($verification->getTable(), 'safehaven_review_ready_at')) {
-                $verification->safehaven_review_ready_at = now();
-                $verification->safehaven_identity_id = null;
-                $verification->safehaven_identity_initiated_at = null;
-                $verification->safehaven_identity_expires_at = null;
-                $verification->safehaven_identity_attempts = 0;
-                $verification->safehaven_identity_validated_at = null;
-                $verification->safehaven_external_reference = 'dupay-kyc-' . $verification->id;
-                $verification->save();
-                DB::commit();
-                return response()->json([
-                    'success' => true,
-                    'message' => 'Review complete. The customer must enter the SafeHaven verification code in the mobile app.',
-                ]);
-            }
-
             $virtualAccountResult = createSafeHavenSubaccount([
                 'user_id'           => $user->id,
                 'phoneNumber'       => $phoneForSafeHaven,
