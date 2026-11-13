@@ -13,6 +13,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:dupay/providers/auth_provider.dart';
 import 'package:dupay/widgets/app_alert.dart';
 import 'package:dupay/services/notifications/fcm_token_sync.dart';
+import 'package:dupay/core/exceptions/api_exception.dart';
 
 class LoginOtpScreen extends ConsumerStatefulWidget {
   const LoginOtpScreen({super.key});
@@ -106,7 +107,12 @@ class _LoginOtpScreenState extends ConsumerState<LoginOtpScreen> {
   /// start or restored task, so remove the abandoned challenge route too.
   void _backToLogin() {
     ref.read(authNotifierProvider.notifier).cancelPendingLoginChallenge();
-    Navigator.of(context).pushNamedAndRemoveUntil('/login', (_) => false);
+    final navigator = Navigator.of(context);
+    if (navigator.canPop()) {
+      navigator.pop();
+    } else {
+      navigator.pushReplacementNamed('/login');
+    }
   }
 
   Future<void> _verifyOtp() async {
@@ -149,15 +155,15 @@ class _LoginOtpScreenState extends ConsumerState<LoginOtpScreen> {
         final message =
             errCode == 'otp_expired'
                 ? 'This code has expired. Please request a new one.'
-                : (errCode == 'otp_retry_limit' || errCode == 'account_locked')
-                ? 'Too many incorrect attempts. Your account is temporarily locked.'
+                : errCode == 'otp_retry_limit'
+                ? 'This verification session has reached its attempt limit. Please sign in again.'
+                : errCode == 'account_locked'
+                ? 'Your account is temporarily locked for 30 minutes. Please try again later or contact support.'
                 : (response.message.isEmpty
                     ? 'Incorrect verification code. Please check and try again.'
                     : response.message);
 
-        if (errCode == 'otp_retry_limit' ||
-            errCode == 'account_locked' ||
-            message.toLowerCase().contains('locked')) {
+        if (errCode == 'account_locked') {
           AppAlert.showAccountLockedDialog(context, message: message);
         } else {
           _focusNode.requestFocus();
@@ -169,8 +175,7 @@ class _LoginOtpScreenState extends ConsumerState<LoginOtpScreen> {
         setState(() => _isVerifying = false);
         _otpController.clear();
         final rawMsg = e.toString();
-        if (rawMsg.toLowerCase().contains('locked') ||
-            rawMsg.toLowerCase().contains('blocked')) {
+        if (e is AccountLockedException && e.statusCode == 423) {
           AppAlert.showAccountLockedDialog(context, message: rawMsg);
         } else {
           _focusNode.requestFocus();

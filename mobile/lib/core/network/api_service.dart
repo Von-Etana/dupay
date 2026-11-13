@@ -547,7 +547,7 @@ class ApiService {
               'We could not send your verification code. Check your email delivery settings or contact support, then try again.',
         );
       }
-      if (code == 'otp_resend_cooldown') {
+      if (code == 'otp_resend_cooldown' || code == 'resend_cooldown') {
         return ValidationException(
           message:
               _extractErrorMessage(responseData) ??
@@ -558,8 +558,7 @@ class ApiService {
 
     if (statusCode == 423 ||
         (responseData is Map<String, dynamic> &&
-            (responseData['code'] == 'account_locked' ||
-                responseData['code'] == 'otp_retry_limit'))) {
+            responseData['code'] == 'account_locked')) {
       return AccountLockedException(
         message:
             _extractErrorMessage(responseData) ??

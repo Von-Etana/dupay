@@ -112,17 +112,18 @@ class UserSecurityServiceTest extends TestCase
         $this->assertFalse($this->db->getConnection()->getSchemaBuilder()->hasTable('oauth_access_tokens'));
     }
 
-    public function test_three_invalid_otp_attempts_lock_for_six_hours(): void
+    public function test_six_invalid_otp_attempts_lock_for_thirty_minutes(): void
     {
         $this->request->merge(['device_id' => 'new-device-123456789']);
         $service = new LoginChallengeService($this->service);
         $challenge = $service->begin($this->user, 'correct-password', $this->request, 'web');
         LoginChallenge::find(hash('sha256', $challenge['challenge_id']))->forceFill(['otp_hash' => Hash::make('123456'), 'otp_expires_at' => now()->addMinutes(10), 'sent_at' => now()])->save();
-        for ($i = 1; $i <= 3; $i++) {
+        for ($i = 1; $i <= 6; $i++) {
             $result = $service->verify(Request::create('/login/otp/verify', 'POST', ['challenge_id' => $challenge['challenge_id'], 'device_id' => 'new-device-123456789', 'otp' => '000000']), 'web');
-            $this->assertSame($i === 3 ? 'account_locked' : 'invalid_otp', $result['code']);
+            $this->assertSame($i === 6 ? 'account_locked' : 'invalid_otp', $result['code']);
+            $this->assertSame($i, $this->user->fresh()->otp_failed_attempts);
         }
-        $this->assertTrue($this->user->fresh()->otp_locked_until->isFuture());
+        $this->assertTrue($this->user->fresh()->otp_locked_until->between(now()->addMinutes(29), now()->addMinutes(31)));
     }
 
     public function test_successful_web_otp_consumes_challenge_and_registers_device(): void

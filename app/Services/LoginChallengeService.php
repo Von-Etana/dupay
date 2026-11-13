@@ -42,6 +42,22 @@ class LoginChallengeService
             if ((string) $user->email_verify !== "1") {
                 return $this->error('email_unverified', 'Your email address is not verified. Please verify your email with the OTP sent to you before signing in.', 403);
             }
+            $device = TrustedDevice::where('user_id', $user->id)
+                ->where('device_hash', $this->deviceHash($request))
+                ->whereNull('revoked_at')
+                ->where('expires_at', '>', now())
+                ->first();
+            if ($device) {
+                $device->last_used_at = now();
+                $device->save();
+                if ($request->filled('fcmToken')) {
+                    $user->fcmToken = $request->input('fcmToken');
+                    $user->save();
+                }
+                $token = $user->createToken('authToken');
+                $this->security->recordEvent('token_issued', $user, $request);
+                return ['success' => true, 'code' => 'authenticated', 'access_token' => $token->accessToken, 'user' => $user->fresh('profile')];
+            }
             // One live challenge per account; replacing a challenge never resets failures.
             LoginChallenge::where('user_id', $user->id)->whereNull('consumed_at')->update(['consumed_at' => now(), 'otp_hash' => null]);
             $id = Str::random(64);

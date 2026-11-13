@@ -530,13 +530,34 @@ class AuthController extends Controller
             'phone_number' => 'required_without:email|nullable|string',
             'password' => 'required|string',
             'fcmToken' => 'nullable|string',
-            'device_id' => 'nullable|string'
+            'device_id' => 'required|string|min:16|max:255'
         ]);
 
         if ($validator->fails()) {
             $error = implode(', ', $validator->errors()->all());
             return response(['success' => false, 'message' => $error]);
         }
+
+        $loginValue = $request->input('email') ?: $request->input('phone_number');
+        $loginField = filter_var($loginValue, FILTER_VALIDATE_EMAIL) ? 'email' : 'phone_number';
+        $user = User::where($loginField, $loginValue)->first();
+        if (!$user) {
+            return response()->json(['success' => false, 'code' => 'invalid_credentials', 'message' => 'Invalid login details.'], 401);
+        }
+        $service = app(LoginChallengeService::class);
+        $result = $service->begin($user, $request->input('password'), $request);
+        if (($result['code'] ?? null) === 'otp_required') {
+            $sent = $service->send(Request::create('/login/otp/send', 'POST', [
+                'challenge_id' => $result['challenge_id'],
+                'device_id' => $request->input('device_id'),
+            ]));
+            if (!($sent['success'] ?? false)) {
+                $result = $sent;
+            }
+        }
+        $status = $result['_status'] ?? 200;
+        unset($result['_status']);
+        return response()->json($result, $status);
 
         // Determine the login type
         $loginType = $request->input('email') ?: $request->input('phone_number');
