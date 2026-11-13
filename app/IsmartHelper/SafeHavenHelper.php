@@ -4,6 +4,7 @@ use GuzzleHttp\Client;
 use GuzzleHttp\Exception\RequestException;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Http\Client\ConnectionException;
 use App\Models\Fintech\BankAccount;
 use App\Models\Telecom\VirtualAccount;
 
@@ -90,7 +91,7 @@ function createSafeHavenSubaccount(array $data)
             'Content-Type'  => 'application/json',
             'Authorization' => 'Bearer ' . $token,
             'ClientID'      => $clientId,
-        ])->post($url, $payload);
+        ])->connectTimeout(10)->timeout(45)->post($url, $payload);
 
         // Log any failed response for traceability
         if (!$response->successful()) {
@@ -125,15 +126,19 @@ function createSafeHavenSubaccount(array $data)
         }
 
         $account = $result['data'];
+        if (empty($account['accountNumber'])) {
+            return ['success' => false, 'message' => 'SafeHaven did not return an account number.', 'outcome_unknown' => true];
+        }
 
         // Save locally
-        $virtualAccount = VirtualAccount::create([
+        $virtualAccount = VirtualAccount::firstOrCreate([
+            'account_reference' => $account['externalReference'] ?? $data['externalReference'],
+        ], [
             'user_id'                => $data['user_id'],
             'bank_name'              => 'SafeHaven MFB',
             'account_name'           => $account['accountName'] ?? null,
             'account_number'         => $account['accountNumber'] ?? null,
             'virtual_account_type_id'=> 3,
-            'account_reference'      => $account['externalReference'] ?? $data['externalReference'],
             'gateway'                => 'safehaven',
             'status'                 => 1,
             'raw_data'               => json_encode($result),
@@ -163,6 +168,16 @@ function createSafeHavenSubaccount(array $data)
             ]
         ];
 
+    } catch (ConnectionException $e) {
+        Log::warning('SafeHaven subaccount outcome unknown after connection failure', [
+            'user_id' => $data['user_id'],
+            'external_reference' => (string) $data['externalReference'],
+        ]);
+        return [
+            'success' => false,
+            'outcome_unknown' => true,
+            'message' => 'SafeHaven did not respond. Check whether the account was created before retrying.',
+        ];
     } catch (\Exception $e) {
         Log::error('SafeHaven Subaccount Exception', [
             'error' => $e->getMessage(),

@@ -261,7 +261,7 @@ class VerificationController extends Controller
                 'emailAddress'      => $user->email,
                 'identityType'      => $method,           // <- BVN or NIN, chosen by admin
                 'identityNumber'    => $identityNumber,
-                'externalReference' => rand(1000000, 999999999),
+                'externalReference' => 'dupay-kyc-' . $verification->id,
                 'dob'               => $formattedDate,
             ]);
 
@@ -271,9 +271,12 @@ class VerificationController extends Controller
 
                 $errorMessage = $virtualAccountResult['message'] ?? "Unable to create virtual account.";
                 $recordUnavailable = (int) ($virtualAccountResult['provider_code'] ?? 0) === 404;
-                $adminMessage = $recordUnavailable
+                $outcomeUnknown = !empty($virtualAccountResult['outcome_unknown']);
+                $adminMessage = $outcomeUnknown
+                    ? 'SafeHaven did not confirm the result. The verification remains pending. Check SafeHaven for an account with reference dupay-kyc-' . $verification->id . ' before retrying.'
+                    : ($recordUnavailable
                     ? "SafeHaven could not fetch the {$method} identity record (provider code 404). The verification remains pending. Confirm the details with SafeHaven support before retrying."
-                    : "Virtual account creation failed using {$method}. Api Error = " . $errorMessage;
+                    : "Virtual account creation failed using {$method}. Api Error = " . $errorMessage);
 
                 ErrorLog::create([
                     "user_id"   => $user->id,
@@ -474,7 +477,7 @@ class VerificationController extends Controller
             'emailAddress'      => $user->email,
             'identityType'      => $method,
             'identityNumber'    => $identityNumber,
-            'externalReference' => rand(1000000, 999999999),
+                'externalReference' => 'dupay-kyc-' . $verification->id,
             'dob'               => $formattedDate,
         ]);
 
