@@ -150,8 +150,8 @@ $document1 = [
         $result = json_decode($response->getBody()->getContents(), true);
 
         Log::info('Graph API Response', [
-            'url' => $url,
-            'response' => $result,
+            'user_id' => $user->id,
+            'status' => $result['status'] ?? null,
         ]);
 
         // Graph is idempotent by identity information. If a person already
@@ -270,10 +270,8 @@ $document1 = [
         }
 
         Log::error('Graph API Client Error', [
-            'url' => $url,
-            'payload' => $payload,
-            'response' => $decodedError,
-            'exception_message' => $e->getMessage(),
+            'user_id' => $user->id,
+            'http_status' => $e->getResponse()->getStatusCode(),
         ]);
 
         return [
@@ -285,10 +283,8 @@ $document1 = [
 
     } catch (\Exception $e) {
         Log::error('Graph API General Error', [
-            'url' => $url,
-            'payload' => $payload,
-            'exception_message' => $e->getMessage(),
-            'trace' => $e->getTraceAsString(),
+            'user_id' => $user->id,
+            'exception_type' => get_class($e),
         ]);
 
         return [
@@ -424,6 +420,9 @@ function CreateGraphBankAccount(User $user, $currency): array
 {
     $url = "https://api.useoval.com/bank_account";
     $token = config('services.graph.api_key');
+    if (!$token || !$user->graph_person_id) {
+        return ['status' => false, 'message' => 'Graph credentials or person ID are missing.', 'data' => null];
+    }
 
     $client = new Client([
         'timeout' => 30,
@@ -449,10 +448,12 @@ function CreateGraphBankAccount(User $user, $currency): array
 
         $result = json_decode($response->getBody()->getContents(), true);
 
+        $account = is_array($result['data'] ?? null) ? $result['data'] : [];
+        $accountId = $account['id'] ?? $account['_id'] ?? null;
         return [
-            'status'  => ($result['status'] ?? 'error') === 'success',
+            'status'  => ($result['status'] ?? 'error') === 'success' && !empty($accountId),
             'message' => $result['message'] ?? 'No message returned',
-            'data'    => $result['data'] ?? null,
+            'data'    => $account,
         ];
 
     } catch (\GuzzleHttp\Exception\ClientException $e) {

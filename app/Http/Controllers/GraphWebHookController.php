@@ -76,9 +76,8 @@ class GraphWebHookController extends Controller
         }
 
         elseif ($event === 'account.issuance.failed') {
-            
-            $user->graph_person_id = NULL;
-            $user->save();
+
+            // The person remains valid even if this account issuance failed.
 
             if (getSiteSettings("email_notify") == "Yes") {
                 $reason = $data['status_message'] ?? "The Bank failed to issue your account.";

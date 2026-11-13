@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\ForeignAccountRequest;
+use App\Models\ForeignAccount;
 use Illuminate\Support\Facades\Session;
 use App\TraitsFolder\MailTrait;
 use App\Models\User;
@@ -101,125 +102,94 @@ class ForeignAccountRequestController extends Controller
 
     public function approve($id)
     {
-        $requestData = ForeignAccountRequest::findOrFail($id);
-    
-        if ($requestData->status !== 'pending') {
-            return $this->errorRedirect('This request has already been processed.');
-        }
-    
-        if (!$requestData->user) {
-            return $this->errorRedirect('User not found.');
-        }
-    
-        $user = $requestData->user;
-        
-        if (!$user->hasVerifyWallet) {
-            return $this->errorRedirect('Kindly verify your account.');
-        }
-    
-        DB::beginTransaction();
-    
-        try {
-            $response = $user->graph_person_id
-                ? ['status' => true, 'graph_person_id' => $user->graph_person_id]
-                : CreateGraphPerson($user, $requestData);
-    
-            if ($response['status']) {
-    
-                $return = CreateGraphBankAccount($user, $requestData->currency);
-    
-                if ($return['status']) {
-    
-                    $requestData->update([
-                        'status'         => 'approved',
-                        'decline_reason' => null,
-                        'account_number' => $return['data']['accountNumber'] ?? null,
-                        'bank_name'      => $return['data']['bankName'] ?? null,
-                    ]);
-    
-                    DB::commit();
-    
-                    return $this->successRedirect(
-                        'Request approved and virtual account created successfully on Graph.'
-                    );
-    
-                } else {
-                    DB::rollBack();
-    
-                    return $this->errorRedirect(
-                        'Graph Create Bank API error: ' . ($return['message'] ?? 'Unknown error.')
-                    );
-                }
-    
-            } else {
-                DB::rollBack();
-    
-                return $this->errorRedirect(
-                    'Graph Create Person API error: ' . ($response['message'] ?? 'Unknown error.')
-                );
-            }
-    
-        } catch (\Exception $e) {
-            DB::rollBack();
-    
-            return $this->errorRedirect(
-                'Unexpected error: ' . $e->getMessage()
-            );
-        }
+        return $this->provisionAccount($id);
     }
     
     public function createBankAccount($id)
     {
+        return $this->provisionAccount($id);
+    }
+
+    private function provisionAccount($id)
+    {
         $requestData = ForeignAccountRequest::findOrFail($id);
-    
         if ($requestData->status !== 'pending') {
             return $this->errorRedirect('This request has already been processed.');
         }
-    
         if (!$requestData->user) {
             return $this->errorRedirect('User not found.');
         }
-    
         $user = $requestData->user;
-        
         if (!$user->hasVerifyWallet) {
             return $this->errorRedirect('Kindly verify your account.');
         }
-    
-        DB::beginTransaction();
-    
+
         try {
-            $return = CreateGraphBankAccount($user, $requestData->currency);
-
-            if ($return['status']) {
-
-                $requestData->update([
-                    'status'         => 'approved',
-                    'decline_reason' => null,
-                    'account_number' => $return['data']['accountNumber'] ?? null,
-                    'bank_name'      => $return['data']['bankName'] ?? null,
-                ]);
-
-                DB::commit();
-
-                return $this->successRedirect(
-                    'Request approved and virtual account created successfully on Graph.'
-                );
-
-            } else {
-                DB::rollBack();
-
-                return $this->errorRedirect(
-                    'Graph Create Bank API error: ' . ($return['message'] ?? 'Unknown error.')
-                );
+            if (!$user->graph_person_id) {
+                $person = CreateGraphPerson($user, $requestData);
+                if (empty($person['status']) || empty($user->fresh()->graph_person_id)) {
+                    return $this->errorRedirect('Graph Create Person API error: ' . ($person['message'] ?? 'No person ID returned.'));
+                }
+                $user->refresh();
             }
 
+            // A previous request may have created an account while issuance was pending.
+            // Fetch it instead of submitting another account creation request.
+            $local = ForeignAccount::where('user_id', $user->id)
+                ->where('currency', $requestData->currency)
+                ->whereNotNull('account_id')->latest('id')->first();
+            $result = $local
+                ? FetchGraphBankAccount($local->account_id)
+                : CreateGraphBankAccount($user, $requestData->currency);
+            if (empty($result['status']) || empty($result['data']['id'])) {
+                return $this->errorRedirect('Graph account API error: ' . ($result['message'] ?? 'No account ID returned.'));
+            }
+
+            $account = $result['data'];
+            $accountId = $account['id'];
+            DB::transaction(function () use ($user, $requestData, $account, $accountId) {
+                $localAccount = ForeignAccount::where('account_id', $accountId)->first()
+                    ?: ForeignAccount::where('user_id', $user->id)
+                        ->where('currency', $requestData->currency)
+                        ->whereNull('account_id')->latest('id')->first()
+                    ?: new ForeignAccount();
+                if ($localAccount->exists && (int) $localAccount->user_id !== (int) $user->id) {
+                    throw new \RuntimeException('Graph account is linked to a different user.');
+                }
+                $localAccount->fill([
+                    'user_id' => $user->id,
+                    'account_id' => $accountId,
+                    'holder_id' => $account['holder_id'] ?? $user->graph_person_id,
+                    'account_number' => $account['account_number'] ?? '',
+                    'account_name' => $account['account_name'] ?? null,
+                    'bank_name' => $account['bank_name'] ?? null,
+                    'bank_code' => $account['bank_code'] ?? null,
+                    'routing_number' => $account['routing_number'] ?? null,
+                    'bank_address' => json_encode($account['bank_address'] ?? []),
+                    'balance' => $account['balance'] ?? 0,
+                    'currency' => $account['currency'] ?? $requestData->currency,
+                    'status' => $account['status'] ?? 'pending',
+                    'bank_data' => json_encode($account),
+                ]);
+                $localAccount->save();
+
+                if (!empty($account['account_number'])) {
+                    $requestData->status = 'approved';
+                    $requestData->decline_reason = null;
+                    $requestData->save();
+                }
+            });
+
+            if (empty($account['account_number'])) {
+                session()->flash('message', 'Graph accepted the account request. Issuance is pending; retry this action to refresh its status.');
+                session()->flash('type', 'info');
+                session()->flash('title', 'Pending');
+                return redirect()->back();
+            }
+            return $this->successRedirect('Graph account created and saved locally.');
         } catch (\Exception $e) {
-            DB::rollBack();
-    
-            return $this->errorRedirect(
-                'Unexpected error: ' . $e->getMessage()
-            );
+            \Log::error('Graph account provisioning failed', ['request_id' => $id, 'error' => $e->getMessage()]);
+            return $this->errorRedirect('Graph account could not be saved. Check the server log before retrying.');
         }
     }
     
