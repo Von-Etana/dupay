@@ -84,6 +84,8 @@ function createSafeHavenSubaccount(array $data)
         "dateOfBirth"        => $data['dob'],
         "booleanMatch"       => true,
     ];
+    if (!empty($data['identityId'])) $payload['identityId'] = $data['identityId'];
+    if (!empty($data['otp'])) $payload['otp'] = $data['otp'];
 
     try {
         $response = Http::withHeaders([
@@ -189,6 +191,35 @@ function createSafeHavenSubaccount(array $data)
             'message' => 'Exception: ' . $e->getMessage()
         ];
     }
+}
+
+function initiateSafeHavenIdentity(array $data): array
+{
+    $token = getSafeHavenAccessToken();
+    $clientId = config('services.safehaven.client_id');
+    if (!$token || !$clientId) return ['success' => false, 'message' => 'SafeHaven configuration is incomplete.'];
+    $phone = preg_replace('/\D+/', '', (string) ($data['phoneNumber'] ?? ''));
+    if (preg_match('/^0[789]\d{9}$/', $phone)) $phone = '+234' . substr($phone, 1);
+    elseif (preg_match('/^234[789]\d{9}$/', $phone)) $phone = '+' . $phone;
+    $response = Http::withToken($token)->withHeaders(['ClientID' => $clientId])->timeout(30)->post(rtrim(config('services.safehaven.base_url'), '/') . '/identity/v2', [
+        'type' => strtoupper($data['type']), 'number' => (string) $data['number'], 'debitAccountNumber' => config('services.safehaven.sweep_account'), 'async' => false,
+    ]);
+    $json = $response->json();
+    $id = data_get($json, 'data._id') ?: data_get($json, 'data.id') ?: $json['_id'] ?? null;
+    return $id ? ['success' => true, 'identity_id' => $id] : ['success' => false, 'message' => $json['message'] ?? 'SafeHaven could not find this identity record.'];
+}
+
+function validateSafeHavenIdentity(string $identityId, string $type, string $otp): array
+{
+    $token = getSafeHavenAccessToken();
+    $clientId = config('services.safehaven.client_id');
+    if (!$token || !$clientId) return ['success' => false, 'message' => 'SafeHaven configuration is incomplete.'];
+    $response = Http::withToken($token)->withHeaders(['ClientID' => $clientId])->timeout(30)->post(rtrim(config('services.safehaven.base_url'), '/') . '/identity/v2/validate', [
+        'identityId' => $identityId, 'type' => strtoupper($type), 'otp' => $otp,
+    ]);
+    return $response->successful() && (int) ($response->json('statusCode') ?? 200) < 300
+        ? ['success' => true]
+        : ['success' => false, 'message' => $response->json('message') ?? 'Incorrect verification code.'];
 }
 
 function verifySafeHavenTransfer(string $sessionId): array

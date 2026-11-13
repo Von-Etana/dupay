@@ -103,6 +103,8 @@ class ApiConstants {
   // Verifications page reads, and the one /register already populates on
   // signup. The KYC screen uses these.
   static const String walletKycDetails = '/wallet-kyc-details';
+  static const String safeHavenInitiate = '/verification/safehaven/initiate';
+  static const String safeHavenComplete = '/verification/safehaven/complete';
   static const String walletKycVerification = '/verification/wallet-kyc';
   static const String bankVerification = '/verification/bank';
 

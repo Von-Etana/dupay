@@ -106,6 +106,11 @@ class KYCVerificationController extends Controller
             'can_resubmit' => $status === 2,
             // The admin's rejection reason, so the user knows what to fix.
             'comment' => $status === 2 ? $user->walletVerification->comment : null,
+            'safehaven_verification' => [
+                'ready' => (bool) $user->walletVerification->safehaven_review_ready_at,
+                'challenge_active' => (bool) ($user->walletVerification->safehaven_identity_expires_at && now()->lt($user->walletVerification->safehaven_identity_expires_at)),
+                'expires_at' => $user->walletVerification->safehaven_identity_expires_at,
+            ],
             'data' => $user->walletVerification,
             'user' => $user,
         ]);

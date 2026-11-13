@@ -29,6 +29,7 @@ use App\Http\Controllers\WebHookController;
 use App\Http\Controllers\FlutterWaveWebHookController;
 use App\Http\Controllers\Api\V1\ExchangeController;
 use App\Http\Controllers\Api\V1\LoginChallengeController;
+use App\Http\Controllers\Api\V1\SafeHavenIdentityController;
 
 //version one
 
@@ -79,6 +80,8 @@ Route::group(['middleware'=>'verifyTelecomAPiUsers'], function(){
 
     Route::get('wallet-kyc-details', [KYCVerificationController::class, 'walletKYCDetails'])->name("WalletKYCDetails");
     Route::post('verification/wallet-kyc', [KYCVerificationController::class, 'verifyUserWalletUsingMonnifyBVN'])->name("WalletKYC");
+    Route::post('verification/safehaven/initiate', [SafeHavenIdentityController::class, 'initiate'])->middleware('throttle:otp');
+    Route::post('verification/safehaven/complete', [SafeHavenIdentityController::class, 'complete'])->middleware('throttle:otp');
     Route::post('verification/bank', [KYCVerificationController::class, 'verifyBankDetails'])->name("verifyBankDetails");
     Route::get('profile-kyc-details', [KYCVerificationController::class, 'profileKYCDetails'])->name("profileKYCDetails");
     Route::post('verification/profile-kyc', [KYCVerificationController::class, 'submitProfileKYC'])->name("ProfileKYC");
