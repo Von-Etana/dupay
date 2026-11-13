@@ -164,6 +164,10 @@ $document1 = [
             preg_match('/\b[a-f0-9]{24,}\b/i', $resultMessage, $matches);
             $existingPersonId = $matches[0] ?? null;
             if ($existingPersonId) {
+                if (User::where('graph_person_id', $existingPersonId)->where('id', '!=', $user->id)->exists()
+                    || ($user->graph_person_id && $user->graph_person_id !== $existingPersonId)) {
+                    return ['status' => false, 'message' => 'This ID information is already linked to another account. Contact support.'];
+                }
                 $user->graph_person_id = $existingPersonId;
                 $user->save();
                 Log::warning('Graph person already exists; reusing existing person', [
@@ -237,6 +241,33 @@ $document1 = [
     } catch (\GuzzleHttp\Exception\ClientException $e) {
         $errorBody = $e->getResponse()->getBody()->getContents();
         $decodedError = json_decode($errorBody, true);
+
+        // Oval reports an existing person with a 4xx response, so the normal
+        // success-response reconciliation above is never reached.
+        $message = is_array($decodedError) ? (string) ($decodedError['message'] ?? '') : '';
+        if (stripos($message, 'Person with the provided ID information already exists') !== false
+            && preg_match('/\b([a-f0-9]{32})\b/i', $message, $matches)) {
+            $existingPersonId = $matches[1];
+            $belongsToAnotherUser = User::where('graph_person_id', $existingPersonId)
+                ->where('id', '!=', $user->id)->exists();
+            if ($belongsToAnotherUser || ($user->graph_person_id && $user->graph_person_id !== $existingPersonId)) {
+                Log::warning('Graph person identity conflicts with an existing local account', [
+                    'user_id' => $user->id,
+                    'graph_person_id' => $existingPersonId,
+                ]);
+                return ['status' => false, 'message' => 'This ID information is already linked to another account. Contact support.'];
+            }
+            $user->graph_person_id = $existingPersonId;
+            $user->save();
+            return [
+                'status' => true,
+                'existing' => true,
+                'message' => 'Existing Graph person reused.',
+                'data' => ['id' => $existingPersonId],
+                'graph_person_id' => $existingPersonId,
+                'graph_person_saved' => true,
+            ];
+        }
 
         Log::error('Graph API Client Error', [
             'url' => $url,

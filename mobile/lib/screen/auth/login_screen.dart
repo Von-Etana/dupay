@@ -12,6 +12,7 @@ import '../../services/storage/secure_storage_service.dart';
 import 'dart:async' show unawaited;
 import '../../services/notifications/fcm_token_sync.dart';
 import 'package:dupay/widgets/app_alert.dart';
+import 'email_verification_screen.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -141,7 +142,23 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             (error != null && error.trim().isNotEmpty)
                 ? error
                 : 'Invalid email or password. Please try again.';
-        if (rawError.toLowerCase().contains('locked') ||
+        if (rawError.toLowerCase().contains('email address is not verified')) {
+          final email = _emailController.text.trim();
+          final sent = await authProvider.sendEmailOtp(email);
+          if (!mounted) return;
+          if (sent) {
+            Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => EmailVerificationScreen(email: email),
+              ),
+            );
+          } else {
+            _showTopMessage(
+              ref.read(authErrorProvider) ??
+                  'Could not send an email verification code. Please try again.',
+            );
+          }
+        } else if (rawError.toLowerCase().contains('locked') ||
             rawError.toLowerCase().contains('blocked')) {
           AppAlert.showAccountLockedDialog(context, message: rawError);
         } else {

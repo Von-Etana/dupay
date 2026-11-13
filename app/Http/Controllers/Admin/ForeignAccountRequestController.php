@@ -120,7 +120,9 @@ class ForeignAccountRequestController extends Controller
         DB::beginTransaction();
     
         try {
-            $response = CreateGraphPerson($user, $requestData);
+            $response = $user->graph_person_id
+                ? ['status' => true, 'graph_person_id' => $user->graph_person_id]
+                : CreateGraphPerson($user, $requestData);
     
             if ($response['status']) {
     

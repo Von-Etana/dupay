@@ -439,7 +439,10 @@ class AuthNotifier extends StateNotifier<AuthState> {
     try {
       final response = await _authRepository.sendEmailOtp(email);
 
-      state = state.copyWith(isLoading: false);
+      state = state.copyWith(
+        isLoading: false,
+        error: response.success ? null : response.message,
+      );
       return response.success;
     } catch (e) {
       state = state.copyWith(isLoading: false, error: e.toString());

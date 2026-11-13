@@ -518,7 +518,22 @@ class ApiService {
                 'No internet connection. Please check your network settings.',
           );
         default:
-          return ServerException(message: 'Unexpected error: ${error.message}');
+          final responseMessage = _extractErrorMessage(error.response?.data);
+          if (responseMessage != null && responseMessage.trim().isNotEmpty) {
+            return ServerException(
+              message: responseMessage,
+              statusCode: error.response?.statusCode,
+            );
+          }
+          if (error.error is FormatException || error.error is TypeError) {
+            return const ServerException(
+              message:
+                  'The server returned an invalid response. Please try again.',
+            );
+          }
+          return const ServerException(
+            message: 'A temporary service issue occurred. Please try again.',
+          );
       }
     }
 
