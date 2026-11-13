@@ -270,6 +270,10 @@ class VerificationController extends Controller
                 DB::rollBack();
 
                 $errorMessage = $virtualAccountResult['message'] ?? "Unable to create virtual account.";
+                $recordUnavailable = (int) ($virtualAccountResult['provider_code'] ?? 0) === 404;
+                $adminMessage = $recordUnavailable
+                    ? "SafeHaven could not fetch the {$method} identity record (provider code 404). The verification remains pending. Confirm the details with SafeHaven support before retrying."
+                    : "Virtual account creation failed using {$method}. Api Error = " . $errorMessage;
 
                 ErrorLog::create([
                     "user_id"   => $user->id,
@@ -281,8 +285,8 @@ class VerificationController extends Controller
 
                 return response()->json([
                     'success' => false,
-                    'message' => "Virtual account creation failed using {$method}. Api Error = " . $errorMessage
-                ], 500);
+                    'message' => $adminMessage
+                ], $recordUnavailable ? 422 : 500);
             }
 
             $verification->update([

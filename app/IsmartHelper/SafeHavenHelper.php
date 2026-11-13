@@ -76,8 +76,8 @@ function createSafeHavenSubaccount(array $data)
         if (!$response->successful()) {
             Log::error('SafeHaven Subaccount Failed', [
                 'status' => $response->status(),
-                'body'   => $response->body(),
-                'payload' => $payload
+                'provider_code' => $response->json('statusCode'),
+                'message' => $response->json('message'),
             ]);
 
             return [
@@ -92,13 +92,14 @@ function createSafeHavenSubaccount(array $data)
         // Handle unexpected API structure
         if (!isset($result['statusCode']) || $result['statusCode'] != 200 || empty($result['data'])) {
             Log::warning('SafeHaven Subaccount Unexpected Response', [
-                'result' => $result,
+                'provider_code' => $result['statusCode'] ?? null,
+                'message' => $result['message'] ?? null,
             ]);
 
             return [
                 'success' => false,
                 'message' => $result['message'] ?? 'Unexpected API response.',
-                'response' => $result
+                'provider_code' => $result['statusCode'] ?? null,
             ];
         }
 
