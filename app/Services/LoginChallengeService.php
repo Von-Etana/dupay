@@ -64,6 +64,9 @@ class LoginChallengeService
             }
             $otp = (string) random_int(100000, 999999);
             $challenge->otp_hash = Hash::make($otp);
+            // Keep OTP expiry explicit where the reconciled schema provides
+            // it; the challenge expiry remains the safe fallback for older
+            // production databases during rollout.
             $challenge->otp_expires_at = $challenge->expires_at;
             $challenge->sent_at = now();
             $user->login_otp_sent_at = now();
@@ -93,7 +96,8 @@ class LoginChallengeService
             if (!$challenge->otp_hash) {
                 return $this->error('otp_not_sent', 'Request a code before verifying.', 422);
             }
-            if (!$challenge->otp_expires_at || !$challenge->otp_expires_at->isFuture()) {
+            $otpExpiresAt = $challenge->otp_expires_at ?: $challenge->expires_at;
+            if (!$otpExpiresAt || !$otpExpiresAt->isFuture()) {
                 return $this->error('otp_expired', 'This code has expired. Sign in again.', 410);
             }
             if ($challenge->attempts >= self::MAX_ATTEMPTS) {
