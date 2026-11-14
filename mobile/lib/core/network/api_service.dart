@@ -589,8 +589,14 @@ class ApiService {
           errors: _extractErrors(responseData),
         );
       case 401:
-        return const AuthenticationException(
-          message: 'Authentication failed. Please login again.',
+        final authMessage = _extractErrorMessage(responseData);
+        return AuthenticationException(
+          message:
+              (authMessage == null ||
+                      authMessage.trim().isEmpty ||
+                      authMessage.toLowerCase().contains('invalid login'))
+                  ? 'Incorrect email or password. Please try again.'
+                  : authMessage,
         );
       case 403:
         return AuthorizationException(
