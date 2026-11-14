@@ -146,11 +146,11 @@
             </li>
             @endcan
 
-            @can('view_user_security')
+            @can('view_security_alerts')
             <li style="margin: 2px 0;">
                 <a href="{{ route('admin.user-security.index') }}" style="{{ $menuStyle }}">
                     <div style="display:flex; align-items:center; gap:12px; flex:1;">
-                        <span style="{{ $spanStyle }}">Locked Users</span>
+                        <span style="{{ $spanStyle }}">Locked Users · Unlock</span>
                     </div>
                 </a>
             </li>

@@ -213,7 +213,7 @@
                             @if(($user->otp_locked_until && $user->otp_locked_until->isFuture()) || ($user->password_locked_until && $user->password_locked_until->isFuture()) || $securityAlert->type === 'otp_account_locked')
                                 <hr>
                                 <div class="d-flex flex-wrap gap-2 align-items-center">
-                                    @can('unlock_user_security')
+                                    @can('manage_security_alerts')
                                         <form method="POST" action="{{ route('admin.user-security.unlock', $user) }}" class="d-inline-flex gap-2">
                                             @csrf
                                             <input name="reason" required minlength="10" maxlength="1000" class="form-control form-control-sm" placeholder="Reason for unlocking (10+ characters)" style="min-width: 280px;">

@@ -100,8 +100,11 @@ Route::group(['prefix' => 'adminoffice'], function () {
     Route::post('security-alerts/{securityAlert}/acknowledge', [SecurityAlertController::class, 'acknowledge'])
         ->middleware('can:manage_security_alerts')
         ->name('security-alerts.acknowledge');
-    Route::get('user-security', [UserSecurityController::class, 'index'])->middleware('can:view_user_security')->name('user-security.index');
-    Route::post('user-security/{user}/unlock', [UserSecurityController::class, 'unlock'])->middleware('can:unlock_user_security')->name('user-security.unlock');
+    // Security managers can review lockouts and release users from this page.
+    // Keep the menu usable even when the older view_user_security permission
+    // was not assigned to an existing admin role.
+    Route::get('user-security', [UserSecurityController::class, 'index'])->middleware('can:view_security_alerts')->name('user-security.index');
+    Route::post('user-security/{user}/unlock', [UserSecurityController::class, 'unlock'])->middleware('can:manage_security_alerts')->name('user-security.unlock');
     Route::post('user-security/{user}/revoke', [UserSecurityController::class, 'revoke'])->middleware('can:revoke_user_sessions')->name('user-security.revoke');
     Route::get('user-security/export', [UserSecurityController::class, 'export'])->middleware('can:export_user_security')->name('user-security.export');
 

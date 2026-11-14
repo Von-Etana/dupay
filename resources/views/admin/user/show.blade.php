@@ -350,7 +350,7 @@
 						{{ $activeOtpLock ? 'Login OTP failures' : 'Password failures' }}.
 						Unlocks {{ ($activeOtpLock ? $data->otp_locked_until : $data->password_locked_until)->diffForHumans() }}.
 					</p>
-					@can('unlock_user_security')
+					@can('manage_security_alerts')
 					<form method="POST" action="{{ route('admin.user-security.unlock', $data->id) }}" class="d-flex flex-wrap gap-2 align-items-center">
 						@csrf
 						<input type="text" name="reason" class="form-control" style="max-width: 360px" minlength="10" maxlength="1000" required placeholder="Reason for early unlock (at least 10 characters)">
