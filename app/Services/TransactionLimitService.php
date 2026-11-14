@@ -156,9 +156,8 @@ class TransactionLimitService
      *   ['success' => true,  'limit' => ?float, 'spent' => float, 'remaining' => ?float]
      *   ['success' => false, 'message' => string, ...same keys]
      *
-     * Fails OPEN on an unexpected error (logged, transaction allowed). A bug in
-     * limit resolution must not take the whole platform's payments down; an
-     * actually-exceeded limit still fails closed.
+     * Fails CLOSED on an unexpected error when the feature is enabled. A limit
+     * calculation failure must never become a way to bypass the user's cap.
      */
     public static function check($user, $amount, string $currency = 'NGN'): array
     {
@@ -195,9 +194,20 @@ class TransactionLimitService
                 'remaining' => max($limit - $after, 0),
             ];
         } catch (\Throwable $e) {
-            Log::error('TransactionLimitService::check failed, allowing transaction: ' . $e->getMessage());
+            Log::critical('TransactionLimitService::check failed; blocking debit', [
+                'user_id' => $user->id ?? null,
+                'amount' => $amount ?? null,
+                'currency' => $currency,
+                'error' => $e->getMessage(),
+            ]);
 
-            return ['success' => true, 'limit' => null, 'spent' => 0.0, 'remaining' => null];
+            return [
+                'success' => false,
+                'limit' => null,
+                'spent' => null,
+                'remaining' => null,
+                'message' => 'Daily transaction limit could not be verified. Please try again shortly.',
+            ];
         }
     }
 
