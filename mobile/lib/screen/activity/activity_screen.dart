@@ -8,6 +8,18 @@ import '../../models/transaction/transaction_model.dart';
 import '../../core/utils/formatters.dart';
 import '../transaction/transaction_receipt_screen.dart';
 
+String _currencyForTransaction(TransactionModel tx) {
+  final explicit = tx.currency ?? tx.metadata?['currency']?.toString();
+  if (explicit != null && explicit.trim().isNotEmpty) {
+    return explicit.trim().toUpperCase();
+  }
+  final text = '${tx.description ?? ''} ${tx.metadata?['service'] ?? ''} ${tx.metadata?['service_type'] ?? ''}'.toLowerCase();
+  if (text.contains('usd') || text.contains('dollar')) return 'USD';
+  if (text.contains('eur') || text.contains('euro')) return 'EUR';
+  if (text.contains('gbp') || text.contains('pound')) return 'GBP';
+  return 'NGN';
+}
+
 class ActivityScreen extends ConsumerStatefulWidget {
   const ActivityScreen({super.key});
 
@@ -354,15 +366,7 @@ class _ActivityScreenState extends ConsumerState<ActivityScreen> {
       tx.type == '1' ? '+' : tx.type == '0' ? '-' : '';
 
   String _txCurrency(TransactionModel tx) {
-    final explicit = tx.currency ?? tx.metadata?['currency']?.toString();
-    if (explicit != null && explicit.trim().isNotEmpty) {
-      return explicit.trim().toUpperCase();
-    }
-    final text = '${tx.description ?? ''} ${_txTitle(tx)}'.toLowerCase();
-    if (text.contains('usd') || text.contains('dollar')) return 'USD';
-    if (text.contains('eur') || text.contains('euro')) return 'EUR';
-    if (text.contains('gbp') || text.contains('pound')) return 'GBP';
-    return 'NGN';
+    return _currencyForTransaction(tx);
   }
 
   String _formatDate(DateTime date) {
@@ -684,7 +688,7 @@ class _TransactionTile extends StatelessWidget {
                       overflow: TextOverflow.ellipsis),
                 const SizedBox(height: 4),
                 Row(children: [
-                  Text('$prefix${formatCurrencyCode(tx.amount, _txCurrency(tx))}',
+                  Text('$prefix${formatCurrencyCode(tx.amount, _currencyForTransaction(tx))}',
                       style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 15,
