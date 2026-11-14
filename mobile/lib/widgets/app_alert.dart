@@ -94,7 +94,7 @@ class AppAlert {
         lower.contains('bad credentials') ||
         lower.contains('incorrect password') ||
         lower.contains('user not found')) {
-      return 'Invalid email or password. Please check your details and try again.';
+      return 'Incorrect email or password. Please check your details and try again.';
     }
 
     if (lower.contains('insufficient') &&
