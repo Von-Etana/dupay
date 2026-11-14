@@ -37,6 +37,7 @@ trowallet_customer_id
 *.keystore
 error_log
 *.log
+*.hprof
 *_log.txt
 .phpunit.result.cache
 **/.DS_Store
