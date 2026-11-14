@@ -64,8 +64,9 @@ class TransactionLimitService
      * screen keeps working, then the account level as the default:
      *
      *   verified   -> users.verified_daily_transaction_limit
+     *              -> users.daily_transaction_limit
      *              -> user_levels.verified_daily_transaction_limit
-     *              -> (falls through to the unverified limit if neither is set)
+     *              -> user_levels.daily_transaction_limit
      *   unverified -> users.daily_transaction_limit
      *              -> user_levels.daily_transaction_limit
      *
@@ -81,10 +82,12 @@ class TransactionLimitService
 
         if (self::isVerified($user)) {
             $candidates[] = $user->verified_daily_transaction_limit ?? null;
+            $candidates[] = $user->daily_transaction_limit ?? null;
             $candidates[] = optional($user->level)->verified_daily_transaction_limit;
+        } else {
+            $candidates[] = $user->daily_transaction_limit ?? null;
         }
 
-        $candidates[] = $user->daily_transaction_limit ?? null;
         $candidates[] = optional($user->level)->daily_transaction_limit;
 
         foreach ($candidates as $candidate) {

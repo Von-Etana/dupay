@@ -113,6 +113,13 @@ namespace {
     ok('unverified on same level: ₦400,000 refused',       L::check($u, 400000)['success'] === false);
 
     echo "\n--- Limit resolution order ---\n";
+    $u = new FakeUser(); $u->level = new FakeLevel('-', '-');
+    $u->walletVerification = new FakeVerification('1');
+    $u->daily_transaction_limit = '100.00';
+    ok('verified user 113 scenario: explicit ₦100 overrides unlimited tier', L::limitFor($u) == 100.0);
+    ok('verified user 113 scenario: ₦101 debit refused', L::check($u, 101)['success'] === false);
+    $u->daily_transaction_limit = null;
+    ok('verified user with no override retains unlimited tier', L::limitFor($u) === null);
     $u = new FakeUser(); $u->level = new FakeLevel('50000'); $u->daily_transaction_limit = '200000';
     ok('per-user limit overrides the level', L::limitFor($u) == 200000.0);
     $u->daily_transaction_limit = 0;
