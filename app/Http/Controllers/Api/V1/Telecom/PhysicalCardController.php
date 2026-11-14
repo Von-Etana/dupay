@@ -957,9 +957,21 @@ class PhysicalCardController extends Controller
         }
     
         $client = new \GuzzleHttp\Client();
+
+        $publicKey = config('services.strowallet.public_key');
+        if (!$publicKey) {
+            \Log::error('Physical card PIN change unavailable: Strowallet public key is not configured', [
+                'user_id' => $user->id,
+                'card_id' => $card->id,
+            ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Card PIN service is temporarily unavailable. Please try again later.',
+            ], 503);
+        }
     
         $query = http_build_query([
-            'public_key' => env('STROWALLET_PUBLIC_KEY'),
+            'public_key' => $publicKey,
             'card_id'    => $card->card_id,
             'old_pin'    => $validated['old_pin'],
             'new_pin'    => $validated['new_pin'],
@@ -1095,9 +1107,20 @@ class PhysicalCardController extends Controller
         try {
     
             $client = new \GuzzleHttp\Client();
+            $publicKey = config('services.strowallet.public_key');
+            if (!$publicKey) {
+                \Log::error('Physical card PIN reset unavailable: Strowallet public key is not configured', [
+                    'user_id' => $user->id,
+                    'card_id' => $card->id,
+                ]);
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Card PIN service is temporarily unavailable. Please try again later.',
+                ], 503);
+            }
     
             $query = http_build_query([
-                'public_key' => env('STROWALLET_PUBLIC_KEY'),
+                'public_key' => $publicKey,
                 'card_id'    => $card->card_id,
                 'new_pin'    => $validated['new_pin'],
             ]);
