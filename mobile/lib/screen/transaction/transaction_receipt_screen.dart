@@ -307,6 +307,19 @@ class _TransactionReceiptScreenState extends State<TransactionReceiptScreen> {
     return const Color(0xFFE53935);
   }
 
+  String get _displayStatusMessage {
+    final message = widget.data.statusMessage?.trim() ?? '';
+    final lower = message.toLowerCase();
+    final success =
+        lower.isNotEmpty &&
+        !lower.contains('unsuccess') &&
+        !lower.contains('failed') &&
+        !lower.contains('pending') &&
+        !lower.contains('processing');
+    if (success) return message;
+    return 'Your transaction was completed successfully';
+  }
+
   IconData get _heroIcon {
     final s = widget.data.status.trim().toLowerCase();
     if (s == 'success' || s == 'successful' || s == '1')
@@ -457,9 +470,7 @@ class _TransactionReceiptScreenState extends State<TransactionReceiptScreen> {
 
                       Text(
                         isSuccess
-                            ? (d.statusMessage?.isNotEmpty == true
-                                ? d.statusMessage!
-                                : 'Your transaction was completed successfully')
+                            ? _displayStatusMessage
                             : (d.statusMessage?.isNotEmpty == true
                                 ? d.statusMessage!
                                 : 'Status: ${d.status}'),
