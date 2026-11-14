@@ -135,10 +135,10 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
             .contains(normalizedStatus);
         final title =
             isPending
-                ? 'Payment pending (${formatCurrency(tx.amount)})'
+                ? 'Payment pending (${formatCurrencyCode(tx.amount, tx.currency)})'
                 : isSuccess
-                    ? '${isCredit ? 'Transfer received' : 'Payment completed'} (${formatCurrency(tx.amount)})'
-                    : 'Payment failed (${formatCurrency(tx.amount)})';
+                    ? '${isCredit ? 'Transfer received' : 'Payment completed'} (${formatCurrencyCode(tx.amount, tx.currency)})'
+                    : 'Payment failed (${formatCurrencyCode(tx.amount, tx.currency)})';
 
         if (!combined.any((n) => n.id == 'tx_${tx.id}' ||
             (tx.reference != null && n.reference == tx.reference))) {
@@ -154,7 +154,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                           ? 'Transaction processed successfully.'
                           : 'This transaction was not completed.')),
               type: isCredit ? 'credit' : 'debit',
-              amount: formatCurrency(tx.amount),
+              amount: formatCurrencyCode(tx.amount, tx.currency),
               reference: tx.reference ?? tx.id,
               sessionId: tx.metadata?['session_id']?.toString(),
               status: tx.status.isEmpty ? 'unknown' : tx.status,

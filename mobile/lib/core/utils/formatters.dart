@@ -27,6 +27,28 @@ String formatCurrency(
   return formatter.format(value);
 }
 
+/// Formats an amount using the currency actually attached to the transaction.
+/// This keeps receipts, history, and notification previews from defaulting to
+/// the naira symbol when the transaction is in USD, EUR, or another currency.
+String formatCurrencyCode(
+  dynamic amount,
+  String? currency, {
+  int decimalDigits = 2,
+}) {
+  final code = currency?.trim().toUpperCase();
+  final symbol =
+      code == null || code.isEmpty || code == 'NGN'
+          ? '₦'
+          : code == 'USD'
+          ? '\$'
+          : code == 'EUR'
+          ? '€'
+          : code == 'GBP'
+          ? '£'
+          : code;
+  return formatCurrency(amount, symbol: symbol, decimalDigits: decimalDigits);
+}
+
 /// Formats a numeric amount with thousand separators (no symbol).
 String formatNumber(dynamic amount, {int decimalDigits = 2}) {
   if (amount == null) return '0.00';

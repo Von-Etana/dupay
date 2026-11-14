@@ -684,7 +684,7 @@ class _TransactionTile extends StatelessWidget {
                       overflow: TextOverflow.ellipsis),
                 const SizedBox(height: 4),
                 Row(children: [
-                  Text('$prefix${formatCurrency(tx.amount)}',
+                  Text('$prefix${formatCurrencyCode(tx.amount, _txCurrency(tx))}',
                       style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 15,
