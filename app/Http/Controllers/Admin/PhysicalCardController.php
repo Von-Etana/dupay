@@ -306,9 +306,17 @@ class PhysicalCardController extends Controller
     try {
 
         $client = new \GuzzleHttp\Client();
+        $publicKey = config('services.strowallet.public_key');
+
+        if (blank($publicKey)) {
+            session()->flash('message', 'Strowallet public key is not configured.');
+            Session::flash('type', 'error');
+            Session::flash('title', 'Configuration Error');
+            return back();
+        }
 
         $query = http_build_query([
-            'public_key' => env('STROWALLET_PUBLIC_KEY'),
+            'public_key' => $publicKey,
             'card_id'    => $physical_card->card_id,
             'new_pin'    => $validated['new_pin'],
         ]);
