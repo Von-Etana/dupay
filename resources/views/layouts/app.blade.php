@@ -63,7 +63,10 @@
 
                             <div class="header-btn">
                                 <ul class="d-flex align-items-center justify-content-end">
-                                    <li><a href="https://app.mydupay.com" class="page-scroll main-btn btn-hover">Get
+                                    <li><a href="{{ getSiteSettings('playstore') ?: '#' }}"
+                                            data-playstore-url="{{ getSiteSettings('playstore') }}"
+                                            data-appstore-url="{{ getSiteSettings('appstore') }}"
+                                            class="page-scroll main-btn btn-hover js-store-download">Get
                                             Started</a></li>
                                 </ul>
                             </div>
@@ -77,6 +80,22 @@
         </div>
 
     </header>
+
+    <script>
+        document.addEventListener('click', function (event) {
+            const link = event.target.closest('.js-store-download');
+            if (!link) return;
+
+            const ios = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+                (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+            const destination = ios ? link.dataset.appstoreUrl : link.dataset.playstoreUrl;
+
+            if (destination) {
+                event.preventDefault();
+                window.location.assign(destination);
+            }
+        });
+    </script>
 
 
     @yield('content')
