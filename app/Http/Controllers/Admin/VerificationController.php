@@ -445,18 +445,13 @@ class VerificationController extends Controller
         $method = strtoupper($request->input('method', $verification->method));
         $method = in_array($method, ['BVN', 'NIN'], true) ? $method : 'BVN';
 
-        $identityNumber = $request->input('identity_number');
+        $identityNumber = trim((string) $request->input('identity_number',
+            $method === 'NIN' ? $verification->nin : $verification->bvn));
 
-        if (! $identityNumber) {
-            $identityNumber = $method === 'NIN'
-                ? ($verification->nin ?: $verification->bvn)
-                : ($verification->bvn ?: $verification->nin);
-        }
-
-        if (! $identityNumber) {
+        if (! preg_match('/^\d{11}$/', $identityNumber)) {
             return response()->json([
                 'success' => false,
-                'message' => "No {$method} on file for this user.",
+                'message' => "Enter a valid 11-digit {$method} number for this user.",
             ], 422);
         }
 

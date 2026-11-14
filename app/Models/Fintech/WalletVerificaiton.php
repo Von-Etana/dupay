@@ -341,16 +341,16 @@ class WalletVerificaiton extends Model
 
     /**
      * The number that must go to SafeHaven as `identityNumber`, based on the
-     * currently selected method. Falls back to the BVN column, which is where
-     * every number used to be stored before the `nin` column existed.
+     * currently selected method. Legacy NIN records may have their number in
+     * the bvn column, so the admin must explicitly select it when approving.
      */
     public function getIdentityNumberAttribute(): ?string
     {
         if ($this->method === 'NIN') {
-            return $this->nin ?: $this->bvn;
+            return $this->nin ?: null;
         }
 
-        return $this->bvn ?: $this->nin;
+        return $this->bvn ?: null;
     }
 
     /* ------------------------------------------------------------------
