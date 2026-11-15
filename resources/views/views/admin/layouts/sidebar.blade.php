@@ -203,6 +203,14 @@
         </li>
         @endcan
 
+        @can('view_recharge_card_epin_rates')
+        <li>
+            <a href="{{ route('admin.recharge_card_pins.index') }}" class="dw-item">
+                <span class="txt">Recharge Card PIN Inventory</span>
+            </a>
+        </li>
+        @endcan
+
         @can('view_vat')
         <li>
             <a href="{{ url('/adminoffice/vat_settings') }}" class="dw-item">

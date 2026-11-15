@@ -146,6 +146,18 @@
             </li>
             @endcan
 
+            @can('view_recharge_card_epin_rates')
+            <li style="margin: 2px 0;">
+                <a href="{{ route('admin.recharge_card_pins.index') }}" style="{{ $menuStyle }}"
+                   onmouseover="this.style.background='rgba(255,255,255,0.08)'; this.style.borderLeftColor='#4f8ef7';"
+                   onmouseout="this.style.background='transparent'; this.style.borderLeftColor='transparent';">
+                    <div style="display:flex; align-items:center; gap:12px; flex:1;">
+                        <span style="{{ $spanStyle }}">Recharge Card PIN Inventory</span>
+                    </div>
+                </a>
+            </li>
+            @endcan
+
             @can('view_security_alerts')
             <li style="margin: 2px 0;">
                 <a href="{{ route('admin.user-security.index') }}" style="{{ $menuStyle }}">
