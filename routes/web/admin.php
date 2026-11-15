@@ -10,6 +10,7 @@ use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\TransactionController;
 use App\Http\Controllers\Admin\AssignedCardCredentialController;
 use App\Http\Controllers\Admin\EpinRateController;
+use App\Http\Controllers\Admin\RechargeCardPinController;
 use App\Http\Controllers\Admin\PhysicalCardController;
 use App\Http\Controllers\Admin\VirtualUsdCardController;
 use App\Http\Controllers\Admin\PushUpdatesController;
@@ -161,6 +162,7 @@ Route::group(['prefix' => 'adminoffice'], function () {
     
     Route::resource('card_credentials', AssignedCardCredentialController::class);
     Route::resource('epin_rates', EpinRateController::class);
+    Route::resource('recharge_card_pins', RechargeCardPinController::class)->only(['index', 'store', 'destroy']);
     Route::resource('physical_cards', PhysicalCardController::class);
     Route::get('user/physical_cards/ajax/', [PhysicalCardController::class, 'cardAjax'])->name('user.physical_cards.ajax');
     Route::post('physical_cards/reset-pin/{physical_card}', [PhysicalCardController::class, 'resetCardPin'])->name('physical_cards.reset.pin');

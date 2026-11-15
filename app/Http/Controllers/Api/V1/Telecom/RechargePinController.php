@@ -17,6 +17,7 @@ use App\Models\EpinRate;
 use App\Models\EpinPurchase;
 use Illuminate\Support\Facades\DB;
 use App\Models\User;
+use App\Services\RechargeCardInventoryService;
 
 class RechargePinController extends Controller
 {
@@ -79,12 +80,13 @@ class RechargePinController extends Controller
         $unit_price = $rate->rate;
         $amount = $unit_price * $data['quantity'];
 
-        if (!config('services.strowallet.public_key')) {
+        $manualOnly = RechargeCardInventoryService::available((int) $data['network_id'], $data['value']) >= (int) $data['quantity'];
+        if (!$manualOnly && !config('services.strowallet.public_key')) {
             Log::error('Strowallet ePIN public key is not configured');
             return response(['success' => false, 'message' => 'Recharge cards are temporarily unavailable. Please try again later.']);
         }
     
-        return DB::transaction(function () use ($user, $amount, $data, $network, $request) {
+        return DB::transaction(function () use ($user, $amount, $data, $network, $request, $manualOnly) {
             
             $lockedUser = User::where('id', $user->id)->lockForUpdate()->first();
             
@@ -105,8 +107,14 @@ class RechargePinController extends Controller
             $Trx = strtoupper(Str::random(16));
     
             try {
-                $client = new \GuzzleHttp\Client();
-                $response = $client->request('POST', 'https://strowallet.com/api/buy_epin/', [
+                $manualCards = $manualOnly
+                    ? RechargeCardInventoryService::reserve((int) $data['network_id'], $data['value'], (int) $data['quantity'], (int) $lockedUser->id, $Trx)
+                    : [];
+                if ($manualOnly && count($manualCards) === (int) $data['quantity']) {
+                    $body = ['status' => 'success', 'data' => ['cards' => $manualCards, 'trxid' => 'INTERNAL-' . $Trx]];
+                } else {
+                    $client = new \GuzzleHttp\Client();
+                    $response = $client->request('POST', 'https://strowallet.com/api/buy_epin/', [
                     'query' => [
                         'public_key' => config('services.strowallet.public_key'),
                         'card_network' => $network->name,
@@ -117,9 +125,9 @@ class RechargePinController extends Controller
                         'accept' => 'application/json',
                     ],
                     'timeout' => 30,
-                ]);
-    
-                $body = json_decode($response->getBody(), true);
+                    ]);
+                    $body = json_decode($response->getBody(), true);
+                }
                 
                 Log::info('Strowallet ePIN response', [
                     'status' => $body['status'] ?? null,
