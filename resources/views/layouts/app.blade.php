@@ -64,8 +64,6 @@
                             <div class="header-btn">
                                 <ul class="d-flex align-items-center justify-content-end">
                                     <li><a href="https://apps.apple.com/ng/app/dupay-banking/id6801323254"
-                                            data-playstore-url="{{ getSiteSettings('playstore') }}"
-                                            data-appstore-url="https://apps.apple.com/ng/app/dupay-banking/id6801323254"
                                             class="page-scroll main-btn btn-hover js-store-download">Get
                                             Started</a></li>
                                 </ul>
@@ -80,33 +78,6 @@
         </div>
 
     </header>
-
-    <script>
-        document.addEventListener('click', function (event) {
-            const link = event.target.closest('.js-store-download');
-            if (!link) return;
-
-            const ios = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-                (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-            const destination = ios ? link.dataset.appstoreUrl : link.dataset.playstoreUrl;
-
-            if (destination) {
-                event.preventDefault();
-                window.location.assign(destination);
-            }
-        });
-
-        (function () {
-            const link = document.querySelector('.js-store-download');
-            if (!link) return;
-            const ios = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-                (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-            if (!ios && link.dataset.playstoreUrl) {
-                link.href = link.dataset.playstoreUrl;
-            }
-        })();
-    </script>
-
 
     @yield('content')
 
