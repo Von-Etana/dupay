@@ -101,6 +101,11 @@
                                                     {{ $child->name }}
                                                 </a>
                                             </li>
+                                            @if(stripos((string) $sidebar->name, 'telecom') !== false && stripos((string) $child->name, 'airtime') !== false)
+                                                @can('view_recharge_card_epin_rates')
+                                                    <li><a href="{{ route('admin.recharge_card_pins.index') }}" style="{{ $submenuLinkStyle }}">Recharge Card PIN Inventory</a></li>
+                                                @endcan
+                                            @endif
                                         @endcanany
                                     @endforeach
                                 </ul>
@@ -141,18 +146,6 @@
                     <div style="display:flex; align-items:center; gap:12px; flex:1;">
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="2"><path d="M12 2l8 4v6c0 5-3.5 9-8 10-4.5-1-8-5-8-10V6l8-4z"></path><path d="M12 8v4"></path><path d="M12 16h.01"></path></svg>
                         <span style="{{ $spanStyle }}">Security Alerts</span>
-                    </div>
-                </a>
-            </li>
-            @endcan
-
-            @can('view_recharge_card_epin_rates')
-            <li style="margin: 2px 0;">
-                <a href="{{ route('admin.recharge_card_pins.index') }}" style="{{ $menuStyle }}"
-                   onmouseover="this.style.background='rgba(255,255,255,0.08)'; this.style.borderLeftColor='#4f8ef7';"
-                   onmouseout="this.style.background='transparent'; this.style.borderLeftColor='transparent';">
-                    <div style="display:flex; align-items:center; gap:12px; flex:1;">
-                        <span style="{{ $spanStyle }}">Recharge Card PIN Inventory</span>
                     </div>
                 </a>
             </li>
