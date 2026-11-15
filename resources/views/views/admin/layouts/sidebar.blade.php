@@ -107,11 +107,11 @@
                                 @foreach($sidebar->children as $child)
                                     @canany([$child->rule != null ? $child->rule : 'view_'.$child->model, 'create_'.$child->model])
                                         <li><a href="{{ $child->use_route == '1' && Route::has($child->route) ? route($child->route, $child->route_parameter) : route('admin.ViewItem', $child->model) }}">{{ $child->name }}</a></li>
-                                        @if(stripos((string) $sidebar->name, 'telecom') !== false && stripos((string) $child->name, 'airtime') !== false)
-                                            @can('view_recharge_card_epin_rates')<li><a href="{{ route('admin.recharge_card_pins.index') }}">Recharge Card PIN Inventory</a></li>@endcan
-                                        @endif
                                     @endcanany
                                 @endforeach
+                                @if(stripos((string) $sidebar->name, 'telecom') !== false)
+                                    <li><a href="{{ route('admin.recharge_card_pins.index') }}">Recharge Card PIN Inventory</a></li>
+                                @endif
                             </ul>
                         </li>
                     @endif

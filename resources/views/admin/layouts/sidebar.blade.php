@@ -101,13 +101,11 @@
                                                     {{ $child->name }}
                                                 </a>
                                             </li>
-                                            @if(stripos((string) $sidebar->name, 'telecom') !== false && stripos((string) $child->name, 'airtime') !== false)
-                                                @can('view_recharge_card_epin_rates')
-                                                    <li><a href="{{ route('admin.recharge_card_pins.index') }}" style="{{ $submenuLinkStyle }}">Recharge Card PIN Inventory</a></li>
-                                                @endcan
-                                            @endif
                                         @endcanany
                                     @endforeach
+                                    @if(stripos((string) $sidebar->name, 'telecom') !== false)
+                                        <li><a href="{{ route('admin.recharge_card_pins.index') }}" style="{{ $submenuLinkStyle }}">Recharge Card PIN Inventory</a></li>
+                                    @endif
                                 </ul>
                             </li>
                         @endif
