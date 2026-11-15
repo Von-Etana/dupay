@@ -108,10 +108,20 @@ class AppAlert {
       return 'Incorrect transaction PIN. Please double-check and try again.';
     }
 
-    if (lower.contains('daily limit') ||
+    if (lower.contains('daily_limit_exceeded') ||
+        lower.contains('daily limit') ||
         lower.contains('daily transaction limit') ||
         lower.contains('transfer limit')) {
-      return text;
+      final cleanedLimit =
+          text
+              .replaceFirst(
+                RegExp(r'^(error|exception)\s*:\s*', caseSensitive: false),
+                '',
+              )
+              .trim();
+      return cleanedLimit.isNotEmpty
+          ? cleanedLimit
+          : 'This transaction would exceed your daily transaction limit.';
     }
 
     if (lower.contains('sqlstate') ||

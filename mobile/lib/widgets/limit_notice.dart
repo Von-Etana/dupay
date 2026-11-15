@@ -23,7 +23,9 @@ bool showLimitNoticeIfNeeded(BuildContext context, String? message) {
   if (text.isEmpty) return false;
 
   final lower = text.toLowerCase();
-  final isLimit = lower.contains('daily transaction limit') ||
+  final isLimit =
+      lower.contains('daily_limit_exceeded') ||
+      lower.contains('daily transaction limit') ||
       lower.contains('daily transfer limit') ||
       lower.contains('daily limit');
   if (!isLimit) return false;
@@ -33,42 +35,59 @@ bool showLimitNoticeIfNeeded(BuildContext context, String? message) {
 
   showDialog<void>(
     context: context,
-    builder: (ctx) => AlertDialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
-      title: Row(children: [
-        Container(
-          padding: const EdgeInsets.all(8),
-          decoration: const BoxDecoration(
-            color: Color(0xFFFFF4E0),
-            shape: BoxShape.circle,
+    builder:
+        (ctx) => AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
           ),
-          child: const Icon(Icons.speed_rounded, color: Color(0xFFC98A00)),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Text(
-            'Daily limit reached',
-            style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold),
+          titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: const BoxDecoration(
+                  color: Color(0xFFFFF4E0),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.speed_rounded,
+                  color: Color(0xFFC98A00),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Daily limit reached',
+                  style: TextStyle(
+                    fontSize: 18.sp,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
           ),
-        ),
-      ]),
-      content: Text(
-        text,
-        style: TextStyle(fontSize: 14.sp, height: 1.45, color: Colors.black87),
-      ),
-      actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(ctx).pop(),
-          child: Text(
-            suggestsVerification ? 'Got it' : 'OK',
-            style: const TextStyle(
-                color: Color(0xFF34544A), fontWeight: FontWeight.bold),
+          content: Text(
+            text,
+            style: TextStyle(
+              fontSize: 14.sp,
+              height: 1.45,
+              color: Colors.black87,
+            ),
           ),
+          actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: Text(
+                suggestsVerification ? 'Got it' : 'OK',
+                style: const TextStyle(
+                  color: Color(0xFF34544A),
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
         ),
-      ],
-    ),
   );
 
   return true;
