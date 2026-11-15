@@ -65,7 +65,7 @@
                                 <ul class="d-flex align-items-center justify-content-end">
                                     <li><a href="{{ getSiteSettings('playstore') ?: '#' }}"
                                             data-playstore-url="{{ getSiteSettings('playstore') }}"
-                                            data-appstore-url="{{ getSiteSettings('appstore') }}"
+                                            data-appstore-url="{{ getSiteSettings('appstore') ?: 'https://apps.apple.com/ng/app/dupay-banking/id6801323254' }}"
                                             class="page-scroll main-btn btn-hover js-store-download">Get
                                             Started</a></li>
                                 </ul>
