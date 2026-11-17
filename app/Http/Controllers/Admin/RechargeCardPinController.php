@@ -9,11 +9,18 @@ use Illuminate\Http\Request;
 
 class RechargeCardPinController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $pins = RechargeCardPin::with('network')->latest()->paginate(50);
+        $query = RechargeCardPin::with('network');
+        if ($request->filled('network_id')) $query->where('network_id', $request->network_id);
+        if ($request->filled('status')) $query->where('status', $request->status);
+        if ($request->filled('search')) $query->where(function ($q) use ($request) { $q->where('serial', 'like', '%'.$request->search.'%'); });
+        $sort = in_array($request->get('sort'), ['value','status','created_at']) ? $request->get('sort') : 'created_at';
+        $direction = $request->get('direction') === 'asc' ? 'asc' : 'desc';
+        $pins = $query->orderBy($sort, $direction)->paginate((int) $request->get('per_page', 25))->withQueryString();
         $networks = Network::orderBy('name')->get();
-        return view('admin.recharge_card_pins.index', compact('pins', 'networks'));
+        $summary = RechargeCardPin::selectRaw('status, count(*) total')->groupBy('status')->pluck('total', 'status');
+        return view('admin.recharge_card_pins.index', compact('pins', 'networks', 'summary'));
     }
 
     public function store(Request $request)
