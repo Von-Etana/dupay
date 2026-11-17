@@ -331,12 +331,12 @@
             </li>
             @endcanany
 
-            @can('view_recharge_card_epin_rates')
             <li style="margin: 2px 0;">
                 <a href="{{ route('recharge_card_pins.index') }}" style="{{ $menuStyle }}" onmouseover="this.style.background='rgba(255,255,255,0.08)';" onmouseout="this.style.background='transparent';">
                     <div style="display:flex; align-items:center; gap:12px; flex:1;"><span style="font-size:20px;">▣</span><span style="{{ $spanStyle }}">Recharge Card PINs</span></div>
                 </a>
             </li>
+            @can('view_recharge_card_epin_rates')
             <li style="margin: 2px 0;">
                 <a href="{{ url('/adminoffice/epin_rates') }}" style="{{ $menuStyle }}"
                    onmouseover="this.style.background='rgba(255,255,255,0.08)'; this.style.borderLeftColor='#4f8ef7';"
