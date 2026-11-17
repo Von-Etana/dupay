@@ -160,7 +160,10 @@ Route::group(['prefix' => 'adminoffice'], function () {
     Route::resource('card_credentials', AssignedCardCredentialController::class);
     Route::resource('epin_rates', EpinRateController::class);
     Route::get('recharge-card-pins', [RechargeCardPinController::class, 'index'])->name('recharge_card_pins.index');
+    // Backward-compatible alias for the original underscore URL used by the portal sidebar.
+    Route::get('recharge_card_pins', [RechargeCardPinController::class, 'index'])->name('recharge_card_pins.legacy');
     Route::post('recharge-card-pins', [RechargeCardPinController::class, 'store'])->name('recharge_card_pins.store');
+    Route::post('recharge_card_pins', [RechargeCardPinController::class, 'store'])->name('recharge_card_pins.legacy.store');
     Route::post('recharge-card-pins/import', [RechargeCardPinController::class, 'import'])->name('recharge_card_pins.import');
     Route::get('recharge-card-pins/{rechargeCardPin}/reveal', [RechargeCardPinController::class, 'reveal'])->name('recharge_card_pins.reveal');
     Route::resource('physical_cards', PhysicalCardController::class);
