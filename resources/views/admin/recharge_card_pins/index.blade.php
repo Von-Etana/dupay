@@ -16,7 +16,7 @@
         </div>
     </form>
     <div class="table-responsive"><table class="table"><thead><tr><th>Network</th><th>Value</th><th>Serial</th><th>Status</th><th>Added</th><th></th></tr></thead><tbody>
-    @forelse($pins as $pin)<tr><td>{{ $pin->network->name }}</td><td>₦{{ number_format($pin->value, 2) }}</td><td>{{ $pin->serial ?: '—' }}</td><td><span class="badge bg-secondary">{{ ucfirst($pin->status) }}</span></td><td>{{ $pin->created_at }}</td><td>@if($pin->status === 'available')<form method="POST" action="{{ route('admin.recharge_card_pins.destroy', $pin) }}">@csrf @method('DELETE')<button class="btn btn-sm btn-outline-danger">Void</button></form>@endif</td></tr>@empty<tr><td colspan="6" class="text-center py-4">No recharge card PINs found.</td></tr>@endforelse
+    @forelse($pins as $pin)<tr><td>{{ $pin->network->name }}</td><td>₦{{ number_format($pin->value, 2) }}</td><td>{{ $pin->serial ?: '—' }}</td><td><span class="badge bg-secondary">{{ ucfirst($pin->status) }}</span></td><td>{{ $pin->created_at }}</td><td>@if(!in_array($pin->status, ['sold','reserved']))<form method="POST" action="{{ route('admin.recharge_card_pins.destroy', $pin) }}" onsubmit="return confirm('Delete this recharge card PIN permanently?')">@csrf @method('DELETE')<button class="btn btn-sm btn-outline-danger">Delete</button></form>@endif</td></tr>@empty<tr><td colspan="6" class="text-center py-4">No recharge card PINs found.</td></tr>@endforelse
     </tbody></table></div>{{ $pins->links() }}
 </div>
 @endsection

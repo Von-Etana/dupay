@@ -38,8 +38,8 @@ class RechargeCardPinController extends Controller
 
     public function destroy(RechargeCardPin $rechargeCardPin)
     {
-        abort_if($rechargeCardPin->status === 'sold', 422, 'Sold PINs cannot be removed.');
-        $rechargeCardPin->update(['status' => 'void']);
-        return back()->with('message', 'Recharge card PIN voided.');
+        abort_if(in_array($rechargeCardPin->status, ['sold', 'reserved'], true), 422, 'Sold or reserved PINs cannot be deleted.');
+        $rechargeCardPin->delete();
+        return back()->with('message', 'Recharge card PIN deleted successfully.');
     }
 }
