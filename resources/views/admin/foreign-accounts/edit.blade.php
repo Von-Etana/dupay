@@ -168,6 +168,12 @@
                             
                                 <button type="submit" class="btn btn-primary mt-3">Update Request</button>
                             </form>
+                            @if(optional($requestData->user)->graph_person_id)
+                            <form method="POST" action="{{ route('admin.foreign-accounts.resubmit-kyc', $requestData->id) }}" class="mt-3" onsubmit="return confirm('Submit the saved identity document and KYC details to Graph? Save edits first.')">
+                                @csrf
+                                <button class="btn btn-warning">Resubmit saved KYC to Graph</button>
+                            </form>
+                            @endif
                             <br><br>
                         </div>
 					</div>

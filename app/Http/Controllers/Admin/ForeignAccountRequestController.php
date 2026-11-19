@@ -104,6 +104,41 @@ class ForeignAccountRequestController extends Controller
     {
         return $this->provisionAccount($id);
     }
+
+    public function resubmitKyc($id)
+    {
+        $requestData = ForeignAccountRequest::with('user')->findOrFail($id);
+        $personId = optional($requestData->user)->graph_person_id;
+        if (!$personId) return $this->errorRedirect('Create the Graph person before resubmitting KYC.');
+        $document = ltrim(preg_replace('#^/?storage/#', '', (string) $requestData->document), '/');
+        if (!$document || !\Illuminate\Support\Facades\Storage::disk('public')->exists($document)) {
+            return $this->errorRedirect('Upload a valid identity document before resubmitting KYC.');
+        }
+        $verification = optional($requestData->user)->walletVerification;
+        if (!$verification) return $this->errorRedirect('Identity number is missing.');
+        $type = strtolower((string) $requestData->document_type);
+        $type = ['national_id' => 'nin', 'drivers_licence' => 'drivers_license'][$type] ?? $type;
+        if (!in_array($type, ['passport', 'drivers_license', 'nin', 'voters_card'], true)) return $this->errorRedirect('Select a supported identity document type.');
+        $identityNumber = $type === 'nin' ? ($verification->nin ?: null) : ($verification->bvn ?: null);
+        if (!$identityNumber) return $this->errorRedirect('The selected identity number is missing from the wallet verification record.');
+        try {
+            $response = \Illuminate\Support\Facades\Http::withToken(config('services.graph.api_key'))
+                ->timeout(30)->patch('https://api.useoval.com/person/'.rawurlencode($personId).'/kyc', [
+                    'id_type' => $type,
+                    'id_number' => (string) $identityNumber,
+                    'id_country' => strtoupper($requestData->country ?: 'NG'),
+                    'id_upload' => asset('storage/'.$document),
+                ]);
+            if (!$response->successful() || $response->json('status') !== 'success') {
+                \Log::warning('Graph KYC resubmission failed', ['request_id' => $id, 'http_status' => $response->status()]);
+                return $this->errorRedirect('Graph did not accept the KYC update. Check the document and identity details.');
+            }
+            return redirect()->back()->with('message', 'KYC update submitted to Graph successfully.');
+        } catch (\Throwable $e) {
+            \Log::error('Graph KYC resubmission error', ['request_id' => $id, 'error' => $e->getMessage()]);
+            return $this->errorRedirect('Graph KYC update could not be completed. Please retry.');
+        }
+    }
     
     public function createBankAccount($id)
     {

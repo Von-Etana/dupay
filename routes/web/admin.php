@@ -203,6 +203,7 @@ Route::group(['prefix' => 'adminoffice'], function () {
         Route::get('/{id}', [ForeignAccountRequestController::class, 'show'])->name('show');
         Route::get('/{id}/edit', [ForeignAccountRequestController::class, 'edit'])->name('edit');
         Route::put('/{id}', [ForeignAccountRequestController::class, 'update'])->name('update');
+        Route::post('/{id}/resubmit-kyc', [ForeignAccountRequestController::class, 'resubmitKyc'])->name('resubmit-kyc');
         Route::delete('/{id}', [ForeignAccountRequestController::class, 'destroy'])->name('destroy');
     
         Route::post('/{id}/approve', [ForeignAccountRequestController::class, 'approve'])->name('approve');
