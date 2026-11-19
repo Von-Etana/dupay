@@ -148,8 +148,8 @@ class ForeignAccountRequestController extends Controller
     private function provisionAccount($id)
     {
         $requestData = ForeignAccountRequest::findOrFail($id);
-        if ($requestData->status !== 'pending') {
-            return $this->errorRedirect('This request has already been processed.');
+        if ($requestData->status === 'declined') {
+            return $this->errorRedirect('This request was declined. Edit it and return it to pending before retrying.');
         }
         if (!$requestData->user) {
             return $this->errorRedirect('User not found.');
