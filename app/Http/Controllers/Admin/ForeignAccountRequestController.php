@@ -119,7 +119,11 @@ class ForeignAccountRequestController extends Controller
         $type = strtolower((string) $requestData->document_type);
         $type = ['national_id' => 'nin', 'drivers_licence' => 'drivers_license'][$type] ?? $type;
         if (!in_array($type, ['passport', 'drivers_license', 'nin', 'voters_card'], true)) return $this->errorRedirect('Select a supported identity document type.');
-        $identityNumber = $type === 'nin' ? ($verification->nin ?: null) : ($verification->bvn ?: null);
+        // Older KYC records stored the selected NIN in the foreign-account
+        // request's `bvn` column, while newer records use wallet_verifications.nin.
+        $identityNumber = $type === 'nin'
+            ? ($verification->nin ?: $requestData->bvn ?: null)
+            : ($verification->bvn ?: $requestData->bvn ?: null);
         if (!$identityNumber) return $this->errorRedirect('The selected identity number is missing from the wallet verification record.');
         try {
             $response = \Illuminate\Support\Facades\Http::withToken(config('services.graph.api_key'))
