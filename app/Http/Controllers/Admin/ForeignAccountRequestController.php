@@ -117,12 +117,12 @@ class ForeignAccountRequestController extends Controller
         $verification = optional($requestData->user)->walletVerification;
         if (!$verification) return $this->errorRedirect('Identity number is missing.');
         $type = strtolower((string) $requestData->document_type);
-        $type = ['national_id' => 'nin', 'drivers_licence' => 'drivers_license'][$type] ?? $type;
+        $type = ['national_id' => 'nin', 'national-id' => 'nin', 'nin' => 'nin', 'drivers_licence' => 'drivers_license', 'drivers-license' => 'drivers_license'][$type] ?? $type;
         if (!in_array($type, ['passport', 'drivers_license', 'nin', 'voters_card'], true)) return $this->errorRedirect('Select a supported identity document type.');
         // Older KYC records stored the selected NIN in the foreign-account
         // request's `bvn` column, while newer records use wallet_verifications.nin.
         $identityNumber = $type === 'nin'
-            ? ($verification->nin ?: $requestData->bvn ?: null)
+            ? ($verification->nin ?: $requestData->bvn ?: $verification->bvn ?: null)
             : ($verification->bvn ?: $requestData->bvn ?: null);
         if (!$identityNumber) return $this->errorRedirect('The selected identity number is missing from the wallet verification record.');
         try {
@@ -134,8 +134,9 @@ class ForeignAccountRequestController extends Controller
                     'id_upload' => asset('storage/'.$document),
                 ]);
             if (!$response->successful() || $response->json('status') !== 'success') {
-                \Log::warning('Graph KYC resubmission failed', ['request_id' => $id, 'http_status' => $response->status()]);
-                return $this->errorRedirect('Graph did not accept the KYC update. Check the document and identity details.');
+                $providerMessage = $response->json('message') ?: $response->json('error.message');
+                \Log::warning('Graph KYC resubmission failed', ['request_id' => $id, 'http_status' => $response->status(), 'provider_message' => $providerMessage, 'response' => $response->json()]);
+                return $this->errorRedirect('Graph did not accept the KYC update'.($providerMessage ? ': '.$providerMessage : '. Check the document and identity details.'));
             }
             return redirect()->back()->with('message', 'KYC update submitted to Graph successfully.');
         } catch (\Throwable $e) {
